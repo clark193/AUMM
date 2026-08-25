@@ -12,6 +12,7 @@ type Module = { title: string; description: string; headers: string[]; rows?: st
 const modules: Record<string, Module> = {
   recrutamento: { title: "Novo associado", description: "Cadastro manual de novos associados.", headers: [] },
   associados: { title: "Cadastros e associados", description: "Análise de inscrições, autorização e situação dos associados.", headers: ["Nome", "Número", "E-mail", "Cidade", "Status"] },
+  filiacoes: { title: "Solicitações de Filiação", description: "Análise, conferência estatutária e decisão sobre pedidos de filiação.", headers: [] },
   assembleias: { title: "Assembleias eletrônicas", description: "Convocação, quórum, pautas, votação, resultados e atas.", headers: [] },
   cargos: { title: "Cargos", description: "Crie e organize cargos sem alterar o código.", headers: ["Cargo", "Descrição", "Ordem", "Status"] },
   diretoria: { title: "Diretoria", description: "Gestão dos nomes e fotos exibidos no mural público.", headers: [] },
@@ -30,7 +31,7 @@ const modules: Record<string, Module> = {
 };
 
 const moduleAccess: Record<string, readonly number[]> = {
-  recrutamento: [5], associados: [1, 2, 3], assembleias: [1], cargos: [1, 2], diretoria: [1, 2], noticias: [1, 2, 4], comunicados: [1, 2, 4], eventos: [1, 2, 4], beneficios: [1, 2, 4], solicitacoes: [1, 2, 3], "recuperacao-senha": [1, 2, 3], transparencia: [1, 2], financeiro: [1, 2], documentos: [1, 2, 3], administradores: [1], logs: [1], configuracoes: [1],
+  recrutamento: [5], associados: [1, 2, 3], filiacoes: [1], assembleias: [1], cargos: [1, 2], diretoria: [1, 2], noticias: [1, 2, 4], comunicados: [1, 2, 4], eventos: [1, 2, 4], beneficios: [1, 2, 4], solicitacoes: [1, 2, 3], "recuperacao-senha": [1, 2, 3], transparencia: [1, 2], financeiro: [1, 2], documentos: [1, 2, 3], administradores: [1], logs: [1], configuracoes: [1],
 };
 
 export function generateStaticParams() { return Object.keys(modules).map(module => ({ module })); }
@@ -43,7 +44,8 @@ export default async function ModulePage({ params }: Props) {
   if (!item) notFound();
   const allowedLevels = moduleAccess[module] || [1];
   if (module === "recrutamento") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Novo associado</h2><p>Cadastre um associado e decida se o acesso será ativado imediatamente.</p></div></div><MemberAdmin registrationOnly /></AdminShell>;
-  if (module === "associados") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Cadastros e associados</h2><p>Analise inscrições recebidas, evite duplicidades e consulte quem já faz parte da AUMM.</p></div></div><ApplicationReviewAdmin /><MemberAdmin /></AdminShell>;
+  if (module === "associados") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Associados da AUMM</h2><p>Pesquise quem já faz parte, consulte números e atualize a situação dos associados.</p></div></div><MemberAdmin /></AdminShell>;
+  if (module === "filiacoes") return <AdminShell title={item.title} allowedLevels={allowedLevels} requiredPermissions={["canManageMembershipRequests"]}><ApplicationReviewAdmin /></AdminShell>;
   if (module === "assembleias") return <AdminShell title={item.title} allowedLevels={allowedLevels} requiredPermissions={["canManageAssemblies","canPublishAssembly","canPresideAssembly","canModerateAssembly","canCertifyResults","canFinalizeMinutes"]}><AssemblyAdmin /></AdminShell>;
   if (module === "diretoria") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Diretoria da AUMM</h2><p>As alterações feitas aqui aparecem no mural da página inicial.</p></div></div><BoardAdmin /></AdminShell>;
   if (module === "noticias") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Notícias da AUMM</h2><p>Crie publicações e escolha quais destaques vão rodar no topo da página inicial.</p></div></div><NewsAdmin /></AdminShell>;

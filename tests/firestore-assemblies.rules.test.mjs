@@ -13,6 +13,7 @@ import {
   setDoc,
   Timestamp,
   updateDoc,
+  writeBatch,
 } from "firebase/firestore";
 
 let environment;
@@ -150,4 +151,86 @@ test("admin nível 1 cria, publica e arquiva documento", async () => {
   await assertSucceeds(setDoc(ref,{title:"Ata",description:"Teste",category:"board_minutes",visibility:"members",sourceType:"external",externalUrl:"https://example.com/ata.pdf",status:"draft",published:false,createdBy:"admin-1",createdAt:serverTimestamp()}));
   await assertSucceeds(updateDoc(ref,{status:"published",published:true,publishedAt:serverTimestamp(),publishedBy:"admin-1"}));
   await assertSucceeds(updateDoc(ref,{status:"archived",published:false}));
+});
+
+function addMembershipRequest(db, { uid, requestId, cpfHash = "c".repeat(64), emailHash = "e".repeat(64), status = "pending" }) {
+  const batch = writeBatch(db);
+  batch.set(doc(db, "membershipRequests", requestId), {
+    requestId, ownerUid: uid, fullName: "João da Silva", birthDate: Timestamp.fromDate(new Date("1990-05-20T12:00:00Z")),
+    cpf: "52998224725", cpfNormalized: "52998224725", cpfHash,
+    email: `${uid}@example.com`, emailNormalized: `${uid}@example.com`, emailHash,
+    whatsapp: "(47) 99999-9999", category: "Motoboy", statuteAccepted: true, statuteVersion: "2021",
+    statuteAcceptedAt: serverTimestamp(), electronicAcceptanceType: "Aceite eletrônico da solicitação de filiação",
+    status, statutoryDocumentVerified: false, submittedAt: serverTimestamp(),
+  });
+  batch.set(doc(db, "membershipRequestCpfIndex", cpfHash), { requestId, ownerUid: uid, cpfHash, createdAt: serverTimestamp() });
+  batch.set(doc(db, "membershipRequestEmailIndex", emailHash), { requestId, ownerUid: uid, emailHash, createdAt: serverTimestamp() });
+  batch.set(doc(db, "membershipRequestOwners", uid), { requestId, ownerUid: uid, status: "pending", updatedAt: serverTimestamp() });
+  batch.set(doc(db, "membershipAuditLogs", `created-${requestId}`), { action: "MEMBERSHIP_REQUEST_CREATED", requestId, actorUid: uid, actorNameSnapshot: "Solicitante", timestamp: serverTimestamp() });
+  return batch.commit();
+}
+
+test("interessado anônimo cria atomicamente e relê somente o próprio pedido", async () => {
+  const own = environment.authenticatedContext("applicant-1").firestore();
+  await assertSucceeds(addMembershipRequest(own, { uid: "applicant-1", requestId: "request-1" }));
+  await assertSucceeds(getDoc(doc(own, "membershipRequestOwners", "applicant-1")));
+  await assertSucceeds(getDoc(doc(own, "membershipRequests", "request-1")));
+  const other = environment.authenticatedContext("applicant-2").firestore();
+  await assertFails(getDoc(doc(other, "membershipRequests", "request-1")));
+});
+
+test("índice por hash bloqueia uma segunda solicitação com o mesmo CPF", async () => {
+  const first = environment.authenticatedContext("applicant-1").firestore();
+  await assertSucceeds(addMembershipRequest(first, { uid: "applicant-1", requestId: "request-1" }));
+  const second = environment.authenticatedContext("applicant-2").firestore();
+  await assertFails(addMembershipRequest(second, { uid: "applicant-2", requestId: "request-2", emailHash: "f".repeat(64) }));
+});
+
+test("interessado não cria pedido já aprovado nem altera a decisão", async () => {
+  const db = environment.authenticatedContext("applicant-1").firestore();
+  await assertFails(addMembershipRequest(db, { uid: "applicant-1", requestId: "forged-approved", status: "approved" }));
+  await assertSucceeds(addMembershipRequest(db, { uid: "applicant-1", requestId: "request-1" }));
+  await assertFails(updateDoc(doc(db, "membershipRequests", "request-1"), { status: "approved", statutoryDocumentVerified: true }));
+});
+
+test("admin não aprova Motoboy antes da conferência documental", async () => {
+  await environment.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, "membershipRequests", "request-admin"), { requestId: "request-admin", ownerUid: "applicant-1", fullName: "João", email: "joao@example.com", category: "Motoboy", status: "pending", statutoryDocumentVerified: false });
+    await setDoc(doc(db, "membershipRequestOwners", "applicant-1"), { requestId: "request-admin", ownerUid: "applicant-1", status: "pending" });
+  });
+  const db = environment.authenticatedContext("admin-1").firestore();
+  await assertFails(updateDoc(doc(db, "membershipRequests", "request-admin"), { status: "approved", memberUid: "new-member", memberNumber: "AUMM-2026-000001" }));
+  await assertSucceeds(updateDoc(doc(db, "membershipRequests", "request-admin"), { statutoryDocumentVerified: true, statutoryDocumentVerifiedAt: serverTimestamp(), statutoryDocumentVerifiedBy: "admin-1" }));
+});
+
+test("admin analisa, aprova Ciclista e rejeita outra solicitação com registro atômico", async () => {
+  await environment.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await Promise.all([
+      setDoc(doc(db, "membershipRequests", "cycle-approval"), { requestId: "cycle-approval", ownerUid: "cycle-owner", fullName: "Maria Ciclista", email: "maria@example.com", category: "Ciclista", status: "pending", statutoryDocumentVerified: false }),
+      setDoc(doc(db, "membershipRequestOwners", "cycle-owner"), { requestId: "cycle-approval", ownerUid: "cycle-owner", status: "pending" }),
+      setDoc(doc(db, "membershipRequests", "request-reject"), { requestId: "request-reject", ownerUid: "reject-owner", fullName: "Carlos", email: "carlos@example.com", category: "Motoboy", status: "under_review", statutoryDocumentVerified: false }),
+      setDoc(doc(db, "membershipRequestOwners", "reject-owner"), { requestId: "request-reject", ownerUid: "reject-owner", status: "under_review" }),
+    ]);
+  });
+  const db = environment.authenticatedContext("admin-1").firestore();
+  const review = writeBatch(db);
+  review.update(doc(db, "membershipRequests", "cycle-approval"), { status: "under_review", reviewedAt: serverTimestamp(), reviewedBy: "admin-1" });
+  review.update(doc(db, "membershipRequestOwners", "cycle-owner"), { status: "under_review", updatedAt: serverTimestamp() });
+  review.set(doc(db, "membershipAuditLogs", "review-cycle"), { action: "MEMBERSHIP_REQUEST_REVIEW_STARTED", requestId: "cycle-approval", actorUid: "admin-1", actorNameSnapshot: "Presidente", timestamp: serverTimestamp() });
+  await assertSucceeds(review.commit());
+  const approve = writeBatch(db);
+  approve.set(doc(db, "associados", "cycle-member"), { uid: "cycle-member", membershipRequestId: "cycle-approval", email: "maria@example.com", status: "active" });
+  approve.set(doc(db, "publicMembers", "AUMM-2026-000001"), { uid: "cycle-member", memberNumber: "AUMM-2026-000001", status: "active" });
+  approve.update(doc(db, "membershipRequests", "cycle-approval"), { status: "approved", memberUid: "cycle-member", memberNumber: "AUMM-2026-000001", decisionAt: serverTimestamp(), decisionDate: Timestamp.now(), decisionBy: "admin-1" });
+  approve.update(doc(db, "membershipRequestOwners", "cycle-owner"), { status: "approved", memberNumber: "AUMM-2026-000001", updatedAt: serverTimestamp() });
+  approve.set(doc(db, "membershipAuditLogs", "approve-cycle"), { action: "MEMBERSHIP_REQUEST_APPROVED", requestId: "cycle-approval", actorUid: "admin-1", actorNameSnapshot: "Presidente", timestamp: serverTimestamp() });
+  await assertSucceeds(approve.commit());
+
+  const reject = writeBatch(db);
+  reject.update(doc(db, "membershipRequests", "request-reject"), { status: "rejected", decisionAt: serverTimestamp(), decisionDate: Timestamp.now(), decisionBy: "admin-1" });
+  reject.update(doc(db, "membershipRequestOwners", "reject-owner"), { status: "rejected", updatedAt: serverTimestamp() });
+  reject.set(doc(db, "membershipAuditLogs", "reject-request"), { action: "MEMBERSHIP_REQUEST_REJECTED", requestId: "request-reject", actorUid: "admin-1", actorNameSnapshot: "Presidente", timestamp: serverTimestamp() });
+  await assertSucceeds(reject.commit());
 });

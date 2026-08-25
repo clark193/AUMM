@@ -62,6 +62,11 @@ service cloud.firestore {
     function documentStaff() {
       return documentPermission('canManageDocuments') || documentPermission('canPublishDocuments') || documentPermission('canArchiveDocuments');
     }
+    function membershipStaff() {
+      return superAdmin() || (signedIn() && adminProfile().data.active == true
+        && adminProfile().data.permissions is map
+        && adminProfile().data.permissions.canManageMembershipRequests == true);
+    }
     function assemblyData(assemblyId) {
       return get(/databases/$(database)/documents/assemblies/$(assemblyId)).data;
     }
@@ -132,6 +137,80 @@ service cloud.firestore {
         && request.resource.data.phone is string && request.resource.data.phone.size() >= 10 && request.resource.data.phone.size() <= 30
         && request.resource.data.city is string && request.resource.data.city.size() >= 2 && request.resource.data.city.size() <= 100;
     }
+    function validMembershipRequest(id) {
+      return signedIn()
+        && request.resource.data.keys().hasOnly([
+          'requestId','ownerUid','fullName','birthDate','cpf','cpfNormalized','cpfHash',
+          'email','emailNormalized','emailHash','whatsapp','category','statuteAccepted',
+          'statuteVersion','statuteAcceptedAt','electronicAcceptanceType','status',
+          'statutoryDocumentVerified','submittedAt'
+        ])
+        && request.resource.data.requestId == id
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.fullName is string
+        && request.resource.data.fullName.size() >= 3
+        && request.resource.data.fullName.size() <= 160
+        && request.resource.data.birthDate is timestamp
+        && request.resource.data.cpf is string
+        && request.resource.data.cpf.size() == 11
+        && request.resource.data.cpfNormalized == request.resource.data.cpf
+        && request.resource.data.cpfHash is string
+        && request.resource.data.cpfHash.size() == 64
+        && request.resource.data.email is string
+        && request.resource.data.email.size() >= 5
+        && request.resource.data.email.size() <= 254
+        && request.resource.data.emailNormalized == request.resource.data.email
+        && request.resource.data.emailHash is string
+        && request.resource.data.emailHash.size() == 64
+        && request.resource.data.whatsapp is string
+        && request.resource.data.whatsapp.size() >= 14
+        && request.resource.data.whatsapp.size() <= 15
+        && request.resource.data.category in ['Motoboy','Ciclista']
+        && request.resource.data.statuteAccepted == true
+        && request.resource.data.statuteVersion == '2021'
+        && request.resource.data.statuteAcceptedAt == request.time
+        && request.resource.data.electronicAcceptanceType == 'Aceite eletrônico da solicitação de filiação'
+        && request.resource.data.status == 'pending'
+        && request.resource.data.statutoryDocumentVerified == false
+        && request.resource.data.submittedAt == request.time
+        && existsAfter(/databases/$(database)/documents/membershipRequestCpfIndex/$(request.resource.data.cpfHash))
+        && existsAfter(/databases/$(database)/documents/membershipRequestEmailIndex/$(request.resource.data.emailHash))
+        && existsAfter(/databases/$(database)/documents/membershipRequestOwners/$(request.auth.uid));
+    }
+    function validMembershipUpdate(id) {
+      return membershipStaff()
+        && resource.data.status in ['pending','under_review']
+        && request.resource.data.status in ['pending','under_review','approved','rejected']
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status','reviewedAt','reviewedBy','statutoryDocumentVerified',
+          'statutoryDocumentVerifiedAt','statutoryDocumentVerifiedBy','decisionAt',
+          'decisionDate','decisionBy','decisionNotes','meetingReference','minutesReference',
+          'memberUid','memberNumber'
+        ])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
+          || getAfter(/databases/$(database)/documents/membershipRequestOwners/$(resource.data.ownerUid)).data.status == request.resource.data.status)
+        && (request.resource.data.status != 'under_review'
+          || resource.data.status == 'under_review'
+          || (request.resource.data.reviewedAt == request.time && request.resource.data.reviewedBy == request.auth.uid))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['statutoryDocumentVerified'])
+          || (request.resource.data.statutoryDocumentVerified == true
+            && request.resource.data.statutoryDocumentVerifiedAt == request.time
+            && request.resource.data.statutoryDocumentVerifiedBy == request.auth.uid))
+        && (!(request.resource.data.status in ['approved','rejected'])
+          || (request.resource.data.decisionAt == request.time
+            && request.resource.data.decisionDate is timestamp
+            && request.resource.data.decisionBy == request.auth.uid))
+        && (request.resource.data.status != 'approved'
+          || request.resource.data.category != 'Motoboy'
+          || request.resource.data.statutoryDocumentVerified == true)
+        && (request.resource.data.status != 'approved'
+          || (request.resource.data.memberUid is string
+            && request.resource.data.memberNumber is string
+            && existsAfter(/databases/$(database)/documents/associados/$(request.resource.data.memberUid))
+            && getAfter(/databases/$(database)/documents/associados/$(request.resource.data.memberUid)).data.membershipRequestId == id
+            && existsAfter(/databases/$(database)/documents/publicMembers/$(request.resource.data.memberNumber))
+            && getAfter(/databases/$(database)/documents/publicMembers/$(request.resource.data.memberNumber)).data.uid == request.resource.data.memberUid));
+    }
     function validPasswordResetRequest() {
       return request.resource.data.keys().hasOnly(['email','phone','status','createdAt'])
         && request.resource.data.email is string
@@ -142,6 +221,67 @@ service cloud.firestore {
         && request.resource.data.phone.size() <= 30
         && request.resource.data.status == 'pending'
         && request.resource.data.createdAt == request.time;
+    }
+    match /membershipRequests/{id} {
+      allow create: if validMembershipRequest(id);
+      allow get: if (signedIn() && resource.data.ownerUid == request.auth.uid) || membershipStaff();
+      allow list: if membershipStaff();
+      allow update: if validMembershipUpdate(id);
+      allow delete: if superAdmin();
+    }
+    match /membershipRequestCpfIndex/{hash} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['requestId','ownerUid','cpfHash','createdAt'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.cpfHash == hash
+        && request.resource.data.createdAt == request.time
+        && existsAfter(/databases/$(database)/documents/membershipRequests/$(request.resource.data.requestId))
+        && getAfter(/databases/$(database)/documents/membershipRequests/$(request.resource.data.requestId)).data.ownerUid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/membershipRequests/$(request.resource.data.requestId)).data.cpfHash == hash;
+      allow read, update: if false;
+      allow delete: if superAdmin();
+    }
+    match /membershipRequestEmailIndex/{hash} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['requestId','ownerUid','emailHash','createdAt'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.emailHash == hash
+        && request.resource.data.createdAt == request.time
+        && existsAfter(/databases/$(database)/documents/membershipRequests/$(request.resource.data.requestId))
+        && getAfter(/databases/$(database)/documents/membershipRequests/$(request.resource.data.requestId)).data.ownerUid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/membershipRequests/$(request.resource.data.requestId)).data.emailHash == hash;
+      allow read, update: if false;
+      allow delete: if superAdmin();
+    }
+    match /membershipRequestOwners/{uid} {
+      allow create: if signedIn() && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['requestId','ownerUid','status','updatedAt'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.updatedAt == request.time
+        && existsAfter(/databases/$(database)/documents/membershipRequests/$(request.resource.data.requestId));
+      allow get: if own(uid) || membershipStaff();
+      allow list: if membershipStaff();
+      allow update: if membershipStaff()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','memberNumber','updatedAt'])
+        && request.resource.data.status in ['under_review','approved','rejected']
+        && request.resource.data.status == getAfter(/databases/$(database)/documents/membershipRequests/$(resource.data.requestId)).data.status;
+      allow delete: if superAdmin();
+    }
+    match /membershipAuditLogs/{id} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['action','requestId','actorUid','actorNameSnapshot','timestamp'])
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.timestamp == request.time
+        && ((request.resource.data.action == 'MEMBERSHIP_REQUEST_CREATED'
+          && existsAfter(/databases/$(database)/documents/membershipRequests/$(request.resource.data.requestId))
+          && getAfter(/databases/$(database)/documents/membershipRequests/$(request.resource.data.requestId)).data.ownerUid == request.auth.uid)
+          || (membershipStaff() && request.resource.data.action in [
+            'MEMBERSHIP_REQUEST_REVIEW_STARTED','MEMBERSHIP_DOCUMENT_VERIFIED',
+            'MEMBERSHIP_REQUEST_APPROVED','MEMBERSHIP_REQUEST_REJECTED'
+          ]));
+      allow read: if membershipStaff();
+      allow update, delete: if false;
     }
     match /associationApplications/{id} {
       allow create: if validApplication(id);
@@ -182,13 +322,13 @@ service cloud.firestore {
     }
     match /associados/{id} {
       allow read: if (signedIn() && resource.data.uid == request.auth.uid) || hasPermission('members.read');
-      allow create: if hasPermission('members.create') || hasPermission('members.write');
+      allow create: if hasPermission('members.create') || hasPermission('members.write') || membershipStaff();
       allow update: if hasPermission('members.write');
       allow delete: if superAdmin();
     }
     match /publicMembers/{token} {
       allow read: if true;
-      allow create: if hasPermission('members.create') || hasPermission('members.write');
+      allow create: if hasPermission('members.create') || hasPermission('members.write') || membershipStaff();
       allow update, delete: if hasPermission('members.write');
     }
     match /assemblies/{assemblyId} {

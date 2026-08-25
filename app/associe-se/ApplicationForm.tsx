@@ -1,237 +1,46 @@
 "use client";
-import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, KeyRound, Send, ShieldCheck } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { ArrowLeft, Check, CheckCircle2, LoaderCircle, Send, ShieldCheck, X } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { loadOwnMembershipRequest, submitApplication, type ApplicationPayload, type MembershipRequestStatus } from "@/lib/application";
+import { maskBirthDate, maskCpf, maskWhatsapp } from "@/lib/membershipValidation";
 import { firebaseEnabled } from "@/lib/firebase";
-import { submitApplication, type ApplicationPayload } from "@/lib/application";
-import { withBasePath } from "@/lib/paths";
 
-const initial: ApplicationPayload = {
-  fullName: "",
-  email: "",
-  phone: "",
-  city: "Blumenau",
-  consent: false,
-};
+const initial: ApplicationPayload = { fullName: "", birthDate: "", cpf: "", whatsapp: "", email: "", category: "", statuteAccepted: false };
+function statusCopy(request: MembershipRequestStatus) {
+  if (request.status === "approved") return { icon: <CheckCircle2 />, title: "Sua filiação foi aprovada!", badge: "APROVADA", text: "Sua solicitação foi aprovada pela AUMM. Entre em contato com a administração para receber as orientações de acesso ao Portal do Associado." };
+  if (request.status === "rejected") return { icon: <X />, title: "Atualização da sua solicitação", badge: "NÃO APROVADA", text: "Sua solicitação não foi aprovada neste momento. Entre em contato com a AUMM caso queira mais informações." };
+  return { icon: <Check />, title: "Seu pedido já foi recebido", badge: "EM ANÁLISE", text: "Sua solicitação de filiação à AUMM já está registrada. Aguarde a análise da administração. Não é necessário realizar uma nova solicitação." };
+}
 export function ApplicationForm() {
   const [data, setData] = useState(initial);
-  const [password, setPassword] = useState("");
-  const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [request, setRequest] = useState<MembershipRequestStatus | null>(null);
+  const [checking, setChecking] = useState(firebaseEnabled);
+  const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
-  const update = (name: keyof ApplicationPayload, value: string | boolean) =>
-    setData((v) => ({ ...v, [name]: value }));
-  async function send(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setMessage(null);
-    try {
-      if (data.phone.replace(/\D/g, "").length < 10)
-        throw new Error("Informe um telefone celular válido.");
-      if (!data.consent)
-        throw new Error(
-          "É necessário aceitar os termos e a política de privacidade.",
-        );
-      if (!firebaseEnabled)
-        throw new Error("Cadastro temporariamente indisponível.");
-      if (password.length < 8)
-        throw new Error("Crie uma senha com pelo menos 8 caracteres.");
-      if (password !== passwordConfirmation)
-        throw new Error("A confirmação da senha está diferente.");
-      const id = await submitApplication(data, password);
-      setMessage({
-        type: "success",
-        text: `Cadastro enviado com sucesso. Protocolo: ${id.slice(0, 12).toUpperCase()}.`,
-      });
-      setData(initial);
-      setPassword("");
-      setPasswordConfirmation("");
-    } catch (err) {
-      setMessage({
-        type: "error",
-        text: err instanceof Error ? err.message : "Não foi possível enviar.",
-      });
-    } finally {
-      setBusy(false);
-    }
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (!firebaseEnabled) return;
+    loadOwnMembershipRequest().then(setRequest).catch((caught) => setError(caught instanceof Error ? caught.message : "Não foi possível consultar sua solicitação.")).finally(() => setChecking(false));
+  }, []);
+  const update = <K extends keyof ApplicationPayload>(name: K, value: ApplicationPayload[K]) => setData((current) => ({ ...current, [name]: value }));
+  function prepare(event: FormEvent) { event.preventDefault(); setError(""); setConfirming(true); }
+  async function confirm() {
+    setBusy(true); setError("");
+    try { setRequest(await submitApplication(data)); setConfirming(false); }
+    catch (caught) { setError(caught instanceof Error ? caught.message : "Não foi possível enviar a solicitação."); setConfirming(false); }
+    finally { setBusy(false); }
   }
-  return (
-    <main className="form-shell">
-      <div className="container form-wrap">
-        <aside className="form-aside">
-          <Link href="/">
-            <ArrowLeft size={17} /> Voltar ao site
-          </Link>
-          <Image src={withBasePath("/logo.png")} width={92} height={92} alt="AUMM" />
-          <h2>Junte-se à AUMM</h2>
-          <p>
-            Preencha seus dados com atenção. O envio inicia uma análise e não
-            ativa automaticamente a associação.
-          </p>
-          <div className="steps">
-            <span>
-              <i>1</i> Envie seus dados
-            </span>
-            <span>
-              <i>2</i> Aguarde a análise
-            </span>
-            <span>
-              <i>3</i> Receba a confirmação
-            </span>
-          </div>
-        </aside>
-        <form className="application-form" onSubmit={send}>
-          <div className="form-heading">
-            <div>
-              <h1>Solicitação de associação</h1>
-              <p>Campos com * são obrigatórios.</p>
-            </div>
-            <span className="demo-badge">
-              Ambiente {firebaseEnabled ? "conectado" : "indisponível"}
-            </span>
-          </div>
-          <FormSection title="Seus dados">
-            <Field
-              label="Nome completo *"
-              name="fullName"
-              value={data.fullName}
-              onChange={update}
-              required
-            />
-            <Field
-              label="E-mail *"
-              name="email"
-              type="email"
-              value={data.email}
-              onChange={update}
-              required
-            />
-            <Field
-              label="Telefone celular *"
-              name="phone"
-              type="tel"
-              value={data.phone}
-              onChange={update}
-              required
-              placeholder="(47) 99999-9999"
-            />
-            <Field
-              label="Cidade *"
-              name="city"
-              value={data.city}
-              onChange={update}
-              required
-            />
-          </FormSection>
-          <FormSection title="Crie seu acesso">
-            <label className="field">
-              <span><KeyRound size={14} /> Senha *</span>
-              <input
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                minLength={8}
-                required
-                placeholder="Mínimo de 8 caracteres"
-              />
-            </label>
-            <label className="field">
-              <span><ShieldCheck size={14} /> Confirmar senha *</span>
-              <input
-                type="password"
-                autoComplete="new-password"
-                value={passwordConfirmation}
-                onChange={(event) => setPasswordConfirmation(event.target.value)}
-                minLength={8}
-                required
-                placeholder="Digite a mesma senha"
-              />
-            </label>
-            <p className="password-notice">
-              Sua senha fica protegida no Firebase Authentication e não é exibida para a administração. O acesso ao portal será liberado somente depois da aprovação.
-            </p>
-          </FormSection>
-          <label className="consent">
-            <input
-              type="checkbox"
-              required
-              checked={data.consent}
-              onChange={(e) => update("consent", e.target.checked)}
-            />
-            <span>
-              Li e aceito a{" "}
-              <Link className="text-link" href="/privacidade">
-                Política de Privacidade
-              </Link>
-              , autorizo o tratamento dos dados para análise da associação e
-              declaro que as informações são verdadeiras.
-            </span>
-          </label>
-          {message && (
-            <div className={`form-message ${message.type}`}>
-              {message.type === "success" && <CheckCircle2 size={16} />}{" "}
-              {message.text}
-            </div>
-          )}
-          <button className="button" disabled={busy}>
-            {busy ? (
-              "Enviando..."
-            ) : (
-              <>
-                Enviar solicitação <Send size={17} />
-              </>
-            )}
-          </button>
-        </form>
-      </div>
-    </main>
-  );
-}
-function FormSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="form-section">
-      <h2>{title}</h2>
-      <div className="form-grid">{children}</div>
-    </div>
-  );
-}
-function Field({
-  label,
-  name,
-  value,
-  onChange,
-  type = "text",
-  ...props
-}: {
-  label: string;
-  name: keyof ApplicationPayload;
-  value: string;
-  onChange: (n: keyof ApplicationPayload, v: string) => void;
-  type?: string;
-  required?: boolean;
-  placeholder?: string;
-  maxLength?: number;
-}) {
-  return (
-    <label className="field">
-      <span>{label}</span>
-      <input
-        {...props}
-        type={type}
-        value={value}
-        onChange={(e) => onChange(name, e.target.value)}
-      />
-    </label>
-  );
+  if (checking) return <main className="membership-page"><div className="membership-loading"><LoaderCircle className="spin" /><p>Consultando sua solicitação…</p></div></main>;
+  if (request) { const copy = statusCopy(request); return <main className="membership-page"><section className={`membership-status membership-status-${request.status}`}><div className="membership-status-icon">{copy.icon}</div><span className="eyebrow">Pedido recebido</span><h1>{copy.title}</h1><p>{copy.text}</p><div className="membership-status-badge"><small>Status</small><strong>{copy.badge}</strong></div>{request.memberNumber && <p className="membership-number">Número de associado: <strong>{request.memberNumber}</strong></p>}<Link className="button" href="/">Voltar para o site</Link></section></main>; }
+  return <main className="membership-page"><div className="membership-wrap"><Link className="membership-back" href="/"><ArrowLeft size={17} /> Voltar ao site</Link><header className="membership-heading"><span className="eyebrow">Filiação AUMM</span><h1>Faça parte da AUMM</h1><p>Junte-se à Associação União Maior Motoboys e faça parte de uma entidade criada para representar e fortalecer os profissionais de entrega.</p></header><form className="membership-form" onSubmit={prepare}>
+    <label className="field"><span>Nome completo</span><input required autoComplete="name" value={data.fullName} onChange={(e) => update("fullName", e.target.value)} /></label>
+    <label className="field"><span>Data de nascimento</span><input required inputMode="numeric" autoComplete="bday" placeholder="DD/MM/AAAA" maxLength={10} value={data.birthDate} onChange={(e) => update("birthDate", maskBirthDate(e.target.value))} /></label>
+    <label className="field"><span>CPF</span><input required inputMode="numeric" autoComplete="off" placeholder="000.000.000-00" maxLength={14} value={data.cpf} onChange={(e) => update("cpf", maskCpf(e.target.value))} /></label>
+    <label className="field"><span>WhatsApp</span><input required inputMode="numeric" autoComplete="tel" placeholder="(47) 99999-9999" maxLength={15} value={data.whatsapp} onChange={(e) => update("whatsapp", maskWhatsapp(e.target.value))} /></label>
+    <label className="field membership-full"><span>E-mail</span><input required type="email" autoComplete="email" value={data.email} onChange={(e) => update("email", e.target.value)} /></label>
+    <fieldset className="membership-category membership-full"><legend>Como você trabalha?</legend><label><input required type="radio" name="category" checked={data.category === "Motoboy"} onChange={() => update("category", "Motoboy")} /><span>Motoboy</span></label><label><input required type="radio" name="category" checked={data.category === "Ciclista"} onChange={() => update("category", "Ciclista")} /><span>Ciclista</span></label></fieldset>
+    <label className="membership-consent membership-full"><input required type="checkbox" checked={data.statuteAccepted} onChange={(e) => update("statuteAccepted", e.target.checked)} /><span>Li e concordo com o <Link href="/estatuto" target="_blank" rel="noopener noreferrer">Estatuto Social da AUMM</Link> e solicito minha filiação à Associação União Maior Motoboys.</span></label>
+    {error && <div className="form-message error membership-full">{error}</div>}<button className="button membership-submit membership-full" disabled={!firebaseEnabled}><Send size={17} /> Solicitar filiação</button><p className="membership-privacy membership-full">Seus dados serão utilizados exclusivamente para analisar e administrar sua solicitação de filiação à AUMM, conforme as regras da associação e sua <Link href="/privacidade">política de privacidade</Link>.</p>
+  </form></div>{confirming && <div className="membership-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title"><div><ShieldCheck size={34} /><h2 id="confirm-title">Confirmar solicitação</h2><p>Você confirma que os dados informados estão corretos e deseja solicitar sua filiação à AUMM?</p><div><button className="button button-dark" type="button" onClick={() => setConfirming(false)} disabled={busy}>Voltar</button><button className="button" type="button" onClick={confirm} disabled={busy}>{busy ? <><LoaderCircle className="spin" /> Enviando…</> : "Confirmar solicitação"}</button></div></div></div>}</main>;
 }

@@ -1,90 +1,76 @@
 import { FirebaseError } from "firebase/app";
-import {
-  createUserWithEmailAndPassword,
-  deleteUser,
-  EmailAuthProvider,
-  linkWithCredential,
-  signOut,
-  type User,
-} from "firebase/auth";
-import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { onAuthStateChanged, signInAnonymously, type User } from "firebase/auth";
+import { doc, getDoc, serverTimestamp, Timestamp, writeBatch } from "firebase/firestore";
 import { getFirebaseServices } from "./firebase";
+import { maskWhatsapp, onlyDigits, parseBrazilianDate, validCpf } from "./membershipValidation";
+import { STATUTE_VERSION } from "./statute/version";
 
-export type ApplicationPayload = {
-  fullName: string;
-  email: string;
-  phone: string;
-  city: string;
-  consent: boolean;
-};
-
+export { STATUTE_VERSION } from "./statute/version";
+export type MembershipCategory = "Motoboy" | "Ciclista";
+export type MembershipStatus = "pending" | "under_review" | "approved" | "rejected";
+export type ApplicationPayload = { fullName: string; birthDate: string; cpf: string; whatsapp: string; email: string; category: MembershipCategory | ""; statuteAccepted: boolean };
+export type MembershipRequestStatus = { requestId: string; status: MembershipStatus; category?: MembershipCategory; submittedAt?: Timestamp; memberNumber?: string };
 async function sha256(value: string) {
-  const bytes = new TextEncoder().encode(value);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
-
-function friendlyAccountError(error: unknown) {
+function friendlyError(error: unknown) {
   if (error instanceof FirebaseError) {
-    if (error.code === "auth/email-already-in-use") return new Error("Este e-mail já possui uma conta ou uma inscrição na AUMM.");
-    if (error.code === "auth/weak-password") return new Error("Escolha uma senha mais forte, com pelo menos 8 caracteres.");
-    if (error.code === "auth/invalid-email") return new Error("Informe um endereço de e-mail válido.");
-    if (error.code === "permission-denied") return new Error("Não foi possível registrar a inscrição. Atualize a página e tente novamente.");
+    if (error.code === "permission-denied") return new Error("Já existe uma solicitação vinculada aos dados informados ou o serviço está temporariamente indisponível.");
+    if (error.code === "auth/operation-not-allowed") return new Error("A solicitação está temporariamente indisponível. A autenticação anônima precisa ser habilitada no Firebase.");
+    if (error.code === "unavailable") return new Error("Sem conexão com o serviço. Verifique sua internet e tente novamente.");
   }
-  return error instanceof Error ? error : new Error("Não foi possível enviar a inscrição.");
+  return error instanceof Error ? error : new Error("Não foi possível enviar a solicitação.");
 }
-
-export async function submitApplication(payload: ApplicationPayload, password: string) {
-  const { auth, db } = getFirebaseServices();
-  const email = payload.email.trim().toLowerCase();
-  const applicationId = await sha256(`email:${email}`);
-  const applicationRef = doc(db, "associationApplications", applicationId);
-  const summaryRef = doc(db, "applicationSummaries", applicationId);
-  let applicant: User | null = null;
-  let accountCreatedNow = false;
-
+export async function ensureApplicantSession(): Promise<User> {
+  const { auth } = getFirebaseServices();
+  if (auth.currentUser) return auth.currentUser;
+  await new Promise<void>((resolve) => { const stop = onAuthStateChanged(auth, () => { stop(); resolve(); }); });
+  if (auth.currentUser) return auth.currentUser;
+  return (await signInAnonymously(auth)).user;
+}
+export async function loadOwnMembershipRequest(): Promise<MembershipRequestStatus | null> {
+  const user = await ensureApplicantSession();
+  const { db } = getFirebaseServices();
+  const owner = await getDoc(doc(db, "membershipRequestOwners", user.uid));
+  if (!owner.exists()) return null;
+  const requestId = String(owner.data().requestId || "");
+  if (!requestId) return null;
+  const request = await getDoc(doc(db, "membershipRequests", requestId));
+  return request.exists() ? ({ requestId, ...request.data() } as MembershipRequestStatus) : null;
+}
+export async function submitApplication(payload: ApplicationPayload) {
+  const user = await ensureApplicantSession();
+  const { db } = getFirebaseServices();
+  const birthDateValue = parseBrazilianDate(payload.birthDate);
+  const cpfNormalized = onlyDigits(payload.cpf);
+  const emailNormalized = payload.email.trim().toLowerCase();
+  const whatsapp = maskWhatsapp(payload.whatsapp);
+  if (payload.fullName.trim().length < 3) throw new Error("Informe seu nome completo.");
+  if (!birthDateValue) throw new Error("Informe uma data de nascimento válida no formato DD/MM/AAAA.");
+  if (!validCpf(cpfNormalized)) throw new Error("Informe um CPF válido.");
+  if (onlyDigits(whatsapp).length < 10) throw new Error("Informe um WhatsApp válido.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNormalized)) throw new Error("Informe um e-mail válido.");
+  if (!payload.category) throw new Error("Selecione Motoboy ou Ciclista.");
+  if (!payload.statuteAccepted) throw new Error("É necessário ler e aceitar o Estatuto Social da AUMM.");
+  const [cpfHash, emailHash] = await Promise.all([sha256(`aumm:membership:cpf:${cpfNormalized}`), sha256(`aumm:membership:email:${emailNormalized}`)]);
+  const requestId = crypto.randomUUID().replaceAll("-", "");
   try {
-    if (auth.currentUser?.isAnonymous) {
-      const credential = EmailAuthProvider.credential(email, password);
-      applicant = (await linkWithCredential(auth.currentUser, credential)).user;
-      accountCreatedNow = true;
-    } else if (auth.currentUser?.email?.toLowerCase() === email) {
-      applicant = auth.currentUser;
-    } else {
-      if (auth.currentUser) await signOut(auth);
-      applicant = (await createUserWithEmailAndPassword(auth, email, password)).user;
-      accountCreatedNow = true;
-    }
-    await applicant.getIdToken(true);
-
     const batch = writeBatch(db);
-    batch.set(applicationRef, {
-      ...payload,
-      applicationId,
-      email,
-      fullName: payload.fullName.trim(),
-      phone: payload.phone.trim(),
-      city: payload.city.trim(),
-      consent: true,
-      consentVersion: "2026-08",
-      consentAt: serverTimestamp(),
-      applicantUid: applicant.uid,
-      authAccountCreated: true,
-      status: "pending",
-      createdAt: serverTimestamp(),
+    batch.set(doc(db, "membershipRequests", requestId), {
+      requestId, ownerUid: user.uid, fullName: payload.fullName.trim(), birthDate: Timestamp.fromDate(birthDateValue),
+      cpf: cpfNormalized, cpfNormalized, cpfHash, email: emailNormalized, emailNormalized, emailHash,
+      whatsapp, category: payload.category, statuteAccepted: true, statuteVersion: STATUTE_VERSION,
+      statuteAcceptedAt: serverTimestamp(), electronicAcceptanceType: "Aceite eletrônico da solicitação de filiação",
+      status: "pending", statutoryDocumentVerified: false, submittedAt: serverTimestamp(),
     });
-    batch.set(summaryRef, {
-      applicationId,
-      fullName: payload.fullName.trim(),
-      status: "pending",
-      createdAt: serverTimestamp(),
-    });
+    batch.set(doc(db, "membershipRequestCpfIndex", cpfHash), { requestId, ownerUid: user.uid, cpfHash, createdAt: serverTimestamp() });
+    batch.set(doc(db, "membershipRequestEmailIndex", emailHash), { requestId, ownerUid: user.uid, emailHash, createdAt: serverTimestamp() });
+    batch.set(doc(db, "membershipRequestOwners", user.uid), { requestId, ownerUid: user.uid, status: "pending", updatedAt: serverTimestamp() });
+    batch.set(doc(db, "membershipAuditLogs", crypto.randomUUID()), { action: "MEMBERSHIP_REQUEST_CREATED", requestId, actorUid: user.uid, actorNameSnapshot: "Solicitante", timestamp: serverTimestamp() });
     await batch.commit();
-    return applicationId;
-  } catch (error) {
-    if (accountCreatedNow && applicant) {
-      try { await deleteUser(applicant); } catch { /* A conta sem inscrição poderá ser removida no console. */ }
-    }
-    throw friendlyAccountError(error);
-  }
+    localStorage.setItem("aummMembershipRequestSubmitted", "true");
+    localStorage.setItem("aummMembershipRequestId", requestId);
+    return { requestId, status: "pending" as const };
+  } catch (error) { throw friendlyError(error); }
 }

@@ -12,6 +12,7 @@ import {
   BookOpenText,
   CalendarDays,
   FileText,
+  ClipboardCheck,
   Handshake,
   LayoutDashboard,
   LockKeyhole,
@@ -34,6 +35,7 @@ const links = [
   ["/admin", "Dashboard", LayoutDashboard, [1, 2, 3, 4, 5]],
   ["/admin/recrutamento", "Novo associado", UsersRound, [5]],
   ["/admin/associados", "Cadastros e associados", UsersRound, [1, 2, 3]],
+  ["/admin/filiacoes", "Filiações", ClipboardCheck, [1]],
   ["/admin/assembleias", "Assembleias eletrônicas", Vote, [1]],
   ["/admin/cargos", "Cargos", Tags, [1, 2]],
   ["/admin/diretoria", "Diretoria", ShieldCheck, [1, 2]],
@@ -120,7 +122,8 @@ export function AdminShell({
               {links
                 .filter(([href, , , levels]) =>
                   (levels as readonly number[]).includes(level)
-                    || (href === "/admin/assembleias" && ["canManageAssemblies","canPublishAssembly","canPresideAssembly","canModerateAssembly","canCertifyResults","canFinalizeMinutes"].some((permission) => permissions[permission] === true)),
+                    || (href === "/admin/assembleias" && ["canManageAssemblies","canPublishAssembly","canPresideAssembly","canModerateAssembly","canCertifyResults","canFinalizeMinutes"].some((permission) => permissions[permission] === true))
+                    || (href === "/admin/filiacoes" && permissions.canManageMembershipRequests === true),
                 )
                 .map(([href, label, Icon]) => (
                   <Link

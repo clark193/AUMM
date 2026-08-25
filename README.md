@@ -15,7 +15,8 @@ Plataforma web da AUMM — Associação União Maior Motoboys. O projeto reúne 
 
 - Site institucional responsivo: início, quem somos, diretoria, projetos, ações, benefícios, parceiros, eventos, contato e páginas legais;
 - Notícias com listagem vazia inicial, metadados, sitemap, robots e Open Graph;
-- Cadastro público com validações, consentimento LGPD e gravação protegida no Firestore;
+- Filiação pública simplificada com CPF validado, aceite versionado do Estatuto, acompanhamento após recarga e proteção atômica contra duplicidade;
+- Estatuto Social de 2021 integral em HTML, com índice, busca local, âncoras por artigo e impressão;
 - Estrutura preparada para aprovação, número único, perfil público mínimo e log de auditoria;
 - Login Firebase, solicitação de recuperação atendida pelo WhatsApp e separação de acesso de associado/admin;
 - Portal do associado, perfil resumido, alteração de senha e carteirinha;
@@ -64,13 +65,13 @@ npm run build:firebase
 
 ## Arquitetura do Firestore
 
-Collections principais: `users`, `associados`, `publicMembers`, `associationApplications`, `applicationSummaries`, `passwordResetRequests`, `dashboardActivity`, `roles`, `adminRoles`, `news`, `communications`, `partners`, `benefits`, `events`, `documents`, `requests`, `transparency`, `financialEntries`, `auditLogs`, `settings`, `notifications` e `counters`.
+Collections principais: `users`, `associados`, `publicMembers`, `membershipRequests`, `membershipRequestOwners`, `membershipRequestCpfIndex`, `membershipRequestEmailIndex`, `membershipAuditLogs`, `associationApplications` (legado), `applicationSummaries` (legado), `passwordResetRequests`, `dashboardActivity`, `roles`, `adminRoles`, `news`, `communications`, `partners`, `benefits`, `events`, `documents`, `requests`, `transparency`, `financialEntries`, `auditLogs`, `settings`, `notifications` e `counters`.
 
 Dados privados ficam em `associados` e `users`. A verificação pública consulta somente `publicMembers`, documento propositalmente mínimo. No modo Spark, a autorização administrativa consulta `adminRoles/{uid}` diretamente pelas regras.
 
 ## Segurança
 
-O frontend nunca é a autoridade de permissão. As regras do Firestore verificam autenticação, propriedade e permissões. No cadastro público, o candidato cria uma conta de e-mail/senha, mas só recebe acesso ao portal depois da aprovação administrativa. A senha permanece no Firebase Authentication e nunca é gravada no Firestore. Um identificador determinístico derivado do e-mail evita duplicidade no fluxo normal.
+O frontend nunca é a autoridade de permissão. As regras do Firestore verificam autenticação, propriedade e permissões. A solicitação pública usa sessão anônima e só vira filiação depois da decisão administrativa. Índices SHA-256 de CPF e e-mail impedem pedidos repetidos no mesmo lote atômico. A CNH não é enviada nem armazenada; quando aplicável, sua conferência ocorre fora do sistema.
 
 Nunca versione `.env.local`, `.firebaserc`, chaves de conta de serviço ou credenciais. O `.gitignore` bloqueia arquivos `.env*`; apenas `.env.example` deve ser público.
 
@@ -95,3 +96,7 @@ O portal inclui convocação, ciência, presença, chamadas estatutárias, discu
 ## Documentos Institucionais
 
 O painel administra Estatuto, atas, editais, convocações, normas e prestação de contas por arquivo estático, URL externa ou documento gerado pela Assembleia. Consulte `docs/DOCUMENTOS.md`.
+
+## Filiações e Estatuto em HTML
+
+Consulte `docs/FILIACOES.md` para o fluxo público, proteção contra duplicidade, análise administrativa, conferência documental externa e versionamento do Estatuto.

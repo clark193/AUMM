@@ -62,11 +62,12 @@ Os valores `NEXT_PUBLIC_*` do SDK Web identificam o projeto, mas não concedem a
 2. Clique em **Primeiros passos**.
 3. Abra a aba **Método de login**.
 4. Clique em **E-mail/senha**.
-5. Ative **E-mail/senha** e clique em **Salvar**. Não é necessário ativar login por link neste momento.
-6. Não é necessário ativar o provedor anônimo. O candidato cria a própria senha no formulário e a conta permanece bloqueada pelo Firestore até a aprovação.
-7. Em **Configurações → Domínios autorizados**, confirme `localhost` durante o desenvolvimento e `clark193.github.io` para a prévia no GitHub Pages.
-8. Quando os domínios forem comprados, adicione `aumm.com.br`, `www.aumm.com.br`, `associado.aumm.com.br` e `admin.aumm.com.br`.
-9. Em **Modelos**, personalize os e-mails de recuperação de senha com o nome e os contatos da AUMM.
+5. Ative **E-mail/senha** e clique em **Salvar**. Esse método é usado pelo Portal do Associado depois da aprovação.
+6. Volte à lista de provedores, abra **Anônimo**, ative-o e clique em **Salvar**. A sessão anônima protege o pedido público sem exigir senha antes da análise.
+7. Não é necessário ativar login por link neste momento.
+8. Em **Configurações → Domínios autorizados**, confirme `localhost` durante o desenvolvimento e os domínios de publicação utilizados pelo projeto.
+9. Quando os domínios forem comprados, adicione `aumm.com.br`, `www.aumm.com.br`, `associado.aumm.com.br` e `admin.aumm.com.br`.
+10. Em **Modelos**, personalize os e-mails de recuperação de senha com o nome e os contatos da AUMM.
 
 Referência: https://firebase.google.com/docs/auth/web/password-auth
 
@@ -157,13 +158,15 @@ Referência: https://firebase.google.com/docs/app-check/web/recaptcha-enterprise
 1. Na raiz, execute `npm run dev`.
 2. Abra http://localhost:3000.
 3. Teste o site em largura de celular e desktop.
-4. Abra `/associe-se`, preencha somente dados fictícios, crie uma senha de teste e envie.
-5. No Firestore, confirme o documento em `associationApplications`.
-6. Entre no nível 1, aprove a inscrição e confirme que o painel não solicita nem exibe a senha escolhida.
-7. Entre no portal com o e-mail e a senha criados no formulário.
-8. Teste recuperação de senha.
-9. Entre no admin e confirme que um usuário comum é recusado.
-10. Execute `npm run lint`, `npm run typecheck` e `npm run build`.
+4. Abra `/associe-se`, preencha somente os seis dados básicos com informações fictícias, aceite o Estatuto e envie.
+5. No Firestore, confirme o documento em `membershipRequests` e os índices SHA-256 correspondentes.
+6. Atualize a página e confirme que o formulário não reaparece.
+7. Entre no nível 1, abra **Filiações**, coloque o pedido em análise e, para Motoboy, marque a documentação como conferida fora do sistema.
+8. Aprove a filiação, copie o acesso temporário e teste o Portal do Associado.
+9. Teste recuperação de senha.
+10. Entre no admin e confirme que um usuário comum é recusado.
+11. Abra `/estatuto`, teste busca, índice, link de artigo e impressão.
+12. Execute `npm run lint`, `npm run typecheck`, `npm test` e `npm run test:rules`.
 
 ## 15. Publicar no Firebase Hosting
 
