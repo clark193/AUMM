@@ -1,0 +1,7 @@
+User-Agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /associado/
+Disallow: /verificar/
+
+Sitemap: https://clark193.github.io/AUMM/sitemap.xml
