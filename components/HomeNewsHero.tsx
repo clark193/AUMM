@@ -3,10 +3,8 @@
 import Link from "next/link";
 import { collection, onSnapshot, query, Timestamp, where } from "firebase/firestore";
 import {
-  ArrowLeft,
   ArrowRight,
   BadgeCheck,
-  Newspaper,
   ShieldCheck,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -80,14 +78,8 @@ export function HomeNewsHero() {
   }, [highlights.length]);
 
   const activeIndex = highlights.length ? active % highlights.length : 0;
-  const current = highlights[activeIndex];
-  const move = (direction: number) => {
-    if (!highlights.length) return;
-    setActive((index) => (index + direction + highlights.length) % highlights.length);
-  };
-
   return (
-    <section className={`hero hero-news ${current ? "has-news" : ""}`}>
+    <section className={`hero hero-news ${highlights.length ? "has-news" : ""}`}>
       <div className="hero-news-backgrounds" aria-hidden="true">
         {highlights.map((item, index) => (
           <div
@@ -125,39 +117,6 @@ export function HomeNewsHero() {
           </div>
         </div>
 
-        <div className="hero-news-panel" aria-live="polite">
-          {current ? (
-            <>
-              <span className="hero-news-label">
-                <Newspaper size={15} /> Destaque AUMM · {current.category || "Notícia"}
-              </span>
-              <h2>{current.title}</h2>
-              <p>{current.summary}</p>
-              <div className="hero-news-footer">
-                <Link href="/noticias">
-                  Ver notícias <ArrowRight size={16} />
-                </Link>
-                {highlights.length > 1 && (
-                  <div className="hero-news-controls">
-                    <button type="button" onClick={() => move(-1)} aria-label="Notícia anterior">
-                      <ArrowLeft />
-                    </button>
-                    <span>{activeIndex + 1} / {highlights.length}</span>
-                    <button type="button" onClick={() => move(1)} aria-label="Próxima notícia">
-                      <ArrowRight />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="hero-news-empty">
-              <Newspaper />
-              <span>Destaques da AUMM</span>
-              <p>As notícias escolhidas pela administração aparecerão aqui.</p>
-            </div>
-          )}
-        </div>
       </div>
       <div className="hero-stripe">
         <div className="container">

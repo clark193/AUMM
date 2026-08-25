@@ -11,6 +11,7 @@ import {
   Home,
   KeyRound,
   LogOut,
+  Vote,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -70,6 +71,9 @@ export function MemberPortalContent() {
           </Link>
           <Link href="/associado/carteirinha">
             <CreditCard /> Carteirinha
+          </Link>
+          <Link href="/associado/assembleias">
+            <Vote /> Assembleias
           </Link>
           <Link href="/associado/transparencia">
             <BarChart3 /> Transparência

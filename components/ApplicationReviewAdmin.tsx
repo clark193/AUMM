@@ -252,6 +252,7 @@ export function ApplicationReviewAdmin() {
         role: "Associado",
         status: "active",
         authorized: true,
+        eligibleToVote: true,
         source: "public_application",
         approvedBy: auth.currentUser.uid,
         createdAt: serverTimestamp(),

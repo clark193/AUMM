@@ -42,6 +42,76 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/associados/$(request.auth.uid))
         && get(/databases/$(database)/documents/associados/$(request.auth.uid)).data.status == 'active';
     }
+    function hasAssemblyPermission(permission) {
+      return superAdmin() || (signedIn() && adminProfile().data.active == true
+        && adminProfile().data.permissions is map
+        && adminProfile().data.permissions[permission] == true);
+    }
+    function assemblyStaff() {
+      return hasAssemblyPermission('canManageAssemblies')
+        || hasAssemblyPermission('canPublishAssembly')
+        || hasAssemblyPermission('canPresideAssembly')
+        || hasAssemblyPermission('canModerateAssembly')
+        || hasAssemblyPermission('canCertifyResults')
+        || hasAssemblyPermission('canFinalizeMinutes');
+    }
+    function documentPermission(permission) {
+      return superAdmin() || hasPermission('documents.write')
+        || (signedIn() && adminProfile().data.active == true && adminProfile().data.permissions is map && adminProfile().data.permissions[permission] == true);
+    }
+    function documentStaff() {
+      return documentPermission('canManageDocuments') || documentPermission('canPublishDocuments') || documentPermission('canArchiveDocuments');
+    }
+    function assemblyData(assemblyId) {
+      return get(/databases/$(database)/documents/assemblies/$(assemblyId)).data;
+    }
+    function agendaData(assemblyId, agendaId) {
+      return get(/databases/$(database)/documents/assemblies/$(assemblyId)/agenda/$(agendaId)).data;
+    }
+    function agendaAfterData(assemblyId, agendaId) {
+      return getAfter(/databases/$(database)/documents/assemblies/$(assemblyId)/agenda/$(agendaId)).data;
+    }
+    function minutesData(assemblyId, minutesId) {
+      return get(/databases/$(database)/documents/assemblies/$(assemblyId)/minutes/$(minutesId)).data;
+    }
+    function eligibleVoter(assemblyId) {
+      return activeMember()
+        && exists(/databases/$(database)/documents/assemblies/$(assemblyId)/eligibleVoters/$(request.auth.uid))
+        && get(/databases/$(database)/documents/assemblies/$(assemblyId)/eligibleVoters/$(request.auth.uid)).data.eligible == true;
+    }
+    function presentAtAssembly(assemblyId) {
+      return eligibleVoter(assemblyId)
+        && exists(/databases/$(database)/documents/assemblies/$(assemblyId)/presence/$(request.auth.uid));
+    }
+    function visibleAssemblyStatus(status) {
+      return status in ['published','first_call','waiting_second_call','second_call','waiting_third_call','third_call','in_session','closed'];
+    }
+    function protectedAssemblyFieldsUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'type','title','description','orderOfDay','additionalInfo','format',
+        'firstCallAt','secondCallAt','thirdCallAt','minimumNoticeDays',
+        'eligibleVoterCount','minutesApproverUids','createdAt','createdBy','createdByName','publishedAt'
+      ]);
+    }
+    function validAssemblyTransition() {
+      return request.resource.data.status == resource.data.status
+        || (resource.data.status == 'published' && request.resource.data.status == 'first_call')
+        || (resource.data.status == 'first_call' && request.resource.data.status in ['waiting_second_call','in_session'])
+        || (resource.data.status == 'waiting_second_call' && request.resource.data.status == 'second_call')
+        || (resource.data.status == 'second_call' && request.resource.data.status in ['waiting_third_call','in_session'])
+        || (resource.data.status == 'waiting_third_call' && request.resource.data.status == 'third_call')
+        || (resource.data.status == 'third_call' && request.resource.data.status == 'in_session')
+        || (resource.data.status == 'in_session' && request.resource.data.status == 'closed');
+    }
+    function validAgendaTransition() {
+      return request.resource.data.status == resource.data.status
+        || (resource.data.status == 'pending' && request.resource.data.status == 'open')
+        || (resource.data.status == 'open' && request.resource.data.status in ['discussion','voting','closed'])
+        || (resource.data.status == 'discussion' && request.resource.data.status in ['open','voting'])
+        || (resource.data.status == 'voting' && request.resource.data.status == 'voting_closed')
+        || (resource.data.status == 'voting_closed' && request.resource.data.status in ['result','closed'])
+        || (resource.data.status == 'result' && request.resource.data.status == 'closed');
+    }
     function validApplication(id) {
       return signedIn()
         && request.resource.data.keys().hasOnly([
@@ -121,6 +191,195 @@ service cloud.firestore {
       allow create: if hasPermission('members.create') || hasPermission('members.write');
       allow update, delete: if hasPermission('members.write');
     }
+    match /assemblies/{assemblyId} {
+      allow create: if hasAssemblyPermission('canManageAssemblies')
+        && request.resource.data.status == 'draft'
+        && request.resource.data.minimumNoticeDays >= 15
+        && request.resource.data.eligibleVoterCount == 0
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+      allow read: if assemblyStaff()
+        || (eligibleVoter(assemblyId) && visibleAssemblyStatus(resource.data.status));
+      allow update: if (
+          hasAssemblyPermission('canManageAssemblies')
+          && resource.data.status == 'draft'
+          && request.resource.data.status == 'draft'
+        ) || (
+          hasAssemblyPermission('canPublishAssembly')
+          && resource.data.status == 'draft'
+          && request.resource.data.status == 'published'
+          && request.resource.data.publishedAt == request.time
+          && request.resource.data.firstCallAt >= request.time + duration.value(resource.data.minimumNoticeDays, 'd')
+          && request.resource.data.eligibleVoterCount > 0
+        ) || (
+          hasAssemblyPermission('canPresideAssembly')
+          && protectedAssemblyFieldsUnchanged()
+          && validAssemblyTransition()
+          && resource.data.status != 'closed'
+          && request.resource.data.status != 'cancelled'
+          && (request.resource.data.status != 'first_call' || request.time >= resource.data.firstCallAt)
+          && (request.resource.data.status != 'waiting_second_call' || request.time >= resource.data.secondCallAt)
+          && (request.resource.data.status != 'second_call' || request.time >= resource.data.secondCallAt)
+          && (request.resource.data.status != 'waiting_third_call' || request.time >= resource.data.thirdCallAt)
+          && (request.resource.data.status != 'third_call' || request.time >= resource.data.thirdCallAt)
+        ) || (
+          hasAssemblyPermission('canManageAssemblies')
+          && resource.data.status in ['draft','published']
+          && request.resource.data.status == 'cancelled'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','cancellationReason','cancelledAt','cancelledBy','updatedAt'])
+          && request.resource.data.cancellationReason is string
+          && request.resource.data.cancellationReason.size() >= 10
+          && request.resource.data.cancelledAt == request.time
+          && request.resource.data.cancelledBy == request.auth.uid
+        ) || (
+          hasAssemblyPermission('canFinalizeMinutes')
+          && resource.data.status == 'closed'
+          && request.resource.data.status == 'closed'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['minutesStatus','minutesHash','updatedAt'])
+        ) || (
+          documentPermission('canPublishDocuments')
+          && resource.data.status == 'closed'
+          && resource.data.minutesStatus == 'finalized'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['publishedDocumentId','updatedAt'])
+        ) || (
+          eligibleVoter(assemblyId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acknowledgementCount'])
+          && request.resource.data.acknowledgementCount == resource.data.acknowledgementCount + 1
+          && existsAfter(/databases/$(database)/documents/assemblies/$(assemblyId)/acknowledgements/$(request.auth.uid))
+          && !exists(/databases/$(database)/documents/assemblies/$(assemblyId)/acknowledgements/$(request.auth.uid))
+        ) || (
+          eligibleVoter(assemblyId)
+          && resource.data.presenceOpen == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['presenceCount'])
+          && request.resource.data.presenceCount == resource.data.presenceCount + 1
+          && existsAfter(/databases/$(database)/documents/assemblies/$(assemblyId)/presence/$(request.auth.uid))
+          && !exists(/databases/$(database)/documents/assemblies/$(assemblyId)/presence/$(request.auth.uid))
+        );
+      allow delete: if false;
+
+      match /eligibleVoters/{uid} {
+        allow create: if hasAssemblyPermission('canPublishAssembly')
+          && uid == request.resource.data.uid
+          && request.resource.data.eligible == true
+          && request.resource.data.snapshotCreatedAt == request.time;
+        allow read: if hasAssemblyPermission('canManageAssemblies') || hasAssemblyPermission('canPublishAssembly') || hasAssemblyPermission('canPresideAssembly') || (signedIn() && uid == request.auth.uid);
+        allow update, delete: if false;
+      }
+      match /acknowledgements/{uid} {
+        allow create: if uid == request.auth.uid && eligibleVoter(assemblyId)
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.assemblyId == assemblyId
+          && request.resource.data.acknowledgedAt == request.time;
+        allow read: if hasAssemblyPermission('canManageAssemblies') || hasAssemblyPermission('canPublishAssembly') || (signedIn() && uid == request.auth.uid);
+        allow update, delete: if false;
+      }
+      match /presence/{uid} {
+        allow create: if uid == request.auth.uid && eligibleVoter(assemblyId)
+          && assemblyData(assemblyId).presenceOpen == true
+          && assemblyData(assemblyId).currentCall in [1,2,3]
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.assemblyId == assemblyId
+          && request.resource.data.callNumber == assemblyData(assemblyId).currentCall
+          && request.resource.data.registeredAt == request.time;
+        allow read: if hasAssemblyPermission('canManageAssemblies') || hasAssemblyPermission('canPresideAssembly') || (signedIn() && uid == request.auth.uid);
+        allow update, delete: if false;
+      }
+      match /agenda/{agendaId} {
+        allow create: if hasAssemblyPermission('canManageAssemblies')
+          && assemblyData(assemblyId).status == 'draft'
+          && request.resource.data.status == 'pending';
+        allow read: if assemblyStaff()
+          || (eligibleVoter(assemblyId) && visibleAssemblyStatus(assemblyData(assemblyId).status));
+        allow update: if hasAssemblyPermission('canPresideAssembly')
+          && assemblyData(assemblyId).status == 'in_session'
+          && resource.data.status != 'closed'
+          && validAgendaTransition()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status','openedAt','closedAt','commentsOpen','votingOpen','votingStartsAt',
+            'votingEndsAt','votingClosedAt','resultPublished','resultPublishedAt'
+          ]);
+        allow delete: if hasAssemblyPermission('canManageAssemblies')
+          && assemblyData(assemblyId).status == 'draft';
+
+        match /comments/{commentId} {
+          allow create: if request.resource.data.createdAt == request.time
+            && request.resource.data.content is string
+            && request.resource.data.content.size() >= 1
+            && request.resource.data.content.size() <= 2000
+            && request.resource.data.authorUid == request.auth.uid
+            && request.resource.data.hidden == false
+            && (
+              (request.resource.data.type in ['manifestation','question']
+                && presentAtAssembly(assemblyId)
+                && assemblyData(assemblyId).status == 'in_session'
+                && agendaData(assemblyId, agendaId).allowComments == true
+                && agendaData(assemblyId, agendaId).commentsOpen == true)
+              || (request.resource.data.type == 'admin_response' && hasAssemblyPermission('canModerateAssembly'))
+            );
+          allow read: if hasAssemblyPermission('canModerateAssembly') || eligibleVoter(assemblyId);
+          allow update: if hasAssemblyPermission('canModerateAssembly')
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hidden','moderationReason','moderatedAt','moderatedBy'])
+            && request.resource.data.hidden == true
+            && request.resource.data.moderatedAt == request.time
+            && request.resource.data.moderatedBy == request.auth.uid;
+          allow delete: if false;
+        }
+        match /votes/{uid} {
+          allow create: if uid == request.auth.uid
+            && presentAtAssembly(assemblyId)
+            && assemblyData(assemblyId).status == 'in_session'
+            && agendaData(assemblyId, agendaId).allowVoting == true
+            && agendaData(assemblyId, agendaId).votingOpen == true
+            && request.time >= agendaData(assemblyId, agendaId).votingStartsAt
+            && request.time <= agendaData(assemblyId, agendaId).votingEndsAt
+            && request.resource.data.voterUid == request.auth.uid
+            && request.resource.data.assemblyId == assemblyId
+            && request.resource.data.agendaId == agendaId
+            && request.resource.data.choice in agendaData(assemblyId, agendaId).options
+            && request.resource.data.createdAt == request.time;
+          allow read: if (signedIn() && uid == request.auth.uid)
+            || hasAssemblyPermission('canCertifyResults');
+          allow update, delete: if false;
+        }
+        match /results/{resultId} {
+          allow create: if hasAssemblyPermission('canCertifyResults')
+            && assemblyData(assemblyId).status == 'in_session'
+            && agendaAfterData(assemblyId, agendaId).votingOpen == false;
+          allow read: if hasAssemblyPermission('canCertifyResults')
+            || (eligibleVoter(assemblyId) && agendaData(assemblyId, agendaId).resultPublished == true);
+          allow update, delete: if false;
+        }
+      }
+      match /auditLogs/{logId} {
+        allow create: if signedIn()
+          && request.resource.data.actorUid == request.auth.uid
+          && request.resource.data.assemblyId == assemblyId
+          && request.resource.data.timestamp == request.time
+          && (eligibleVoter(assemblyId) || assemblyStaff());
+        allow read: if assemblyStaff() || eligibleVoter(assemblyId);
+        allow update, delete: if false;
+      }
+      match /minutes/{minutesId} {
+        allow create: if hasAssemblyPermission('canFinalizeMinutes')
+          && assemblyData(assemblyId).status == 'closed';
+        allow update: if hasAssemblyPermission('canFinalizeMinutes')
+          && assemblyData(assemblyId).status == 'closed'
+          && resource.data.status != 'finalized';
+        allow read: if hasAssemblyPermission('canFinalizeMinutes')
+          || (eligibleVoter(assemblyId) && resource.data.status == 'finalized');
+        allow delete: if false;
+      }
+      match /minutes/{minutesId}/approvals/{uid} {
+        allow create: if uid == request.auth.uid && eligibleVoter(assemblyId)
+          && minutesData(assemblyId, minutesId).status == 'finalized'
+          && assemblyData(assemblyId).minutesApproverUids.hasAny([request.auth.uid])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.minutesHash == minutesData(assemblyId, minutesId).hash
+          && request.resource.data.timestamp == request.time;
+        allow read: if hasAssemblyPermission('canFinalizeMinutes') || (signedIn() && uid == request.auth.uid);
+        allow update, delete: if false;
+      }
+    }
     match /boardMembers/{id} {
       allow read: if true;
       allow write: if hasPermission('board.manage');
@@ -148,8 +407,38 @@ service cloud.firestore {
       allow write: if collectionName in ['partners','benefits','events'] && hasPermission('content.manage');
     }
     match /documents/{id} {
-      allow read: if resource.data.visibility == 'public' || (activeMember() && resource.data.visibility == 'member') || hasPermission('documents.read');
-      allow write: if hasPermission('documents.write');
+      allow read: if (resource.data.published == true && resource.data.status != 'archived' && resource.data.visibility == 'public')
+        || (activeMember() && resource.data.published == true && resource.data.status != 'archived' && resource.data.visibility in ['public','members'])
+        || documentStaff() || hasPermission('documents.read');
+      allow create: if documentPermission('canManageDocuments')
+        && request.resource.data.status == 'draft' && request.resource.data.published == false
+        && request.resource.data.createdBy == request.auth.uid && request.resource.data.createdAt == request.time
+        || documentPermission('canPublishDocuments')
+        && request.resource.data.sourceType in ['assembly_minutes','assembly_notice']
+        && request.resource.data.status == 'published' && request.resource.data.published == true
+        && request.resource.data.createdBy == request.auth.uid && request.resource.data.createdAt == request.time;
+      allow update: if (
+          documentPermission('canManageDocuments') && resource.data.status == 'draft' && request.resource.data.status == 'draft'
+        ) || (
+          documentPermission('canPublishDocuments') && resource.data.status == 'draft'
+          && request.resource.data.published == true && request.resource.data.status in ['published','current']
+          && request.resource.data.publishedAt == request.time && request.resource.data.publishedBy == request.auth.uid
+        ) || (
+          documentPermission('canArchiveDocuments') && resource.data.published == true
+          && request.resource.data.status == 'archived' && request.resource.data.published == false
+        ) || (
+          documentPermission('canManageDocuments')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['signedDocumentUrl','updatedAt','updatedBy'])
+        ) || (
+          documentPermission('canPublishDocuments') && resource.data.category == 'statute'
+          && request.resource.data.status == 'replaced' && request.resource.data.isCurrent == false
+        );
+      allow delete: if documentPermission('canManageDocuments') && resource.data.status == 'draft' && resource.data.published == false;
+    }
+    match /documentAuditLogs/{id} {
+      allow read: if documentStaff();
+      allow create: if documentStaff() && request.resource.data.actorUid == request.auth.uid && request.resource.data.timestamp == request.time;
+      allow update, delete: if false;
     }
     match /requests/{id} {
       allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;

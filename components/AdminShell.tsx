@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   Tags,
   UsersRound,
+  Vote,
 } from "lucide-react";
 import { AuthGate } from "./AuthGate";
 import { firebaseEnabled, getFirebaseServices } from "@/lib/firebase";
@@ -33,6 +34,7 @@ const links = [
   ["/admin", "Dashboard", LayoutDashboard, [1, 2, 3, 4, 5]],
   ["/admin/recrutamento", "Novo associado", UsersRound, [5]],
   ["/admin/associados", "Cadastros e associados", UsersRound, [1, 2, 3]],
+  ["/admin/assembleias", "Assembleias eletrônicas", Vote, [1]],
   ["/admin/cargos", "Cargos", Tags, [1, 2]],
   ["/admin/diretoria", "Diretoria", ShieldCheck, [1, 2]],
   ["/admin/noticias", "Notícias", Newspaper, [1, 2, 4]],
@@ -53,17 +55,20 @@ type Props = {
   title: string;
   children: React.ReactNode;
   allowedLevels?: readonly number[];
+  requiredPermissions?: readonly string[];
 };
 
 export function AdminShell({
   title,
   children,
   allowedLevels = [1, 2, 3, 4, 5],
+  requiredPermissions = [],
 }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [level, setLevel] = useState<number | null>(firebaseEnabled ? null : 1);
   const [role, setRole] = useState("Administrador");
+  const [permissions, setPermissions] = useState<Record<string, boolean>>({});
   const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
@@ -75,6 +80,7 @@ export function AdminShell({
       if (access.exists()) {
         setLevel(Number(access.data().level || 5));
         setRole(String(access.data().role || "Administrador"));
+        setPermissions((access.data().permissions || {}) as Record<string, boolean>);
       }
     });
   }, []);
@@ -112,8 +118,9 @@ export function AdminShell({
             </Link>
             <nav className="side-nav" aria-label="Menu administrativo">
               {links
-                .filter(([, , , levels]) =>
-                  (levels as readonly number[]).includes(level),
+                .filter(([href, , , levels]) =>
+                  (levels as readonly number[]).includes(level)
+                    || (href === "/admin/assembleias" && ["canManageAssemblies","canPublishAssembly","canPresideAssembly","canModerateAssembly","canCertifyResults","canFinalizeMinutes"].some((permission) => permissions[permission] === true)),
                 )
                 .map(([href, label, Icon]) => (
                   <Link
@@ -147,7 +154,7 @@ export function AdminShell({
               </div>
             </header>
             <div className="dash-content">
-              {allowedLevels.includes(level) ? (
+              {allowedLevels.includes(level) || requiredPermissions.some((permission) => permissions[permission] === true) ? (
                 children
               ) : (
                 <section className="panel access-denied">

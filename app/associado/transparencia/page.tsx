@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BarChart3, CreditCard, FileText, Home, KeyRound } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { withBasePath } from "@/lib/paths";
+import { DocumentLibrary } from "@/components/DocumentLibrary";
 
 export default function MemberTransparency() {
   return (
@@ -55,7 +56,7 @@ export default function MemberTransparency() {
                   <FileText size={18} /> Documentos e demonstrativos
                 </h3>
               </div>
-              <div className="empty-state">Nenhum demonstrativo publicado.</div>
+              <DocumentLibrary member />
             </section>
           </div>
         </main>

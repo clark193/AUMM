@@ -5,11 +5,14 @@ import { BoardAdmin } from "@/components/BoardAdmin";
 import { MemberAdmin } from "@/components/MemberAdmin";
 import { NewsAdmin } from "@/components/NewsAdmin";
 import { PasswordResetAdmin } from "@/components/PasswordResetAdmin";
+import { AssemblyAdmin } from "@/components/AssemblyAdmin";
+import { DocumentAdmin } from "@/components/DocumentAdmin";
 
 type Module = { title: string; description: string; headers: string[]; rows?: string[][] };
 const modules: Record<string, Module> = {
   recrutamento: { title: "Novo associado", description: "Cadastro manual de novos associados.", headers: [] },
   associados: { title: "Cadastros e associados", description: "Análise de inscrições, autorização e situação dos associados.", headers: ["Nome", "Número", "E-mail", "Cidade", "Status"] },
+  assembleias: { title: "Assembleias eletrônicas", description: "Convocação, quórum, pautas, votação, resultados e atas.", headers: [] },
   cargos: { title: "Cargos", description: "Crie e organize cargos sem alterar o código.", headers: ["Cargo", "Descrição", "Ordem", "Status"] },
   diretoria: { title: "Diretoria", description: "Gestão dos nomes e fotos exibidos no mural público.", headers: [] },
   noticias: { title: "Notícias", description: "Criação, revisão e publicação de notícias.", headers: ["Título", "Categoria", "Data", "Status"] },
@@ -27,7 +30,7 @@ const modules: Record<string, Module> = {
 };
 
 const moduleAccess: Record<string, readonly number[]> = {
-  recrutamento: [5], associados: [1, 2, 3], cargos: [1, 2], diretoria: [1, 2], noticias: [1, 2, 4], comunicados: [1, 2, 4], eventos: [1, 2, 4], beneficios: [1, 2, 4], solicitacoes: [1, 2, 3], "recuperacao-senha": [1, 2, 3], transparencia: [1, 2], financeiro: [1, 2], documentos: [1, 2, 3], administradores: [1], logs: [1], configuracoes: [1],
+  recrutamento: [5], associados: [1, 2, 3], assembleias: [1], cargos: [1, 2], diretoria: [1, 2], noticias: [1, 2, 4], comunicados: [1, 2, 4], eventos: [1, 2, 4], beneficios: [1, 2, 4], solicitacoes: [1, 2, 3], "recuperacao-senha": [1, 2, 3], transparencia: [1, 2], financeiro: [1, 2], documentos: [1, 2, 3], administradores: [1], logs: [1], configuracoes: [1],
 };
 
 export function generateStaticParams() { return Object.keys(modules).map(module => ({ module })); }
@@ -41,8 +44,10 @@ export default async function ModulePage({ params }: Props) {
   const allowedLevels = moduleAccess[module] || [1];
   if (module === "recrutamento") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Novo associado</h2><p>Cadastre um associado e decida se o acesso será ativado imediatamente.</p></div></div><MemberAdmin registrationOnly /></AdminShell>;
   if (module === "associados") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Cadastros e associados</h2><p>Analise inscrições recebidas, evite duplicidades e consulte quem já faz parte da AUMM.</p></div></div><ApplicationReviewAdmin /><MemberAdmin /></AdminShell>;
+  if (module === "assembleias") return <AdminShell title={item.title} allowedLevels={allowedLevels} requiredPermissions={["canManageAssemblies","canPublishAssembly","canPresideAssembly","canModerateAssembly","canCertifyResults","canFinalizeMinutes"]}><AssemblyAdmin /></AdminShell>;
   if (module === "diretoria") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Diretoria da AUMM</h2><p>As alterações feitas aqui aparecem no mural da página inicial.</p></div></div><BoardAdmin /></AdminShell>;
   if (module === "noticias") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Notícias da AUMM</h2><p>Crie publicações e escolha quais destaques vão rodar no topo da página inicial.</p></div></div><NewsAdmin /></AdminShell>;
   if (module === "recuperacao-senha") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Recuperação de senha</h2><p>Responda pelo WhatsApp somente após confirmar a identidade do solicitante.</p></div></div><PasswordResetAdmin /></AdminShell>;
+  if (module === "documentos") return <AdminShell title={item.title} allowedLevels={allowedLevels} requiredPermissions={["canManageDocuments","canPublishDocuments","canArchiveDocuments"]}><div className="dash-welcome"><div><h2>Documentos Institucionais</h2><p>Estatutos, atas, editais, normas e prestação de contas.</p></div></div><DocumentAdmin /></AdminShell>;
   return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>{item.title}</h2><p>{item.description}</p></div></div><section className="panel">{item.rows?.length ? <div className="table-wrap"><table><thead><tr>{item.headers.map(header => <th key={header}>{header}</th>)}</tr></thead><tbody>{item.rows.map((row, index) => <tr key={index}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cellIndex === 0 ? <strong>{cell}</strong> : cell}</td>)}</tr>)}</tbody></table></div> : <div className="empty-state">Nenhum registro cadastrado.</div>}</section></AdminShell>;
 }

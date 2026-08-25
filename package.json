@@ -12,7 +12,9 @@
     "dev:next": "next dev",
     "build:firebase": "next build",
     "typecheck": "tsc --noEmit",
-    "test": "npm run build && node --test tests/rendered-html.test.mjs",
+    "test": "npm run build && node --experimental-strip-types --test tests/assembly-rules.test.ts tests/rendered-html.test.mjs",
+    "test:rules": "npx firebase-tools emulators:exec --only firestore \"node --test tests/firestore-assemblies.rules.test.mjs\"",
+    "seed:assembly:emulator": "node scripts/seed-assembly-emulator.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern functions/lib --ignore-pattern functions/node_modules"
   },
   "dependencies": {
@@ -29,6 +31,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.53.1",
     "@cloudflare/workers-types": "^5.20260825.1",
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",

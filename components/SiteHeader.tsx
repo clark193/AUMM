@@ -16,7 +16,7 @@ export function SiteHeader() {
       <div className="container nav-wrap">
         <Link href="/" className="brand" aria-label="AUMM — Início">
           <Image src={withBasePath("/logo.png")} width={72} height={72} priority alt="Logo da AUMM" />
-          <span><strong>AUMM</strong><small>Associação de Motoboys e Motociclistas</small></span>
+          <span><strong>AUMM</strong><small>Associação União Maior Motoboys</small></span>
         </Link>
         <button className="menu-toggle" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={open ? "Fechar menu" : "Abrir menu"}>{open ? <X /> : <Menu />}</button>
         <nav className={open ? "main-nav is-open" : "main-nav"} aria-label="Navegação principal">

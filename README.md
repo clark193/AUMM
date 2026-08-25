@@ -1,6 +1,6 @@
 # Plataforma AUMM
 
-Plataforma web da AUMM — Associação dos Motoboys e Motociclistas de Blumenau. O projeto reúne site institucional, captação e aprovação de associados, portal autenticado, carteirinha digital, administração, conteúdo e transparência.
+Plataforma web da AUMM — Associação União Maior Motoboys. O projeto reúne site institucional, captação e aprovação de associados, portal autenticado, carteirinha digital, administração, conteúdo e transparência.
 
 ## Tecnologias
 
@@ -87,3 +87,11 @@ Crie o usuário no Firebase Authentication e depois crie o documento `adminRoles
 ## Backup e recuperação
 
 No Spark, exportações gerenciadas para bucket não estão disponíveis. Preserve o código, as regras e faça exportações administrativas dos dados permitidos pela aplicação.
+
+## Assembleias eletrônicas
+
+O portal inclui convocação, ciência, presença, chamadas estatutárias, discussão escrita, voto eletrônico, resultados, ata com hash e auditoria. Consulte `docs/ASSEMBLEIAS.md` para configuração e operação e `docs/FIREBASE_FREE_TIER.md` para limites e economia de cota.
+
+## Documentos Institucionais
+
+O painel administra Estatuto, atas, editais, convocações, normas e prestação de contas por arquivo estático, URL externa ou documento gerado pela Assembleia. Consulte `docs/DOCUMENTOS.md`.

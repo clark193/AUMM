@@ -21,6 +21,7 @@ import {
   where,
   writeBatch,
   doc,
+  updateDoc,
 } from "firebase/firestore";
 import {
   CheckCircle2,
@@ -47,6 +48,7 @@ type MemberRow = {
   cpf?: string;
   memberNumber?: string;
   status: string;
+  eligibleToVote?: boolean;
 };
 
 const emptyForm = {
@@ -185,6 +187,7 @@ export function MemberAdmin({ registrationOnly = false }: MemberAdminProps) {
         role: "Associado",
         status: authorizeNow ? "active" : "pending",
         authorized: authorizeNow,
+        eligibleToVote: authorizeNow,
         source: "admin_manual",
         createdBy: auth.currentUser.uid,
         createdAt: serverTimestamp(),
@@ -242,6 +245,22 @@ export function MemberAdmin({ registrationOnly = false }: MemberAdminProps) {
       `Acesso AUMM\nE-mail: ${credentials.email}\nSenha temporária: ${credentials.password}\nPortal: ${window.location.origin}${withBasePath("/associado/login")}`,
     );
     setMessage({ type: "success", text: "Dados de acesso copiados." });
+  }
+
+  async function toggleVotingEligibility(member: MemberRow) {
+    try {
+      const { db } = getFirebaseServices();
+      await updateDoc(doc(db, "associados", member.id), {
+        eligibleToVote: member.eligibleToVote === false,
+        updatedAt: serverTimestamp(),
+      });
+      setMessage({
+        type: "success",
+        text: `Direito a voto de ${member.fullName} atualizado.`,
+      });
+    } catch (error) {
+      setMessage({ type: "error", text: friendlyError(error) });
+    }
   }
 
   return (
@@ -403,6 +422,7 @@ export function MemberAdmin({ registrationOnly = false }: MemberAdminProps) {
                     <th>Telefone</th>
                     <th>Cidade</th>
                     <th>Status</th>
+                    <th>Voto</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -419,6 +439,18 @@ export function MemberAdmin({ registrationOnly = false }: MemberAdminProps) {
                         <span className={`status ${member.status}`}>
                           {member.status === "active" ? "Ativo" : "Pendente"}
                         </span>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="button button-sm button-dark"
+                          onClick={() => toggleVotingEligibility(member)}
+                          disabled={member.status !== "active"}
+                        >
+                          {member.status === "active" && member.eligibleToVote !== false
+                            ? "Habilitado"
+                            : "Desabilitado"}
+                        </button>
                       </td>
                     </tr>
                   ))}
