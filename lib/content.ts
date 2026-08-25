@@ -12,7 +12,6 @@ export const navItems = [
   { label: "A AUMM", href: "/quem-somos" },
   { label: "Notícias", href: "/noticias" },
   { label: "Benefícios", href: "/beneficios" },
-  { label: "Transparência", href: "/transparencia" },
   { label: "Contato", href: "/contato" },
 ];
 

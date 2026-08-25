@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Bike, CalendarDays, CheckCircle2, FileText, Handshake, HeartHandshake, ShieldCheck, UsersRound } from "lucide-react";
+import { ArrowRight, BadgeCheck, CalendarDays, CheckCircle2, Handshake, HeartHandshake, ShieldCheck, UsersRound } from "lucide-react";
 import { PublicShell } from "@/components/PublicShell";
+import { BoardWall } from "@/components/BoardWall";
 import { news } from "@/lib/content";
 
 export default function HomePage() {
@@ -17,7 +18,6 @@ export default function HomePage() {
         </div>
         <div className="hero-visual" aria-label="Identidade da AUMM">
           <div className="hero-logo-ring"><Image src="/logo.png" fill sizes="(max-width: 800px) 70vw, 420px" priority alt="AUMM — Associação de motoboys e motociclistas de Blumenau" /></div>
-          <div className="hero-note"><Bike/><span><strong>Por quem faz acontecer</strong><small>na rua, na chuva, todos os dias.</small></span></div>
         </div>
       </div>
       <div className="hero-stripe"><div className="container"><span>Representatividade</span><i/> <span>Benefícios</span><i/> <span>Segurança</span><i/> <span>Comunidade</span></div></div>
@@ -37,6 +37,6 @@ export default function HomePage() {
       <div className="section-heading"><div><span className="eyebrow">Fique por dentro</span><h2>Notícias da AUMM</h2></div><Link className="text-link" href="/noticias">Ver todas <ArrowRight size={17}/></Link></div>
       <div className="news-grid">{news.map((item,i)=><Link className={i===0?"news-card news-featured":"news-card"} href={`/noticias/${item.slug}`} key={item.slug}><div className="news-art"><span>{item.category}</span>{i===0?<ShieldCheck/>:i===1?<Handshake/>:<CalendarDays/>}</div><div className="news-body"><small>{item.date}</small><h3>{item.title}</h3><p>{item.summary}</p><span className="read-more">Ler notícia <ArrowRight size={16}/></span></div></Link>)}</div>
     </div></section>
-    <section className="section transparency-preview"><div className="container transparency-grid"><div><span className="eyebrow">Compromisso público</span><h2>Transparência em cada decisão.</h2><p>Acompanhe receitas, despesas, atas, relatórios e documentos da AUMM em um ambiente claro e acessível.</p><Link className="button button-dark" href="/transparencia">Acessar o portal <ArrowRight size={18}/></Link></div><div className="transparency-card"><div className="mini-chart"><i/><i/><i/><i/><i/><i/></div><div><span><FileText/> Documentos publicados</span><strong>24</strong></div><div><span><BadgeCheck/> Última atualização</span><strong>22 ago. 2026</strong></div><small>DADOS DEMONSTRATIVOS</small></div></div></section>
+    <BoardWall/>
   </PublicShell>;
 }

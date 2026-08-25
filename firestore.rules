@@ -6,10 +6,30 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/adminRoles/$(request.auth.uid));
     }
     function superAdmin() {
-      return signedIn() && adminProfile().data.active == true && adminProfile().data.superAdmin == true;
+      return signedIn() && adminProfile().data.active == true
+        && (adminProfile().data.superAdmin == true || adminProfile().data.level == 1);
+    }
+    function levelAllows(permission) {
+      return signedIn() && adminProfile().data.active == true && (
+        adminProfile().data.level == 1
+        || (adminProfile().data.level == 2 && permission in [
+          'applications.read','applications.review','users.read','users.update','members.read','members.write',
+          'roles.manage','board.manage','news.read','news.create','news.edit','news.delete','communications.read',
+          'communications.write','content.manage','requests.read','requests.write','finance.read','finance.write',
+          'transparency.write','documents.read','documents.write','notifications.write','settings.read'
+        ])
+        || (adminProfile().data.level == 3 && permission in [
+          'applications.read','applications.review','users.read','users.update','members.read','members.write',
+          'requests.read','requests.write','documents.read','notifications.write'
+        ])
+        || (adminProfile().data.level == 4 && permission in [
+          'news.read','news.create','news.edit','communications.read','communications.write','content.manage','documents.read'
+        ])
+      );
     }
     function hasPermission(permission) {
-      return superAdmin() || (signedIn() && adminProfile().data.active == true && adminProfile().data.permissions[permission] == true);
+      return superAdmin() || levelAllows(permission)
+        || (signedIn() && adminProfile().data.active == true && adminProfile().data.permissions is map && adminProfile().data.permissions[permission] == true);
     }
     function own(uid) { return signedIn() && request.auth.uid == uid; }
     function validApplication(id) {
@@ -49,6 +69,10 @@ service cloud.firestore {
     match /publicMembers/{token} {
       allow read: if true;
       allow write: if hasPermission('members.write');
+    }
+    match /boardMembers/{id} {
+      allow read: if true;
+      allow write: if hasPermission('board.manage');
     }
     match /roles/{id} {
       allow read: if resource.data.active == true || signedIn();

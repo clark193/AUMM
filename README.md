@@ -19,10 +19,12 @@ Plataforma web da AUMM — Associação dos Motoboys e Motociclistas de Blumenau
 - Estrutura preparada para aprovação, número único, perfil público mínimo e log de auditoria;
 - Login Firebase, recuperação de senha e separação de acesso de associado/admin;
 - Portal do associado, perfil resumido, comunicados, benefícios e protocolos;
+- Portal da transparência protegido dentro da área do associado;
+- Mural da diretoria editável pelo admin, com nome, cargo, ordem e URL da foto;
 - Carteirinha digital mobile-first, QR Code, impressão/PDF e compartilhamento;
 - Verificação pública por token não sequencial, sem dados sensíveis;
 - Painel administrativo para associados, cargos configuráveis, diretoria, notícias, comunicados, eventos, benefícios, solicitações, transparência, financeiro, documentos, administradores, logs e configurações;
-- RBAC por documentos administrativos e regras de segurança do Firestore;
+- RBAC por níveis de 1 a 5 e permissões específicas nas regras do Firestore;
 - Deploy automatizado e documentação de operação.
 
 Os conteúdos pessoais e financeiros presentes na interface estão claramente marcados como demonstração e não são gravados no Firebase. Remova-os substituindo os arrays em `lib/content.ts` e nos componentes de dashboard por consultas aos serviços Firebase.

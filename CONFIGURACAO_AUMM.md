@@ -121,7 +121,7 @@ Não existe senha padrão e nenhum administrador é criado no código.
 7. Abra **Firestore Database → Dados** e clique em **Iniciar coleção**.
 8. ID da coleção: `adminRoles`.
 9. ID do documento: cole exatamente o UID do usuário.
-10. Adicione `active` (boolean) = `true`, `superAdmin` (boolean) = `true`, `role` (string) = `super_admin` e `permissions` (mapa) = mapa vazio.
+10. Adicione `active` (boolean) = `true`, `superAdmin` (boolean) = `true`, `level` (number) = `1`, `role` (string) = `Presidente` ou `Vice-Presidente` e `permissions` (mapa) = mapa vazio.
 11. Salve o documento e entre em `/associado/login?destino=admin`.
 12. Depois de acessar o painel, troque a senha usando a recuperação por e-mail ou pelo console Authentication quando necessário.
 
