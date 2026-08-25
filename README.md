@@ -68,7 +68,7 @@ Dados privados ficam em `associados` e `users`. A verificação pública consult
 
 ## Segurança
 
-O frontend nunca é a autoridade de permissão. As regras do Firestore verificam autenticação, propriedade e permissões. Cadastros públicos recebem autenticação anônima temporária e usam um identificador determinístico derivado do CPF para evitar duplicidade no fluxo normal. Anexos ficam desativados no Spark e são solicitados durante a análise.
+O frontend nunca é a autoridade de permissão. As regras do Firestore verificam autenticação, propriedade e permissões. Cadastros públicos recebem autenticação anônima temporária e usam um identificador determinístico derivado do e-mail para evitar duplicidade no fluxo normal.
 
 Nunca versione `.env.local`, `.firebaserc`, chaves de conta de serviço ou credenciais. O `.gitignore` bloqueia arquivos `.env*`; apenas `.env.example` deve ser público.
 

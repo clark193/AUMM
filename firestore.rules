@@ -15,9 +15,8 @@ service cloud.firestore {
     function validApplication(id) {
       return signedIn()
         && request.resource.data.keys().hasOnly([
-          'applicationId','fullName','cpf','birthDate','email','phone','whatsapp','cep','address','number',
-          'district','city','state','cnh','cnhCategory','cnhExpiry','motorcyclePlate','motorcycleModel',
-          'motorcycleYear','notes','consent','consentVersion','consentAt','applicantUid','status','createdAt'
+          'applicationId','fullName','email','phone','city','consent','consentVersion','consentAt',
+          'applicantUid','status','createdAt'
         ])
         && request.resource.data.applicationId == id
         && request.resource.data.applicantUid == request.auth.uid
@@ -26,9 +25,9 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time
         && request.resource.data.consentAt == request.time
         && request.resource.data.fullName is string && request.resource.data.fullName.size() >= 3 && request.resource.data.fullName.size() <= 160
-        && request.resource.data.cpf is string && request.resource.data.cpf.size() == 11
         && request.resource.data.email is string && request.resource.data.email.size() <= 254
-        && request.resource.data.notes is string && request.resource.data.notes.size() <= 2000;
+        && request.resource.data.phone is string && request.resource.data.phone.size() >= 10 && request.resource.data.phone.size() <= 30
+        && request.resource.data.city is string && request.resource.data.city.size() >= 2 && request.resource.data.city.size() <= 100;
     }
     match /associationApplications/{id} {
       allow create: if validApplication(id);
