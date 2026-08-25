@@ -23,8 +23,8 @@ export const metadata: Metadata = {
     icon: withBasePath("/logo.png"),
     shortcut: withBasePath("/logo.png"),
   },
-  openGraph: { title: "AUMM — União que move Blumenau", description: "Motoboys e motociclistas unidos por respeito, segurança e futuro.", images: [`${siteUrl}/og.png`], locale: "pt_BR", type: "website" },
-  twitter: { card: "summary_large_image", title: "AUMM — União que move Blumenau", description: "Motoboys e motociclistas unidos por respeito, segurança e futuro.", images: [`${siteUrl}/og.png`] },
+  openGraph: { title: "AUMM — União que move Blumenau", description: "Motoboys e motociclistas unidos por respeito, segurança e futuro.", images: [{ url: `${siteUrl}/logo.png`, width: 1694, height: 1384, alt: "Logo da Associação União Maior Motoboys" }], locale: "pt_BR", type: "website" },
+  twitter: { card: "summary", title: "AUMM — União que move Blumenau", description: "Motoboys e motociclistas unidos por respeito, segurança e futuro.", images: [`${siteUrl}/logo.png`] },
 };
 
 export default function RootLayout({
