@@ -6,7 +6,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { LockKeyhole, LogIn, Mail, UserRound } from "lucide-react";
+import { LockKeyhole, LogIn, Mail, ShieldCheck, UserRound } from "lucide-react";
 import { firebaseEnabled, getFirebaseServices } from "@/lib/firebase";
 import { withBasePath } from "@/lib/paths";
 
@@ -65,10 +65,15 @@ export function LoginForm() {
   }
 
   return (
-    <main className="auth-page">
+    <main className={`auth-page ${admin ? "auth-page-admin" : ""}`}>
       <section className="auth-brand">
         <Link className="auth-logo" href="/">
-          <Image src={withBasePath("/logo.png")} width={78} height={78} alt="AUMM" />
+          <Image
+            src={withBasePath("/logo.png")}
+            width={78}
+            height={78}
+            alt="AUMM"
+          />
           <strong>AUMM</strong>
         </Link>
         <div>
@@ -85,7 +90,16 @@ export function LoginForm() {
         <small>Área protegida · Blumenau/SC</small>
       </section>
       <section className="auth-panel">
-        <div className="auth-card">
+        <div className="auth-card" key={admin ? "admin" : "associado"}>
+          {admin && (
+            <div className="admin-login-banner">
+              <ShieldCheck size={22} />
+              <span>
+                <small>Ambiente restrito</small>
+                <strong>Painel administrativo</strong>
+              </span>
+            </div>
+          )}
           <span className="eyebrow">Acesso seguro</span>
           <h2>{admin ? "Administração" : "Área do associado"}</h2>
           <p>
