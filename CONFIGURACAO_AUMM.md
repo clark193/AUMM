@@ -2,6 +2,8 @@
 
 Este guia foi escrito para quem nunca configurou Firebase. Faça as etapas na ordem. Não publique nenhuma senha, chave administrativa ou arquivo de conta de serviço.
 
+> **Configuração atual (plano Spark):** o projeto `aumm-21dda` usa Authentication, Firestore e Hosting estático. Storage, Cloud Functions e SSR permanecem desativados porque exigem o plano Blaze. Nenhuma conta de faturamento é necessária para o fluxo atual.
+
 ## 1. O que já está pronto
 
 O código, as telas, regras de segurança, índices, Cloud Functions, workflow do GitHub e arquivos de configuração já estão no projeto. Você precisa apenas conectar suas contas e copiar os valores do seu projeto Firebase.
@@ -62,7 +64,7 @@ Os valores `NEXT_PUBLIC_*` do SDK Web identificam o projeto, mas não concedem a
 4. Clique em **E-mail/senha**.
 5. Ative **E-mail/senha** e clique em **Salvar**. Não é necessário ativar login por link neste momento.
 6. Volte para a lista de provedores e clique em **Anônimo**.
-7. Ative o provedor anônimo e salve. Ele é usado temporariamente para vincular uploads ao formulário público sem deixar os arquivos expostos.
+7. Ative o provedor anônimo e salve. Ele é usado temporariamente para identificar e proteger o envio do formulário público.
 8. Em **Configurações → Domínios autorizados**, confirme `localhost` durante o desenvolvimento.
 9. Quando os domínios forem comprados, adicione `aumm.com.br`, `www.aumm.com.br`, `associado.aumm.com.br` e `admin.aumm.com.br`.
 10. Em **Modelos**, personalize os e-mails de recuperação de senha com o nome e os contatos da AUMM.
@@ -82,14 +84,9 @@ Referências: https://firebase.google.com/docs/auth/web/password-auth e https://
 
 Referência: https://firebase.google.com/docs/firestore/quickstart
 
-## 8. Configurar o Storage
+## 8. Storage no plano Spark
 
-1. No menu esquerdo, abra **Databases & Storage → Storage**.
-2. Clique em **Primeiros passos**.
-3. Escolha o modo de produção.
-4. Use a localização sugerida que seja compatível com a região do projeto.
-5. Conclua a criação do bucket.
-6. Não altere manualmente o bucket para acesso público. Os arquivos privados são protegidos por `storage.rules`.
+O Storage não é usado na configuração Spark. Fotos e documentos são solicitados pela AUMM após o envio do cadastro. O arquivo `storage.rules` e o código de Functions foram preservados apenas para uma eventual migração futura.
 
 ## 9. Conectar o projeto local ao Firebase
 
@@ -101,26 +98,15 @@ Referência: https://firebase.google.com/docs/firestore/quickstart
 
 ## 10. Publicar regras e índices
 
-1. Execute `firebase deploy --only firestore:rules,firestore:indexes,storage`.
+1. Execute `firebase deploy --only firestore:rules,firestore:indexes,hosting`.
 2. Aguarde a mensagem de sucesso.
 3. No console, abra **Firestore → Regras** e confirme que o conteúdo publicado começa com `rules_version = '2';`.
-4. Abra **Storage → Regras** e confirme a publicação.
-5. Se o Firebase pedir para habilitar uma API, aceite e execute o comando novamente.
-6. Nunca use regras com `allow read, write: if true` em produção.
+4. Se o Firebase pedir para habilitar uma API, aceite e execute o comando novamente.
+5. Nunca use regras com `allow read, write: if true` em produção.
 
-## 11. Instalar e publicar Cloud Functions
+## 11. Cloud Functions no plano Spark
 
-As Functions aprovam associados, geram números únicos, criam tokens seguros, configuram permissões e registram auditoria.
-
-1. Entre na pasta com `cd functions`.
-2. Execute `npm install`.
-3. Execute `npm run build`.
-4. Volte à raiz com `cd ..`.
-5. Para publicar, execute `firebase deploy --only functions`.
-6. O Firebase poderá solicitar ativação do plano Blaze. Cloud Functions e exportações gerenciadas exigem faturamento. Configure um orçamento/alerta no Google Cloud antes de publicar.
-7. No console Firebase, abra **Functions** e confirme `approveApplication` e `setAdminRole` na região `southamerica-east1`.
-8. A função `createApplication` impede duplicidade por CPF e e-mail usando chaves SHA-256 e transação atômica.
-9. A aprovação retorna um link seguro de ativação/redefinição de senha. Enquanto a integração de e-mail não estiver configurada, o administrador deverá encaminhar esse link ao associado por um canal confirmado; não publique o link em comunicados ou logs.
+Cloud Functions não são publicadas no Spark. O cadastro grava diretamente no Firestore sob regras restritivas. Operações administrativas usam documentos em `adminRoles`. A implementação de Functions permanece no repositório somente como opção futura.
 
 ## 12. Configurar o primeiro Super Admin
 
@@ -131,16 +117,13 @@ Não existe senha padrão e nenhum administrador é criado no código.
 3. Informe seu e-mail administrativo.
 4. Crie uma senha longa e exclusiva. Guarde-a em um gerenciador de senhas.
 5. Clique em **Adicionar usuário**.
-6. Para atribuir o primeiro claim, instale e autentique o Google Cloud CLI ou use o Cloud Shell em https://console.cloud.google.com/.
-7. No Cloud Shell, abra o menu de upload e envie somente `scripts/set-first-admin.mjs` e o `package.json`/dependências necessárias; a opção mais simples localmente é executar `gcloud auth application-default login` no PowerShell.
-8. Na raiz do projeto local, instale temporariamente o Admin SDK com `npm install --no-save firebase-admin` se ele ainda não estiver disponível.
-9. Execute `gcloud config set project SEU_PROJECT_ID`.
-10. Execute `node scripts/set-first-admin.mjs seu-email@exemplo.com`.
-11. A mensagem `Super Admin configurado com segurança` confirma o procedimento.
-12. Abra `http://localhost:3000/associado/login?destino=admin`.
-13. Entre com e-mail e senha.
-14. Se já estava logado antes de aplicar o claim, saia e entre novamente para renovar o token.
-15. Depois de acessar o painel, troque a senha usando a recuperação por e-mail ou pelo console Authentication.
+6. Copie o **UID** mostrado na linha do usuário.
+7. Abra **Firestore Database → Dados** e clique em **Iniciar coleção**.
+8. ID da coleção: `adminRoles`.
+9. ID do documento: cole exatamente o UID do usuário.
+10. Adicione `active` (boolean) = `true`, `superAdmin` (boolean) = `true`, `role` (string) = `super_admin` e `permissions` (mapa) = mapa vazio.
+11. Salve o documento e entre em `/associado/login?destino=admin`.
+12. Depois de acessar o painel, troque a senha usando a recuperação por e-mail ou pelo console Authentication quando necessário.
 
 ## 13. Configurar App Check
 
@@ -156,7 +139,7 @@ Faça primeiro em modo de monitoramento. Só ative a aplicação forçada depois
 8. Cole a chave de site.
 9. Copie a mesma chave para `NEXT_PUBLIC_FIREBASE_APPCHECK_SITE_KEY` em `.env.local`.
 10. Publique e monitore as métricas.
-11. Quando tudo estiver estável, ative enforcement gradualmente para Firestore, Storage, Authentication e Functions.
+11. Quando tudo estiver estável, ative enforcement gradualmente para Firestore e Authentication.
 
 Referência: https://firebase.google.com/docs/app-check/web/recaptcha-enterprise-provider?hl=pt-br
 
@@ -167,7 +150,7 @@ Referência: https://firebase.google.com/docs/app-check/web/recaptcha-enterprise
 3. Teste o site em largura de celular e desktop.
 4. Abra `/associe-se`, preencha somente dados fictícios e envie.
 5. No Firestore, confirme o documento em `associationApplications`.
-6. No Storage, confirme que os arquivos ficaram em `applications/{id}` e não abrem sem autorização administrativa.
+6. Confirme que a página informa que os anexos serão solicitados durante a análise.
 7. Teste recuperação de senha.
 8. Entre no admin e confirme que um usuário comum é recusado.
 9. Execute `npm run lint`, `npm run typecheck` e `npm run build`.

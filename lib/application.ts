@@ -1,6 +1,5 @@
-import { ref, uploadBytes } from "firebase/storage";
 import { signInAnonymously } from "firebase/auth";
-import { httpsCallable } from "firebase/functions";
+import { doc, runTransaction, serverTimestamp } from "firebase/firestore";
 import { getFirebaseServices } from "./firebase";
 
 export type ApplicationPayload = {
@@ -10,18 +9,39 @@ export type ApplicationPayload = {
   motorcycleModel: string; motorcycleYear: string; notes?: string; consent: boolean;
 };
 
-export async function submitApplication(payload: ApplicationPayload, files: File[]) {
-  const { auth, storage, functions } = getFirebaseServices();
+async function sha256(value: string) {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+export async function submitApplication(payload: ApplicationPayload) {
+  const { auth, db } = getFirebaseServices();
   if (!auth.currentUser) await signInAnonymously(auth);
-  const createApplication = httpsCallable<ApplicationPayload, { applicationId: string }>(functions, "createApplication");
-  const result = await createApplication(payload);
-  const applicationId = result.data.applicationId;
-  await Promise.all(files.map(async (file) => {
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    await uploadBytes(ref(storage, `applications/${applicationId}/${crypto.randomUUID()}-${safeName}`), file, {
-      contentType: file.type,
-      customMetadata: { applicationId },
+  const applicantUid = auth.currentUser!.uid;
+  const cpf = payload.cpf.replace(/\D/g, "");
+  const email = payload.email.trim().toLowerCase();
+  const applicationId = await sha256(`cpf:${cpf}`);
+  const applicationRef = doc(db, "associationApplications", applicationId);
+
+  await runTransaction(db, async transaction => {
+    const existing = await transaction.get(applicationRef);
+    if (existing.exists()) throw new Error("Já existe uma solicitação para este CPF.");
+    transaction.set(applicationRef, {
+      ...payload,
+      applicationId,
+      cpf,
+      email,
+      fullName: payload.fullName.trim(),
+      state: payload.state.trim().toUpperCase(),
+      motorcyclePlate: payload.motorcyclePlate.trim().toUpperCase(),
+      consent: true,
+      consentVersion: "2026-08",
+      consentAt: serverTimestamp(),
+      applicantUid,
+      status: "pending",
+      createdAt: serverTimestamp(),
     });
-  }));
+  });
   return applicationId;
 }

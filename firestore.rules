@@ -2,23 +2,36 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
-    function superAdmin() { return signedIn() && request.auth.token.admin == true; }
+    function adminProfile() {
+      return get(/databases/$(database)/documents/adminRoles/$(request.auth.uid));
+    }
+    function superAdmin() {
+      return signedIn() && adminProfile().data.active == true && adminProfile().data.superAdmin == true;
+    }
     function hasPermission(permission) {
-      return superAdmin() || (signedIn() && request.auth.token.permissions != null && request.auth.token.permissions[permission] == true);
+      return superAdmin() || (signedIn() && adminProfile().data.active == true && adminProfile().data.permissions[permission] == true);
     }
     function own(uid) { return signedIn() && request.auth.uid == uid; }
-    function validApplication() {
-      return request.resource.data.keys().hasAll(['fullName','cpf','email','status','applicantUid','consent','createdAt'])
+    function validApplication(id) {
+      return signedIn()
+        && request.resource.data.keys().hasOnly([
+          'applicationId','fullName','cpf','birthDate','email','phone','whatsapp','cep','address','number',
+          'district','city','state','cnh','cnhCategory','cnhExpiry','motorcyclePlate','motorcycleModel',
+          'motorcycleYear','notes','consent','consentVersion','consentAt','applicantUid','status','createdAt'
+        ])
+        && request.resource.data.applicationId == id
         && request.resource.data.applicantUid == request.auth.uid
         && request.resource.data.status == 'pending'
         && request.resource.data.consent == true
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.consentAt == request.time
         && request.resource.data.fullName is string && request.resource.data.fullName.size() >= 3 && request.resource.data.fullName.size() <= 160
         && request.resource.data.cpf is string && request.resource.data.cpf.size() == 11
-        && request.resource.data.email is string && request.resource.data.email.size() <= 254;
+        && request.resource.data.email is string && request.resource.data.email.size() <= 254
+        && request.resource.data.notes is string && request.resource.data.notes.size() <= 2000;
     }
-
     match /associationApplications/{id} {
-      allow create: if false;
+      allow create: if validApplication(id);
       allow read: if (signedIn() && resource.data.applicantUid == request.auth.uid) || hasPermission('applications.read');
       allow update: if hasPermission('applications.review');
       allow delete: if superAdmin();
@@ -43,7 +56,7 @@ service cloud.firestore {
       allow write: if hasPermission('roles.manage');
     }
     match /adminRoles/{id} {
-      allow read: if hasPermission('admins.read');
+      allow read: if own(id) || hasPermission('admins.read');
       allow write: if superAdmin();
     }
     match /news/{id} {

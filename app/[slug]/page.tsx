@@ -7,6 +7,11 @@ import { news, publicPages } from "@/lib/content";
 
 type Props = { params: Promise<{ slug: string }> };
 
+export function generateStaticParams() {
+  return [...Object.keys(publicPages), "noticias", "transparencia", "documentos"].map(slug => ({ slug }));
+}
+export const dynamicParams = false;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   if (slug === "noticias") return { title: "Notícias" };
