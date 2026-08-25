@@ -1,0 +1,30 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function superAdmin() { return signedIn() && request.auth.token.admin == true; }
+    function hasPermission(permission) { return superAdmin() || (signedIn() && request.auth.token.permissions != null && request.auth.token.permissions[permission] == true); }
+    function safeUpload() {
+      return request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('(image/jpeg|image/png|image/webp|application/pdf)');
+    }
+    match /applications/{applicationId}/{fileName} {
+      allow write: if signedIn() && safeUpload()
+        && firestore.get(/databases/(default)/documents/associationApplications/$(applicationId)).data.applicantUid == request.auth.uid;
+      allow read: if hasPermission('applications.read');
+    }
+    match /members/{uid}/{fileName} {
+      allow read: if signedIn() && request.auth.uid == uid || hasPermission('members.read');
+      allow write: if signedIn() && request.auth.uid == uid && safeUpload() || hasPermission('members.write');
+    }
+    match /public/{fileName} {
+      allow read: if true;
+      allow write: if hasPermission('content.manage') && safeUpload();
+    }
+    match /documents/{visibility}/{fileName} {
+      allow read: if visibility == 'public' || (visibility == 'member' && signedIn()) || hasPermission('documents.read');
+      allow write: if hasPermission('documents.write') && safeUpload();
+    }
+    match /{allPaths=**} { allow read, write: if false; }
+  }
+}

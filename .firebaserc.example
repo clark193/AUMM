@@ -1,0 +1,12 @@
+{
+  "projects": { "default": "SEU_PROJECT_ID" },
+  "targets": {
+    "SEU_PROJECT_ID": {
+      "hosting": {
+        "site": ["aumm-site"],
+        "associado": ["aumm-associado"],
+        "admin": ["aumm-admin"]
+      }
+    }
+  }
+}
