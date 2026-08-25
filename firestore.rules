@@ -46,10 +46,13 @@ service cloud.firestore {
       return signedIn()
         && request.resource.data.keys().hasOnly([
           'applicationId','fullName','email','phone','city','consent','consentVersion','consentAt',
-          'applicantUid','status','createdAt'
+          'applicantUid','authAccountCreated','status','createdAt'
         ])
         && request.resource.data.applicationId == id
         && request.resource.data.applicantUid == request.auth.uid
+        && request.resource.data.authAccountCreated == true
+        && request.auth.token.firebase.sign_in_provider == 'password'
+        && request.resource.data.email == request.auth.token.email
         && request.resource.data.status == 'pending'
         && request.resource.data.consent == true
         && request.resource.data.createdAt == request.time

@@ -63,13 +63,12 @@ Os valores `NEXT_PUBLIC_*` do SDK Web identificam o projeto, mas não concedem a
 3. Abra a aba **Método de login**.
 4. Clique em **E-mail/senha**.
 5. Ative **E-mail/senha** e clique em **Salvar**. Não é necessário ativar login por link neste momento.
-6. Volte para a lista de provedores e clique em **Anônimo**.
-7. Ative o provedor anônimo e salve. Ele é usado temporariamente para identificar e proteger o envio do formulário público.
-8. Em **Configurações → Domínios autorizados**, confirme `localhost` durante o desenvolvimento.
-9. Quando os domínios forem comprados, adicione `aumm.com.br`, `www.aumm.com.br`, `associado.aumm.com.br` e `admin.aumm.com.br`.
-10. Em **Modelos**, personalize os e-mails de recuperação de senha com o nome e os contatos da AUMM.
+6. Não é necessário ativar o provedor anônimo. O candidato cria a própria senha no formulário e a conta permanece bloqueada pelo Firestore até a aprovação.
+7. Em **Configurações → Domínios autorizados**, confirme `localhost` durante o desenvolvimento e `clark193.github.io` para a prévia no GitHub Pages.
+8. Quando os domínios forem comprados, adicione `aumm.com.br`, `www.aumm.com.br`, `associado.aumm.com.br` e `admin.aumm.com.br`.
+9. Em **Modelos**, personalize os e-mails de recuperação de senha com o nome e os contatos da AUMM.
 
-Referências: https://firebase.google.com/docs/auth/web/password-auth e https://firebase.google.com/docs/auth/web/anonymous-auth
+Referência: https://firebase.google.com/docs/auth/web/password-auth
 
 ## 7. Criar o Firestore
 
@@ -158,12 +157,13 @@ Referência: https://firebase.google.com/docs/app-check/web/recaptcha-enterprise
 1. Na raiz, execute `npm run dev`.
 2. Abra http://localhost:3000.
 3. Teste o site em largura de celular e desktop.
-4. Abra `/associe-se`, preencha somente dados fictícios e envie.
+4. Abra `/associe-se`, preencha somente dados fictícios, crie uma senha de teste e envie.
 5. No Firestore, confirme o documento em `associationApplications`.
-6. Confirme que a página informa que os anexos serão solicitados durante a análise.
-7. Teste recuperação de senha.
-8. Entre no admin e confirme que um usuário comum é recusado.
-9. Execute `npm run lint`, `npm run typecheck` e `npm run build`.
+6. Entre no nível 1, aprove a inscrição e confirme que o painel não solicita nem exibe a senha escolhida.
+7. Entre no portal com o e-mail e a senha criados no formulário.
+8. Teste recuperação de senha.
+9. Entre no admin e confirme que um usuário comum é recusado.
+10. Execute `npm run lint`, `npm run typecheck` e `npm run build`.
 
 ## 15. Publicar no Firebase Hosting
 
@@ -298,7 +298,7 @@ Referência: https://firebase.google.com/docs/firestore/manage-data/export-impor
 
 ## 23. Checklist antes de produção
 
-- [ ] E-mail/senha e Anônimo ativados no Authentication;
+- [ ] E-mail/senha ativado no Authentication;
 - [ ] Firestore e Storage criados na região correta;
 - [ ] regras e índices publicados;
 - [ ] Functions compiladas e publicadas;

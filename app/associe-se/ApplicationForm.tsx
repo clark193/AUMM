@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Send } from "lucide-react";
+import { ArrowLeft, CheckCircle2, KeyRound, Send, ShieldCheck } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { firebaseEnabled } from "@/lib/firebase";
 import { submitApplication, type ApplicationPayload } from "@/lib/application";
@@ -16,6 +16,8 @@ const initial: ApplicationPayload = {
 };
 export function ApplicationForm() {
   const [data, setData] = useState(initial);
+  const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
@@ -36,12 +38,18 @@ export function ApplicationForm() {
         );
       if (!firebaseEnabled)
         throw new Error("Cadastro temporariamente indisponível.");
-      const id = await submitApplication(data);
+      if (password.length < 8)
+        throw new Error("Crie uma senha com pelo menos 8 caracteres.");
+      if (password !== passwordConfirmation)
+        throw new Error("A confirmação da senha está diferente.");
+      const id = await submitApplication(data, password);
       setMessage({
         type: "success",
         text: `Cadastro enviado com sucesso. Protocolo: ${id.slice(0, 12).toUpperCase()}.`,
       });
       setData(initial);
+      setPassword("");
+      setPasswordConfirmation("");
     } catch (err) {
       setMessage({
         type: "error",
@@ -118,6 +126,35 @@ export function ApplicationForm() {
               onChange={update}
               required
             />
+          </FormSection>
+          <FormSection title="Crie seu acesso">
+            <label className="field">
+              <span><KeyRound size={14} /> Senha *</span>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                minLength={8}
+                required
+                placeholder="Mínimo de 8 caracteres"
+              />
+            </label>
+            <label className="field">
+              <span><ShieldCheck size={14} /> Confirmar senha *</span>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={passwordConfirmation}
+                onChange={(event) => setPasswordConfirmation(event.target.value)}
+                minLength={8}
+                required
+                placeholder="Digite a mesma senha"
+              />
+            </label>
+            <p className="password-notice">
+              Sua senha fica protegida no Firebase Authentication e não é exibida para a administração. O acesso ao portal será liberado somente depois da aprovação.
+            </p>
           </FormSection>
           <label className="consent">
             <input

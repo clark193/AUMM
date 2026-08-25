@@ -50,10 +50,12 @@ type ApplicationRow = {
   city?: string;
   status?: string;
   memberNumber?: string;
+  applicantUid?: string;
+  authAccountCreated?: boolean;
   createdAt?: Timestamp;
 };
 
-type Credentials = { email: string; password: string; memberNumber: string };
+type Credentials = { email: string; password?: string; memberNumber: string };
 
 function searchable(value: string) {
   return value
@@ -179,7 +181,8 @@ export function ApplicationReviewAdmin() {
         throw new Error("Esta inscrição já foi analisada.");
       if (!selected.email)
         throw new Error("A inscrição não possui e-mail válido.");
-      if (temporaryPassword.length < 8)
+      const accountPrepared = selected.authAccountCreated === true;
+      if (!accountPrepared && temporaryPassword.length < 8)
         throw new Error(
           "Crie uma senha temporária com pelo menos 8 caracteres.",
         );
@@ -214,25 +217,32 @@ export function ApplicationReviewAdmin() {
           "Esta pessoa já aparece na lista de associados. Pesquise pelo e-mail ou telefone antes de continuar.",
         );
 
-      secondaryApp = initializeApp(
-        firebaseConfig,
-        `application-approval-${crypto.randomUUID()}`,
-      );
-      secondaryAuth = initializeAuth(secondaryApp, {
-        persistence: inMemoryPersistence,
-      });
-      const credential = await createUserWithEmailAndPassword(
-        secondaryAuth,
-        email,
-        temporaryPassword,
-      );
-      createdUser = credential.user;
+      let memberUid = selected.applicantUid || "";
+      if (accountPrepared) {
+        if (!memberUid)
+          throw new Error("A conta desta inscrição está incompleta. Revise o cadastro no Firebase.");
+      } else {
+        secondaryApp = initializeApp(
+          firebaseConfig,
+          `application-approval-${crypto.randomUUID()}`,
+        );
+        secondaryAuth = initializeAuth(secondaryApp, {
+          persistence: inMemoryPersistence,
+        });
+        const credential = await createUserWithEmailAndPassword(
+          secondaryAuth,
+          email,
+          temporaryPassword,
+        );
+        createdUser = credential.user;
+        memberUid = createdUser.uid;
+      }
 
       const memberNumber = await uniqueMemberNumber();
       const verificationToken = crypto.randomUUID().replaceAll("-", "");
       const batch = writeBatch(db);
-      batch.set(doc(db, "associados", createdUser.uid), {
-        uid: createdUser.uid,
+      batch.set(doc(db, "associados", memberUid), {
+        uid: memberUid,
         applicationId: selected.id,
         memberNumber,
         fullName: selected.fullName?.trim() || "Associado",
@@ -248,7 +258,7 @@ export function ApplicationReviewAdmin() {
         updatedAt: serverTimestamp(),
       });
       batch.set(doc(db, "publicMembers", memberNumber), {
-        uid: createdUser.uid,
+        uid: memberUid,
         memberNumber,
         fullName: selected.fullName?.trim() || "Associado",
         role: "Associado",
@@ -258,7 +268,7 @@ export function ApplicationReviewAdmin() {
       });
       batch.update(doc(db, "associationApplications", selected.id), {
         status: "approved",
-        uid: createdUser.uid,
+        uid: memberUid,
         memberNumber,
         verificationToken,
         approvedAt: serverTimestamp(),
@@ -279,7 +289,11 @@ export function ApplicationReviewAdmin() {
       });
       await batch.commit();
 
-      setCredentials({ email, password: temporaryPassword, memberNumber });
+      setCredentials({
+        email,
+        password: accountPrepared ? undefined : temporaryPassword,
+        memberNumber,
+      });
       setMessage({
         type: "success",
         text: `${selected.fullName || "Associado"} foi aprovado e já pode acessar o portal.`,
@@ -354,7 +368,7 @@ export function ApplicationReviewAdmin() {
   async function copyCredentials() {
     if (!credentials) return;
     await navigator.clipboard.writeText(
-      `Acesso AUMM\nE-mail: ${credentials.email}\nSenha temporária: ${credentials.password}\nNúmero: ${credentials.memberNumber}\nPortal: ${window.location.origin}${withBasePath("/associado/login")}`,
+      `Acesso AUMM\nE-mail: ${credentials.email}\n${credentials.password ? `Senha temporária: ${credentials.password}\n` : "Use a senha escolhida no cadastro.\n"}Número: ${credentials.memberNumber}\nPortal: ${window.location.origin}${withBasePath("/associado/login")}`,
     );
     setMessage({ type: "success", text: "Dados de acesso copiados." });
   }
@@ -395,7 +409,7 @@ export function ApplicationReviewAdmin() {
           <div>
             <strong>Acesso liberado · {credentials.memberNumber}</strong>
             <span>{credentials.email}</span>
-            <span>Senha temporária: {credentials.password}</span>
+            <span>{credentials.password ? `Senha temporária: ${credentials.password}` : "Senha definida pelo associado no cadastro"}</span>
           </div>
           <button
             type="button"
@@ -481,19 +495,26 @@ export function ApplicationReviewAdmin() {
               {selected.email} · {selected.phone || "sem telefone"}
             </p>
           </div>
-          <label className="field">
-            <span>
-              <KeyRound size={14} /> Senha temporária do associado
-            </span>
-            <input
-              type="password"
-              autoComplete="new-password"
-              value={temporaryPassword}
-              onChange={(event) => setTemporaryPassword(event.target.value)}
-              minLength={8}
-              placeholder="Mínimo de 8 caracteres"
-            />
-          </label>
+          {selected.authAccountCreated ? (
+            <div className="approval-password-ready">
+              <BadgeCheck size={22} />
+              <span><strong>Senha já definida</strong><small>O associado usará a senha escolhida no cadastro.</small></span>
+            </div>
+          ) : (
+            <label className="field">
+              <span>
+                <KeyRound size={14} /> Senha temporária do associado antigo
+              </span>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={temporaryPassword}
+                onChange={(event) => setTemporaryPassword(event.target.value)}
+                minLength={8}
+                placeholder="Mínimo de 8 caracteres"
+              />
+            </label>
+          )}
           <div className="approval-actions">
             <button
               type="button"

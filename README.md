@@ -70,7 +70,7 @@ Dados privados ficam em `associados` e `users`. A verificação pública consult
 
 ## Segurança
 
-O frontend nunca é a autoridade de permissão. As regras do Firestore verificam autenticação, propriedade e permissões. Cadastros públicos recebem autenticação anônima temporária e usam um identificador determinístico derivado do e-mail para evitar duplicidade no fluxo normal.
+O frontend nunca é a autoridade de permissão. As regras do Firestore verificam autenticação, propriedade e permissões. No cadastro público, o candidato cria uma conta de e-mail/senha, mas só recebe acesso ao portal depois da aprovação administrativa. A senha permanece no Firebase Authentication e nunca é gravada no Firestore. Um identificador determinístico derivado do e-mail evita duplicidade no fluxo normal.
 
 Nunca versione `.env.local`, `.firebaserc`, chaves de conta de serviço ou credenciais. O `.gitignore` bloqueia arquivos `.env*`; apenas `.env.example` deve ser público.
 

@@ -163,6 +163,7 @@ h1,h2 { font-family:var(--font-display),Impact,sans-serif; text-transform:upperc
 .form-section { margin-top:32px; }
 .form-section h2 { padding-bottom:10px; border-bottom:1px solid var(--line); font-family:var(--font-body); font-size:15px; letter-spacing:.02em; text-transform:none; }
 .form-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:18px; }
+.password-notice { grid-column:1/-1; display:flex; align-items:flex-start; margin:0; padding:13px 14px; color:#555961; background:#f5f5f3; border-left:3px solid var(--red); border-radius:7px; font-size:11px; line-height:1.55; }
 .field { display:grid; gap:7px; }
 .field.full { grid-column:1/-1; }
 .field label { font-size:12px; font-weight:750; }
@@ -290,6 +291,9 @@ td { padding:13px 10px; border-bottom:1px solid #eee; white-space:nowrap; }
 .approval-box { display:grid; grid-template-columns:1fr minmax(260px,.8fr); gap:18px; align-items:end; margin-top:18px; padding:20px; background:#f5f5f3; border:1px solid var(--line); border-left:4px solid var(--red); border-radius:10px; }
 .approval-box h3 { margin:6px 0 4px; font-size:20px; }
 .approval-box p { margin:0; color:var(--muted); font-size:12px; }
+.approval-password-ready { display:flex; align-items:center; gap:11px; min-height:67px; padding:13px 14px; color:#0b5b34; background:#e6f6ed; border:1px solid #b8e3cd; border-radius:8px; }
+.approval-password-ready span { display:grid; gap:3px; }
+.approval-password-ready small { color:#39715a; font-size:10px; }
 .approval-actions { grid-column:1/-1; display:flex; gap:10px; }
 .approval-actions .button { min-width:190px; }
 .member-registration .panel-head h3 { display:flex; align-items:center; gap:8px; }
