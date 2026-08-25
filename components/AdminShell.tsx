@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { AuthGate } from "./AuthGate";
 import { firebaseEnabled, getFirebaseServices } from "@/lib/firebase";
+import { withBasePath } from "@/lib/paths";
 
 const links = [
   ["/admin", "Dashboard", LayoutDashboard, [1, 2, 3, 4, 5]],
@@ -64,7 +65,7 @@ export function AdminShell({ title, children, allowedLevels = [1, 2, 3, 4, 5] }:
       : <div className="dashboard">
         <aside className="sidebar">
           <Link href="/admin" className="sidebar-brand">
-            <Image src="/logo.png" width={51} height={51} alt="AUMM" />
+            <Image src={withBasePath("/logo.png")} width={51} height={51} alt="AUMM" />
             <span><strong>AUMM</strong><small>Administração · Nível {level}</small></span>
           </Link>
           <nav className="side-nav" aria-label="Menu administrativo">

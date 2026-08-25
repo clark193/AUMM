@@ -6,6 +6,7 @@ import { createUserWithEmailAndPassword, deleteUser, inMemoryPersistence, initia
 import { collection, getDocs, limit, onSnapshot, orderBy, query, serverTimestamp, where, writeBatch, doc } from "firebase/firestore";
 import { CheckCircle2, Copy, KeyRound, Save, ShieldCheck, UserPlus } from "lucide-react";
 import { firebaseConfig, firebaseEnabled, getFirebaseServices } from "@/lib/firebase";
+import { withBasePath } from "@/lib/paths";
 
 type MemberRow = {
   id: string;
@@ -139,7 +140,7 @@ export function MemberAdmin({ registrationOnly = false }: MemberAdminProps) {
 
   async function copyCredentials() {
     if (!credentials) return;
-    await navigator.clipboard.writeText(`Acesso AUMM\nE-mail: ${credentials.email}\nSenha temporária: ${credentials.password}\nPortal: ${window.location.origin}/associado/login`);
+    await navigator.clipboard.writeText(`Acesso AUMM\nE-mail: ${credentials.email}\nSenha temporária: ${credentials.password}\nPortal: ${window.location.origin}${withBasePath("/associado/login")}`);
     setMessage({ type: "success", text: "Dados de acesso copiados." });
   }
 

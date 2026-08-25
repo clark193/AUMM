@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Menu, X, UserRound } from "lucide-react";
 import { useState } from "react";
 import { navItems } from "@/lib/content";
+import { withBasePath } from "@/lib/paths";
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
@@ -14,7 +15,7 @@ export function SiteHeader() {
       <div className="topline"><div className="container topline-inner"><span>Blumenau · Santa Catarina</span><span>Unidos por respeito, segurança e futuro</span></div></div>
       <div className="container nav-wrap">
         <Link href="/" className="brand" aria-label="AUMM — Início">
-          <Image src="/logo.png" width={72} height={72} priority alt="Logo da AUMM" />
+          <Image src={withBasePath("/logo.png")} width={72} height={72} priority alt="Logo da AUMM" />
           <span><strong>AUMM</strong><small>Associação de Motoboys e Motociclistas</small></span>
         </Link>
         <button className="menu-toggle" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={open ? "Fechar menu" : "Abrir menu"}>{open ? <X /> : <Menu />}</button>

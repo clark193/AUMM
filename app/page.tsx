@@ -4,6 +4,7 @@ import { ArrowRight, BadgeCheck, CalendarDays, CheckCircle2, Handshake, HeartHan
 import { PublicShell } from "@/components/PublicShell";
 import { BoardWall } from "@/components/BoardWall";
 import { news } from "@/lib/content";
+import { withBasePath } from "@/lib/paths";
 
 export default function HomePage() {
   return <PublicShell>
@@ -17,7 +18,7 @@ export default function HomePage() {
           <div className="hero-trust"><span><ShieldCheck/> Atuação responsável</span><span><BadgeCheck/> Gestão transparente</span></div>
         </div>
         <div className="hero-visual" aria-label="Identidade da AUMM">
-          <div className="hero-logo-ring"><Image src="/logo.png" fill sizes="(max-width: 800px) 70vw, 420px" priority alt="AUMM — Associação de motoboys e motociclistas de Blumenau" /></div>
+          <div className="hero-logo-ring"><Image src={withBasePath("/logo.png")} fill sizes="(max-width: 800px) 70vw, 420px" priority alt="AUMM — Associação de motoboys e motociclistas de Blumenau" /></div>
         </div>
       </div>
       <div className="hero-stripe"><div className="container"><span>Representatividade</span><i/> <span>Benefícios</span><i/> <span>Segurança</span><i/> <span>Comunidade</span></div></div>
