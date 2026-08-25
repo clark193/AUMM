@@ -249,6 +249,27 @@ td { padding:13px 10px; border-bottom:1px solid #eee; white-space:nowrap; }
 .quick-card strong { margin-top:auto; font-size:14px; }
 .quick-card small { margin-top:4px; color:var(--muted); }
 
+/* Cadastro administrativo de associados */
+.member-registration .panel-head h3 { display:flex; align-items:center; gap:8px; }
+.member-registration .panel-head p,.panel-head>div>p { margin:5px 0 0; color:var(--muted); font-size:12px; }
+.authorization-switch { display:flex; align-items:center; gap:13px; margin:22px 0; padding:16px; border:1px solid var(--line); border-radius:10px; cursor:pointer; }
+.authorization-switch>input { position:absolute; opacity:0; pointer-events:none; }
+.authorization-switch>span:last-child { display:grid; gap:3px; }
+.authorization-switch small { color:var(--muted); }
+.switch-track { flex:0 0 auto; width:48px; height:27px; padding:3px; background:#aaa; border-radius:30px; transition:.2s; }
+.switch-track i { display:block; width:21px; height:21px; background:#fff; border-radius:50%; box-shadow:0 2px 6px rgb(0 0 0 / 20%); transition:.2s; }
+.authorization-switch>input:checked+.switch-track { background:#16804d; }
+.authorization-switch>input:checked+.switch-track i { transform:translateX(21px); }
+.authorization-switch>input:focus-visible+.switch-track { outline:3px solid rgb(215 25 32 / 22%); }
+.credentials-box { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:14px; margin:15px 0; padding:16px; color:#0b5b34; background:#e6f6ed; border:1px solid #b8e3cd; border-radius:10px; }
+.credentials-box>svg { width:28px; height:28px; }
+.credentials-box>div { display:grid; gap:3px; }
+.credentials-box span { font-size:12px; }
+.access-denied { max-width:620px; margin:50px auto; text-align:center; }
+.access-denied>svg { width:45px; height:45px; color:var(--red); }
+.access-denied h2 { font-size:28px; }
+.access-denied p { margin-bottom:22px; color:var(--muted); }
+
 /* Card and transparency */
 .id-page { min-height:100vh; padding:70px 20px; background:#202226; }
 .id-page-inner { width:min(620px,100%); margin:auto; }
@@ -329,6 +350,7 @@ td { padding:13px 10px; border-bottom:1px solid #eee; white-space:nowrap; }
   .metric-grid,.quick-grid,.finance-summary { grid-template-columns:1fr; }.side-nav { display:flex; overflow:auto; }.side-nav>a { min-width:115px; flex-direction:column; }.dash-profile>span { display:none; }.dash-welcome { align-items:start; flex-direction:column; }
   .member-hero { grid-template-columns:1fr; }.id-card { min-height:520px; }.id-body { grid-template-columns:100px 1fr; }.qr-box { grid-column:1/-1; justify-self:center; width:110px; }.id-actions { gap:8px; flex-wrap:wrap; }
   .board-grid,.board-admin-row { grid-template-columns:1fr; }.board-photo-url { grid-column:auto; }
+  .credentials-box { grid-template-columns:1fr; }.credentials-box .button { width:100%; }
 }
 @media print { .id-page { background:#fff; padding:0; }.id-actions { display:none; }.id-card { box-shadow:none; print-color-adjust:exact; -webkit-print-color-adjust:exact; }.site-header,.footer { display:none; } }
 @media (prefers-reduced-motion:reduce) { *,*:before,*:after { scroll-behavior:auto!important; animation:none!important; transition:none!important; } }

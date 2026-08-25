@@ -125,6 +125,16 @@ Não existe senha padrão e nenhum administrador é criado no código.
 11. Salve o documento e entre em `/associado/login?destino=admin`.
 12. Depois de acessar o painel, troque a senha usando a recuperação por e-mail ou pelo console Authentication quando necessário.
 
+### Criar um administrador de nível 5
+
+O nível 5 possui um painel básico com acesso somente ao Dashboard e ao cadastro de associados. Ele pode cadastrar um associado manualmente e usar a chave **Autorizar acesso agora** para criar o login e ativar o acesso na mesma operação.
+
+1. Em **Authentication → Usuários**, adicione o usuário administrativo e copie o UID.
+2. Em `adminRoles`, crie um documento cujo ID seja esse UID.
+3. Adicione `active` (boolean) = `true`, `superAdmin` (boolean) = `false`, `level` (number) = `5`, `role` (string) = `Cadastro` e `permissions` (mapa) = mapa vazio.
+4. Esse usuário entra em `/associado/login?destino=admin`.
+5. Para o cadastro manual criar logins de associados, o provedor **E-mail/senha** precisa estar ativo no Firebase Authentication.
+
 ## 13. Configurar App Check
 
 Faça primeiro em modo de monitoramento. Só ative a aplicação forçada depois de confirmar que não existem requisições legítimas bloqueadas.

@@ -25,6 +25,9 @@ service cloud.firestore {
         || (adminProfile().data.level == 4 && permission in [
           'news.read','news.create','news.edit','communications.read','communications.write','content.manage','documents.read'
         ])
+        || (adminProfile().data.level == 5 && permission in [
+          'members.read','members.write'
+        ])
       );
     }
     function hasPermission(permission) {
@@ -32,6 +35,11 @@ service cloud.firestore {
         || (signedIn() && adminProfile().data.active == true && adminProfile().data.permissions is map && adminProfile().data.permissions[permission] == true);
     }
     function own(uid) { return signedIn() && request.auth.uid == uid; }
+    function activeMember() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/associados/$(request.auth.uid))
+        && get(/databases/$(database)/documents/associados/$(request.auth.uid)).data.status == 'active';
+    }
     function validApplication(id) {
       return signedIn()
         && request.resource.data.keys().hasOnly([
@@ -97,7 +105,7 @@ service cloud.firestore {
       allow write: if collectionName in ['partners','benefits','events'] && hasPermission('content.manage');
     }
     match /documents/{id} {
-      allow read: if resource.data.visibility == 'public' || (signedIn() && resource.data.visibility == 'member') || hasPermission('documents.read');
+      allow read: if resource.data.visibility == 'public' || (activeMember() && resource.data.visibility == 'member') || hasPermission('documents.read');
       allow write: if hasPermission('documents.write');
     }
     match /requests/{id} {
@@ -111,7 +119,7 @@ service cloud.firestore {
       allow write: if hasPermission('finance.write');
     }
     match /transparency/{id} {
-      allow read: if resource.data.status == 'published';
+      allow read: if (activeMember() && resource.data.status == 'published') || hasPermission('transparency.write');
       allow write: if hasPermission('transparency.write');
     }
     match /settings/{id} {
