@@ -1,25 +1,45 @@
-import { Plus, Search, SlidersHorizontal } from "lucide-react";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/AdminShell";
 import { BoardAdmin } from "@/components/BoardAdmin";
 import { MemberAdmin } from "@/components/MemberAdmin";
-const modules:Record<string,{title:string;description:string;headers:string[];rows:string[][]}>={
-associados:{title:"Associados",description:"Cadastros, aprovação, status, cargos e dados dos associados.",headers:["Nome","Nº","CPF","Cargo","Status"],rows:[["João Silva","AUMM-1027","***.456.***-**","Associado","Ativo"],["Marcos Oliveira","—","***.128.***-**","—","Pendente"],["Ana Paula Costa","—","***.904.***-**","—","Em análise"]]},
-cargos:{title:"Cargos",description:"Crie e organize cargos sem alterar o código.",headers:["Cargo","Descrição","Cor","Ordem","Status"],rows:[["Presidente","Representação institucional","Vermelho","1","Ativo"],["Tesoureiro","Gestão financeira","Dourado","2","Ativo"],["Associado","Membro da associação","Grafite","10","Ativo"]]},
-diretoria:{title:"Diretoria",description:"Gestão dos mandatos e apresentação pública da diretoria.",headers:["Associado","Cargo","Mandato","Publicação","Status"],rows:[["João Demonstrativo","Presidente","2026–2028","Público","Ativo"],["Maria Demonstrativa","Secretária","2026–2028","Público","Ativo"]]},
-noticias:{title:"Notícias",description:"Criação, revisão, agendamento e publicação de notícias.",headers:["Título","Categoria","Autor","Data","Status"],rows:[["Campanha de segurança","Segurança","Editor","22/08/2026","Publicado"],["Novos convênios","Benefícios","Editor","18/08/2026","Publicado"],["Pauta da assembleia","Institucional","Secretaria","—","Rascunho"]]},
-comunicados:{title:"Comunicados",description:"Mensagens internas segmentadas por público, cargo ou usuário.",headers:["Assunto","Público","Data","Leituras","Status"],rows:[["Assembleia geral","Todos os associados","24/08/2026","312","Publicado"],["Reunião de diretoria","Diretoria","22/08/2026","8","Publicado"]]},
-eventos:{title:"Eventos",description:"Agenda, locais, capacidade e confirmações de presença.",headers:["Evento","Data","Local","Inscritos","Status"],rows:[["Passeio pela Vida","07/09/2026","Vila Germânica","84/150","Publicado"],["Pilotagem defensiva","03/10/2026","A confirmar","12/30","Rascunho"]]},
-beneficios:{title:"Benefícios",description:"Vantagens oferecidas aos associados ativos.",headers:["Benefício","Parceiro","Validade","Uso","Status"],rows:[["10% em serviços","Moto Center","31/12/2026","Carteirinha","Ativo"],["Plano especial","Protege Moto","31/12/2026","Cupom","Ativo"]]},
-solicitacoes:{title:"Solicitações",description:"Protocolos abertos pelos associados e histórico de respostas.",headers:["Protocolo","Associado","Assunto","Atualização","Status"],rows:[["AUMM-2026-000128","João Silva","Atualização cadastral","Hoje","Em análise"],["AUMM-2026-000127","Ana Costa","Declaração","Ontem","Aberto"]]},
-transparencia:{title:"Transparência",description:"Publicações, documentos, contas e dados abertos.",headers:["Publicação","Categoria","Competência","Visibilidade","Status"],rows:[["Balancete mensal","Contas","08/2026","Público","Publicado"],["Ata nº 08","Atas","08/2026","Público","Publicado"]]},
-financeiro:{title:"Financeiro",description:"Receitas e despesas com controle de publicação.",headers:["Data","Descrição","Categoria","Valor","Visibilidade"],rows:[["20/08/2026","Contribuições","Receita","R$ 4.800,00","Público"],["18/08/2026","Material gráfico","Despesa","R$ 640,00","Admin"]]},
-documentos:{title:"Documentos",description:"Biblioteca com acesso por perfil e armazenamento protegido.",headers:["Documento","Tipo","Acesso","Atualização","Status"],rows:[["Estatuto Social","Estatuto","Público","10/08/2026","Publicado"],["Procedimento interno","Administrativo","Admin","08/08/2026","Ativo"]]},
-administradores:{title:"Administradores",description:"Acesso dividido em níveis, sempre com o menor privilégio necessário.",headers:["Função","Nível","Acesso","Exemplo","Status"],rows:[["Presidente / Vice-Presidente","Nível 1","Acesso máximo","Administração completa","Ativo"],["Diretoria / Tesouraria / Secretaria","Nível 2","Gestão ampla","Diretoria e financeiro","Ativo"],["Coordenação","Nível 3","Operacional","Associados e solicitações","Ativo"],["Editor / Atendimento","Nível 4","Área específica","Conteúdo e atendimento","Ativo"],["Cadastro básico","Nível 5","Acesso básico","Cadastrar e autorizar associados","Ativo"]]},
-logs:{title:"Logs de auditoria",description:"Registro protegido de ações administrativas importantes.",headers:["Data/hora","Administrador","Ação","Recurso","ID"],rows:[["24/08/2026 19:32","Super Admin","Aprovou associado","associados","1042"],["24/08/2026 18:10","Editor Demo","Publicou notícia","news","campanha-seguranca"]]},
-configuracoes:{title:"Configurações",description:"Dados institucionais, identidade, cadastro, numeração e carteirinha.",headers:["Seção","Descrição","Atualização","Responsável","Status"],rows:[["Dados gerais","Nome, CNPJ e contatos","Hoje","Super Admin","Configurado"],["Carteirinha","Campos, cores e validade","Hoje","Super Admin","Configurado"],["Numeração","Prefixo e sequência","Ontem","Super Admin","Configurado"]]},
+import { PasswordResetAdmin } from "@/components/PasswordResetAdmin";
+
+type Module = { title: string; description: string; headers: string[]; rows?: string[][] };
+const modules: Record<string, Module> = {
+  recrutamento: { title: "Novo associado", description: "Cadastro manual de novos associados.", headers: [] },
+  associados: { title: "Associados", description: "Cadastros, autorização e situação dos associados.", headers: ["Nome", "Número", "E-mail", "Cidade", "Status"] },
+  cargos: { title: "Cargos", description: "Crie e organize cargos sem alterar o código.", headers: ["Cargo", "Descrição", "Ordem", "Status"] },
+  diretoria: { title: "Diretoria", description: "Gestão dos nomes e fotos exibidos no mural público.", headers: [] },
+  noticias: { title: "Notícias", description: "Criação, revisão e publicação de notícias.", headers: ["Título", "Categoria", "Data", "Status"] },
+  comunicados: { title: "Comunicados", description: "Mensagens internas destinadas aos associados.", headers: ["Assunto", "Público", "Data", "Status"] },
+  eventos: { title: "Eventos", description: "Agenda, locais e inscrições.", headers: ["Evento", "Data", "Local", "Status"] },
+  beneficios: { title: "Benefícios", description: "Vantagens oferecidas aos associados ativos.", headers: ["Benefício", "Parceiro", "Validade", "Status"] },
+  solicitacoes: { title: "Solicitações", description: "Protocolos abertos pelos associados.", headers: ["Protocolo", "Associado", "Assunto", "Atualização", "Status"] },
+  "recuperacao-senha": { title: "Recuperação de senha", description: "Pedidos recebidos para atendimento pelo WhatsApp.", headers: [] },
+  transparencia: { title: "Transparência", description: "Publicações, documentos e prestações de contas.", headers: ["Publicação", "Categoria", "Competência", "Status"] },
+  financeiro: { title: "Financeiro", description: "Receitas e despesas da associação.", headers: ["Data", "Descrição", "Categoria", "Valor"] },
+  documentos: { title: "Documentos", description: "Biblioteca de documentos institucionais.", headers: ["Documento", "Tipo", "Acesso", "Atualização"] },
+  administradores: { title: "Administradores", description: "Matriz dos níveis de acesso.", headers: ["Perfil", "Nível", "Permissão"], rows: [["Presidência", "Nível 1", "Acesso completo"], ["Diretoria", "Nível 2", "Gestão ampla"], ["Coordenação", "Nível 3", "Associados, solicitações e documentos"], ["Comunicação", "Nível 4", "Notícias, comunicados, eventos e benefícios"], ["Recrutador", "Nível 5", "Dashboard visual e cadastro de novos associados"]] },
+  logs: { title: "Logs de auditoria", description: "Registro protegido de ações administrativas.", headers: ["Data/hora", "Administrador", "Ação", "Recurso"] },
+  configuracoes: { title: "Configurações", description: "Dados institucionais e preferências do sistema.", headers: ["Seção", "Atualização", "Responsável"] },
 };
-export function generateStaticParams(){return Object.keys(modules).map(module=>({module}));}
-export const dynamicParams=false;
-const moduleAccess:Record<string,readonly number[]>={associados:[1,2,3,5],cargos:[1,2],diretoria:[1,2],noticias:[1,2,4],comunicados:[1,2,4],eventos:[1,2,4],beneficios:[1,2,4],solicitacoes:[1,2,3],transparencia:[1,2],financeiro:[1,2],documentos:[1,2,3],administradores:[1],logs:[1],configuracoes:[1]};
-type Props={params:Promise<{module:string}>};export default async function ModulePage({params}:Props){const {module}=await params;const item=modules[module];if(!item)notFound();const allowedLevels=moduleAccess[module]||[1];if(module==="associados")return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Cadastro de associados</h2><p>Cadastre manualmente e escolha se o login será autorizado na mesma hora.</p></div></div><MemberAdmin/></AdminShell>;if(module==="diretoria")return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Diretoria da AUMM</h2><p>As alterações feitas aqui aparecem no mural da página inicial.</p></div></div><BoardAdmin/></AdminShell>;return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>{item.title}</h2><p>{item.description}</p></div><button className="button button-sm"><Plus size={16}/> Novo registro</button></div><section className="panel"><div className="panel-head"><div className="field" style={{minWidth:260}}><label htmlFor="search">Pesquisar</label><input id="search" placeholder="Digite para buscar…"/></div><button className="button button-sm button-dark"><SlidersHorizontal size={15}/> Filtros</button></div><div className="table-wrap"><table><thead><tr>{item.headers.map(h=><th key={h}>{h}</th>)}<th>Ações</th></tr></thead><tbody>{item.rows.map((row,i)=><tr key={i}>{row.map((cell,j)=><td key={j}>{j===0?<strong>{cell}</strong>:j===row.length-1?<span className={`status ${cell.toLowerCase().includes("ativ")||cell==="Publicado"?"active":"pending"}`}>{cell}</span>:cell}</td>)}<td><button aria-label="Abrir registro"><Search size={15}/></button></td></tr>)}</tbody></table></div><div className="footer-bottom" style={{color:"#777",marginTop:15}}><span>Exibindo {item.rows.length} registros demonstrativos</span><span>Página 1 de 1</span></div></section></AdminShell>}
+
+const moduleAccess: Record<string, readonly number[]> = {
+  recrutamento: [5], associados: [1, 2, 3], cargos: [1, 2], diretoria: [1, 2], noticias: [1, 2, 4], comunicados: [1, 2, 4], eventos: [1, 2, 4], beneficios: [1, 2, 4], solicitacoes: [1, 2, 3], "recuperacao-senha": [1, 2, 3], transparencia: [1, 2], financeiro: [1, 2], documentos: [1, 2, 3], administradores: [1], logs: [1], configuracoes: [1],
+};
+
+export function generateStaticParams() { return Object.keys(modules).map(module => ({ module })); }
+export const dynamicParams = false;
+
+type Props = { params: Promise<{ module: string }> };
+export default async function ModulePage({ params }: Props) {
+  const { module } = await params;
+  const item = modules[module];
+  if (!item) notFound();
+  const allowedLevels = moduleAccess[module] || [1];
+  if (module === "recrutamento") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Novo associado</h2><p>Cadastre um associado e decida se o acesso será ativado imediatamente.</p></div></div><MemberAdmin registrationOnly /></AdminShell>;
+  if (module === "associados") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Cadastro de associados</h2><p>Cadastre manualmente e escolha se o login será autorizado na mesma hora.</p></div></div><MemberAdmin /></AdminShell>;
+  if (module === "diretoria") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Diretoria da AUMM</h2><p>As alterações feitas aqui aparecem no mural da página inicial.</p></div></div><BoardAdmin /></AdminShell>;
+  if (module === "recuperacao-senha") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Recuperação de senha</h2><p>Responda pelo WhatsApp somente após confirmar a identidade do solicitante.</p></div></div><PasswordResetAdmin /></AdminShell>;
+  return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>{item.title}</h2><p>{item.description}</p></div></div><section className="panel">{item.rows?.length ? <div className="table-wrap"><table><thead><tr>{item.headers.map(header => <th key={header}>{header}</th>)}</tr></thead><tbody>{item.rows.map((row, index) => <tr key={index}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cellIndex === 0 ? <strong>{cell}</strong> : cell}</td>)}</tr>)}</tbody></table></div> : <div className="empty-state">Nenhum registro cadastrado.</div>}</section></AdminShell>;
+}

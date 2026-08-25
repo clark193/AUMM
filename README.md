@@ -14,20 +14,20 @@ Plataforma web da AUMM — Associação dos Motoboys e Motociclistas de Blumenau
 ## Módulos implementados
 
 - Site institucional responsivo: início, quem somos, diretoria, projetos, ações, benefícios, parceiros, eventos, contato e páginas legais;
-- Notícias com listagem, página individual, metadados, sitemap, robots e Open Graph;
+- Notícias com listagem vazia inicial, metadados, sitemap, robots e Open Graph;
 - Cadastro público com validações, consentimento LGPD e gravação protegida no Firestore;
 - Estrutura preparada para aprovação, número único, perfil público mínimo e log de auditoria;
-- Login Firebase, recuperação de senha e separação de acesso de associado/admin;
-- Portal do associado, perfil resumido, comunicados, benefícios e protocolos;
+- Login Firebase, solicitação de recuperação atendida pelo WhatsApp e separação de acesso de associado/admin;
+- Portal do associado, perfil resumido, alteração de senha e carteirinha;
 - Portal da transparência protegido dentro da área do associado;
 - Mural da diretoria editável pelo admin, com nome, cargo, ordem e URL da foto;
 - Carteirinha digital mobile-first, QR Code, impressão/PDF e compartilhamento;
 - Verificação pública por token não sequencial, sem dados sensíveis;
-- Painel administrativo para associados, cargos configuráveis, diretoria, notícias, comunicados, eventos, benefícios, solicitações, transparência, financeiro, documentos, administradores, logs e configurações;
+- Painel administrativo para associados, cargos configuráveis, diretoria, notícias, comunicados, eventos, benefícios, solicitações, recuperação de acesso, transparência, financeiro, documentos, administradores, logs e configurações;
 - RBAC por níveis de 1 a 5 e permissões específicas nas regras do Firestore;
 - Deploy automatizado e documentação de operação.
 
-Os conteúdos pessoais e financeiros presentes na interface estão claramente marcados como demonstração e não são gravados no Firebase. Remova-os substituindo os arrays em `lib/content.ts` e nos componentes de dashboard por consultas aos serviços Firebase.
+O repositório não inclui registros pessoais, financeiros, notícias, eventos ou parceiros fictícios. As telas operacionais iniciam vazias e usam o Firebase configurado.
 
 ## Execução local
 
@@ -39,7 +39,7 @@ npm install
 npm run dev
 ```
 
-Abra `http://localhost:3000`. Sem variáveis Firebase o projeto entra em modo demonstrativo; depois da configuração, cadastro e login usam o projeto real.
+Abra `http://localhost:3000`. As variáveis do Firebase são necessárias para cadastro, login e painéis protegidos.
 
 Comandos úteis:
 
@@ -55,7 +55,7 @@ npm run build:firebase
 
 - `app/`: rotas públicas, portal do associado, administração, SEO e verificação;
 - `components/`: estrutura visual e proteção de acesso;
-- `lib/`: configuração do Firebase, serviços e dados demonstrativos;
+- `lib/`: configuração do Firebase, serviços e conteúdo institucional;
 - `functions/`: implementação opcional preservada para uma futura migração ao Blaze;
 - `firestore.rules`: autorização do banco no plano Spark;
 - `firestore.indexes.json`: índices de consultas;
@@ -64,7 +64,7 @@ npm run build:firebase
 
 ## Arquitetura do Firestore
 
-Collections principais: `users`, `associados`, `publicMembers`, `associationApplications`, `roles`, `adminRoles`, `news`, `communications`, `partners`, `benefits`, `events`, `documents`, `requests`, `transparency`, `financialEntries`, `auditLogs`, `settings`, `notifications` e `counters`.
+Collections principais: `users`, `associados`, `publicMembers`, `associationApplications`, `applicationSummaries`, `passwordResetRequests`, `dashboardActivity`, `roles`, `adminRoles`, `news`, `communications`, `partners`, `benefits`, `events`, `documents`, `requests`, `transparency`, `financialEntries`, `auditLogs`, `settings`, `notifications` e `counters`.
 
 Dados privados ficam em `associados` e `users`. A verificação pública consulta somente `publicMembers`, documento propositalmente mínimo. No modo Spark, a autorização administrativa consulta `adminRoles/{uid}` diretamente pelas regras.
 

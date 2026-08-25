@@ -1,7 +1,6 @@
-"use client";
-import Image from "next/image";
-import Link from "next/link";
-import { ArrowLeft, Download, Printer, Share2, UserRound } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
 import { AuthGate } from "@/components/AuthGate";
-export default function DigitalCard(){const verifyUrl=typeof window!=="undefined"?`${window.location.origin}/verificar/AUMM-DEMO-1027`:"https://aumm.com.br/verificar/AUMM-DEMO-1027";async function share(){if(navigator.share)await navigator.share({title:"Carteirinha AUMM",text:"Verificação da minha carteirinha AUMM",url:verifyUrl});else await navigator.clipboard.writeText(verifyUrl)}return <AuthGate><main className="id-page"><div className="id-page-inner"><div className="id-actions"><Link href="/associado"><ArrowLeft size={15}/> Voltar</Link><span style={{display:"flex",gap:8}}><button onClick={()=>window.print()}><Printer size={15}/> Imprimir/PDF</button><button onClick={share}><Share2 size={15}/> Compartilhar</button></span></div><div className="id-card"><div className="id-top"><div className="id-brand"><Image src="/logo.png" width={68} height={68} alt="AUMM"/><span><strong>AUMM</strong><small>Carteira de associado</small></span></div><small>BLUMENAU · SC</small></div><div className="id-body"><div className="member-photo"><UserRound size={50}/></div><div className="id-data"><small>Associado</small><h1>João Silva</h1><strong>ASSOCIADO</strong><p>Nº AUMM-1027 · ATIVO</p><p>Desde 15/03/2025</p></div><div className="qr-box"><QRCodeSVG value={verifyUrl} size={94} level="H"/></div></div></div><p style={{color:"#a8a9ad",fontSize:11,textAlign:"center",marginTop:18}}>Carteirinha demonstrativa. Dados reais serão carregados do perfil autenticado.</p><button className="button" style={{width:"100%",marginTop:10}} onClick={()=>window.print()}><Download size={17}/> Baixar como PDF</button></div></main></AuthGate>}
+import { MemberCardContent } from "@/components/MemberCardContent";
+
+export default function DigitalCard() {
+  return <AuthGate><MemberCardContent /></AuthGate>;
+}

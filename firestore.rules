@@ -16,17 +16,19 @@ service cloud.firestore {
           'applications.read','applications.review','users.read','users.update','members.read','members.write',
           'roles.manage','board.manage','news.read','news.create','news.edit','news.delete','communications.read',
           'communications.write','content.manage','requests.read','requests.write','finance.read','finance.write',
-          'transparency.write','documents.read','documents.write','notifications.write','settings.read'
+          'transparency.write','documents.read','documents.write','notifications.write','settings.read',
+          'passwordResets.read','passwordResets.manage','dashboard.read'
         ])
         || (adminProfile().data.level == 3 && permission in [
           'applications.read','applications.review','users.read','users.update','members.read','members.write',
-          'requests.read','requests.write','documents.read','notifications.write'
+          'requests.read','requests.write','documents.read','notifications.write',
+          'passwordResets.read','passwordResets.manage','dashboard.read'
         ])
         || (adminProfile().data.level == 4 && permission in [
-          'news.read','news.create','news.edit','communications.read','communications.write','content.manage','documents.read'
+          'news.read','news.create','news.edit','communications.read','communications.write','content.manage','documents.read','dashboard.read'
         ])
         || (adminProfile().data.level == 5 && permission in [
-          'members.read','members.write'
+          'dashboard.read','members.create'
         ])
       );
     }
@@ -57,10 +59,46 @@ service cloud.firestore {
         && request.resource.data.phone is string && request.resource.data.phone.size() >= 10 && request.resource.data.phone.size() <= 30
         && request.resource.data.city is string && request.resource.data.city.size() >= 2 && request.resource.data.city.size() <= 100;
     }
+    function validPasswordResetRequest() {
+      return request.resource.data.keys().hasOnly(['email','phone','status','createdAt'])
+        && request.resource.data.email is string
+        && request.resource.data.email.size() >= 5
+        && request.resource.data.email.size() <= 254
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() >= 10
+        && request.resource.data.phone.size() <= 30
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time;
+    }
     match /associationApplications/{id} {
       allow create: if validApplication(id);
       allow read: if (signedIn() && resource.data.applicantUid == request.auth.uid) || hasPermission('applications.read');
       allow update: if hasPermission('applications.review');
+      allow delete: if superAdmin();
+    }
+    match /applicationSummaries/{id} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['applicationId','fullName','status','createdAt'])
+        && request.resource.data.applicationId == id
+        && request.resource.data.fullName is string
+        && request.resource.data.fullName.size() >= 3
+        && request.resource.data.fullName.size() <= 160
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time
+        && existsAfter(/databases/$(database)/documents/associationApplications/$(id))
+        && getAfter(/databases/$(database)/documents/associationApplications/$(id)).data.applicantUid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/associationApplications/$(id)).data.fullName == request.resource.data.fullName
+        && getAfter(/databases/$(database)/documents/associationApplications/$(id)).data.status == request.resource.data.status
+        && getAfter(/databases/$(database)/documents/associationApplications/$(id)).data.createdAt == request.resource.data.createdAt;
+      allow read: if hasPermission('dashboard.read');
+      allow update: if hasPermission('applications.review');
+      allow delete: if superAdmin();
+    }
+    match /passwordResetRequests/{id} {
+      allow create: if validPasswordResetRequest();
+      allow read: if hasPermission('passwordResets.read');
+      allow update: if hasPermission('passwordResets.manage')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','contactedAt','resolvedAt','updatedBy']);
       allow delete: if superAdmin();
     }
     match /users/{uid} {
@@ -71,12 +109,14 @@ service cloud.firestore {
     }
     match /associados/{id} {
       allow read: if (signedIn() && resource.data.uid == request.auth.uid) || hasPermission('members.read');
-      allow create, update: if hasPermission('members.write');
+      allow create: if hasPermission('members.create') || hasPermission('members.write');
+      allow update: if hasPermission('members.write');
       allow delete: if superAdmin();
     }
     match /publicMembers/{token} {
       allow read: if true;
-      allow write: if hasPermission('members.write');
+      allow create: if hasPermission('members.create') || hasPermission('members.write');
+      allow update, delete: if hasPermission('members.write');
     }
     match /boardMembers/{id} {
       allow read: if true;
@@ -135,6 +175,10 @@ service cloud.firestore {
       allow read: if hasPermission('audit.read');
       allow create: if signedIn();
       allow update, delete: if false;
+    }
+    match /dashboardActivity/{id} {
+      allow read: if hasPermission('dashboard.read');
+      allow write: if superAdmin();
     }
     match /counters/{id} { allow read, write: if false; }
     match /applicationKeys/{id} { allow read, write: if false; }

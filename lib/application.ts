@@ -1,5 +1,5 @@
 import { signInAnonymously } from "firebase/auth";
-import { doc, runTransaction, serverTimestamp } from "firebase/firestore";
+import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { getFirebaseServices } from "./firebase";
 
 export type ApplicationPayload = {
@@ -23,24 +23,29 @@ export async function submitApplication(payload: ApplicationPayload) {
   const email = payload.email.trim().toLowerCase();
   const applicationId = await sha256(`email:${email}`);
   const applicationRef = doc(db, "associationApplications", applicationId);
+  const summaryRef = doc(db, "applicationSummaries", applicationId);
 
-  await runTransaction(db, async transaction => {
-    const existing = await transaction.get(applicationRef);
-    if (existing.exists()) throw new Error("Já existe uma solicitação para este e-mail.");
-    transaction.set(applicationRef, {
-      ...payload,
-      applicationId,
-      email,
-      fullName: payload.fullName.trim(),
-      phone: payload.phone.trim(),
-      city: payload.city.trim(),
-      consent: true,
-      consentVersion: "2026-08",
-      consentAt: serverTimestamp(),
-      applicantUid,
-      status: "pending",
-      createdAt: serverTimestamp(),
-    });
+  const batch = writeBatch(db);
+  batch.set(applicationRef, {
+    ...payload,
+    applicationId,
+    email,
+    fullName: payload.fullName.trim(),
+    phone: payload.phone.trim(),
+    city: payload.city.trim(),
+    consent: true,
+    consentVersion: "2026-08",
+    consentAt: serverTimestamp(),
+    applicantUid,
+    status: "pending",
+    createdAt: serverTimestamp(),
   });
+  batch.set(summaryRef, {
+    applicationId,
+    fullName: payload.fullName.trim(),
+    status: "pending",
+    createdAt: serverTimestamp(),
+  });
+  await batch.commit();
   return applicationId;
 }

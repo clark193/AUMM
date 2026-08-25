@@ -28,6 +28,8 @@ jobs:
           NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
           NEXT_PUBLIC_FIREBASE_APPCHECK_SITE_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_APPCHECK_SITE_KEY }}
       - uses: google-github-actions/auth@v2
+        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_AUMM != '' && secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID != '' }}
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_AUMM }}
       - run: npx firebase-tools@latest deploy --project "${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}" --only hosting,firestore:rules,firestore:indexes
+        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_AUMM != '' && secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID != '' }}

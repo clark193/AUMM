@@ -15,30 +15,7 @@ export const navItems = [
   { label: "Contato", href: "/contato" },
 ];
 
-export const news: NewsItem[] = [
-  {
-    slug: "campanha-seguranca-no-transito",
-    title: "AUMM amplia diálogo por mais segurança no trânsito",
-    summary: "Entidade reúne trabalhadores e poder público em uma agenda permanente de prevenção e respeito.",
-    category: "Segurança",
-    date: "22 AGO 2026",
-    featured: true,
-  },
-  {
-    slug: "novos-convenios-para-associados",
-    title: "Novos convênios fortalecem a rede de benefícios",
-    summary: "Oficinas, serviços e estabelecimentos locais passam a oferecer condições especiais aos associados.",
-    category: "Benefícios",
-    date: "18 AGO 2026",
-  },
-  {
-    slug: "assembleia-geral-setembro",
-    title: "Assembleia geral acontece em setembro",
-    summary: "Encontro terá prestação de contas, planejamento e espaço aberto para propostas da categoria.",
-    category: "Institucional",
-    date: "12 AGO 2026",
-  },
-];
+export const news: NewsItem[] = [];
 
 export const publicPages: Record<string, { eyebrow: string; title: string; intro: string; sections: { title: string; text: string }[] }> = {
   "quem-somos": {
@@ -95,30 +72,20 @@ export const publicPages: Record<string, { eyebrow: string; title: string; intro
     eyebrow: "Rede AUMM",
     title: "Parceiros que valorizam a categoria",
     intro: "Empresas locais que reconhecem a importância dos motoboys e motociclistas para Blumenau.",
-    sections: [
-      { title: "Moto Center Blumenau", text: "Desconto demonstrativo de 10% em serviços selecionados." },
-      { title: "Protege Moto", text: "Condições demonstrativas em assistência e proteção veicular." },
-      { title: "Academia Rota Ativa", text: "Planos especiais demonstrativos para associados ativos." },
-    ],
+    sections: [],
   },
   eventos: {
     eyebrow: "Agenda",
     title: "Próximos eventos",
     intro: "Encontros, capacitações e assembleias para fortalecer a comunidade AUMM.",
-    sections: [
-      { title: "07 SET · 09H", text: "Passeio pela Vida — concentração no Parque Vila Germânica." },
-      { title: "18 SET · 19H", text: "Assembleia geral — sede provisória da associação." },
-      { title: "03 OUT · 08H", text: "Curso de pilotagem defensiva — vagas limitadas." },
-    ],
+    sections: [],
   },
   contato: {
     eyebrow: "Fale conosco",
     title: "A AUMM está perto de você",
     intro: "Envie sua mensagem ou procure nossos canais de atendimento.",
     sections: [
-      { title: "WhatsApp", text: "(47) 00000-0000 · número demonstrativo" },
-      { title: "E-mail", text: "contato@aumm.com.br" },
-      { title: "Atendimento", text: "Segunda a sexta, das 9h às 18h, em Blumenau/SC." },
+      { title: "Atendimento", text: "Os canais oficiais de contato serão publicados pela diretoria da AUMM." },
     ],
   },
   privacidade: {

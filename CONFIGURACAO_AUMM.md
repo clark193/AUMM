@@ -127,13 +127,13 @@ Não existe senha padrão e nenhum administrador é criado no código.
 
 ### Criar um administrador de nível 5
 
-O nível 5 possui um painel básico com acesso somente ao Dashboard e ao cadastro de associados. Ele pode cadastrar um associado manualmente e usar a chave **Autorizar acesso agora** para criar o login e ativar o acesso na mesma operação.
+O nível 5 é o perfil de recrutador. Ele consulta o Dashboard visual sem abrir, aprovar ou alterar registros existentes e possui somente o formulário separado para cadastrar um novo associado, com a chave de autorização imediata. Ele não publica notícias, responde solicitações nem acessa a auditoria completa.
 
 1. Em **Authentication → Usuários**, adicione o usuário administrativo e copie o UID.
 2. Em `adminRoles`, crie um documento cujo ID seja esse UID.
 3. Adicione `active` (boolean) = `true`, `superAdmin` (boolean) = `false`, `level` (number) = `5`, `role` (string) = `Cadastro` e `permissions` (mapa) = mapa vazio.
 4. Esse usuário entra em `/associado/login?destino=admin`.
-5. Para o cadastro manual criar logins de associados, o provedor **E-mail/senha** precisa estar ativo no Firebase Authentication.
+5. O perfil nível 5 não recebe permissões de escrita no Firestore.
 
 ## 13. Configurar App Check
 
@@ -288,9 +288,9 @@ Referência: https://firebase.google.com/docs/firestore/manage-data/export-impor
 
 ## 22. Manutenção cotidiana
 
-- **Alterar textos, cores e dados:** use Admin → Configurações. Parte da versão inicial está demonstrativa; ao conectar cada tela às collections, a rotina ficará totalmente pelo painel.
+- **Alterar textos, cores e dados:** use os módulos administrativos correspondentes. As telas iniciam sem registros fictícios.
 - **Cadastrar administrador:** crie o usuário no Authentication e atribua função pelo módulo Administradores; somente o Super Admin pode mudar claims.
-- **Recuperar senha:** na tela de login, informe o e-mail e clique em **Esqueci minha senha**.
+- **Recuperar senha:** na tela de login, clique em **Esqueci minha senha**, informe o e-mail e o WhatsApp. O pedido aparecerá em Admin → Recuperar senhas para contato após conferência da identidade.
 - **Consultar logs:** Admin → Logs. Os logs críticos são somente leitura para o cliente.
 - **Suspender associado:** Admin → Associados → abrir cadastro → alterar status. A verificação pública deve refletir o novo status.
 - **Atualizar o sistema:** crie uma branch, altere, abra Pull Request, aguarde o workflow de validação e então faça merge em `main`.
@@ -308,7 +308,7 @@ Referência: https://firebase.google.com/docs/firestore/manage-data/export-impor
 - [ ] workflow verde;
 - [ ] orçamento/alertas configurados;
 - [ ] política de privacidade revisada por responsável jurídico;
-- [ ] textos e contatos demonstrativos substituídos;
+- [ ] canais oficiais de contato publicados;
 - [ ] cadastros, aprovação, login, QR, permissões e uploads testados;
 - [ ] backup e restauração testados;
 - [ ] domínios e SSL verificados quando disponíveis.

@@ -34,7 +34,11 @@ function makeMemberNumber() {
   return `AUMM-${new Date().getFullYear()}-${String(random).padStart(6, "0")}`;
 }
 
-export function MemberAdmin() {
+type MemberAdminProps = {
+  registrationOnly?: boolean;
+};
+
+export function MemberAdmin({ registrationOnly = false }: MemberAdminProps) {
   const [form, setForm] = useState(emptyForm);
   const [authorizeNow, setAuthorizeNow] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -43,12 +47,12 @@ export function MemberAdmin() {
   const [members, setMembers] = useState<MemberRow[]>([]);
 
   useEffect(() => {
-    if (!firebaseEnabled) return;
+    if (!firebaseEnabled || registrationOnly) return;
     const { db } = getFirebaseServices();
     return onSnapshot(query(collection(db, "associados"), orderBy("createdAt", "desc"), limit(50)), snapshot => {
       setMembers(snapshot.docs.map(item => ({ id: item.id, ...item.data() } as MemberRow)));
     }, error => setMessage({ type: "error", text: friendlyError(error) }));
-  }, []);
+  }, [registrationOnly]);
 
   function update(field: keyof typeof emptyForm, value: string) {
     setForm(current => ({ ...current, [field]: value }));
@@ -71,8 +75,10 @@ export function MemberAdmin() {
       if (!auth.currentUser) throw new Error("A sessão administrativa expirou. Entre novamente.");
 
       const email = form.email.trim().toLowerCase();
-      const duplicate = await getDocs(query(collection(db, "associados"), where("email", "==", email), limit(1)));
-      if (!duplicate.empty) throw new Error("Já existe um associado cadastrado com este e-mail.");
+      if (!registrationOnly) {
+        const duplicate = await getDocs(query(collection(db, "associados"), where("email", "==", email), limit(1)));
+        if (!duplicate.empty) throw new Error("Já existe um associado cadastrado com este e-mail.");
+      }
 
       let memberId = `pending-${crypto.randomUUID()}`;
       if (authorizeNow) {
@@ -98,6 +104,14 @@ export function MemberAdmin() {
         source: "admin_manual",
         createdBy: auth.currentUser.uid,
         createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      if (authorizeNow) batch.set(doc(db, "publicMembers", memberNumber), {
+        uid: memberId,
+        memberNumber,
+        fullName: form.fullName.trim(),
+        role: "Associado",
+        status: "active",
         updatedAt: serverTimestamp(),
       });
       await batch.commit();
@@ -132,7 +146,7 @@ export function MemberAdmin() {
   return <>
     <section className="panel member-registration">
       <div className="panel-head">
-        <div><h3><UserPlus size={18} /> Novo associado</h3><p>Cadastro manual disponível também para o administrador nível 5.</p></div>
+        <div><h3><UserPlus size={18} /> Novo associado</h3><p>Cadastro manual disponível para administradores autorizados.</p></div>
       </div>
       <form onSubmit={submit}>
         <div className="form-grid">
@@ -153,9 +167,9 @@ export function MemberAdmin() {
       </form>
     </section>
 
-    <section className="panel" style={{ marginTop: 18 }}>
+    {!registrationOnly && <section className="panel" style={{ marginTop: 18 }}>
       <div className="panel-head"><div><h3>Associados cadastrados</h3><p>Registros reais do Firebase.</p></div><span className="demo-badge">{members.length} registros</span></div>
       {members.length === 0 ? <div className="empty-state">Nenhum associado cadastrado ainda.</div> : <div className="table-wrap"><table><thead><tr><th>Nome</th><th>Número</th><th>E-mail</th><th>Cidade</th><th>Status</th></tr></thead><tbody>{members.map(member => <tr key={member.id}><td><strong>{member.fullName}</strong></td><td>{member.memberNumber || "—"}</td><td>{member.email}</td><td>{member.city}</td><td><span className={`status ${member.status}`}>{member.status === "active" ? "Ativo" : "Pendente"}</span></td></tr>)}</tbody></table></div>}
-    </section>
+    </section>}
   </>;
 }
