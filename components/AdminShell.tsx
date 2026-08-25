@@ -9,7 +9,7 @@ import { doc, getDoc } from "firebase/firestore";
 import {
   BarChart3, Bell, BookOpenText, CalendarDays, FileText, Handshake,
   LayoutDashboard, LockKeyhole, MessageSquareText, Newspaper, ReceiptText,
-  ScrollText, Settings, ShieldCheck, Tags, UsersRound,
+  ScrollText, Settings, ShieldCheck, Tags, UserPlus, UsersRound,
 } from "lucide-react";
 import { AuthGate } from "./AuthGate";
 import { firebaseEnabled, getFirebaseServices } from "@/lib/firebase";
@@ -79,7 +79,13 @@ export function AdminShell({ title, children, allowedLevels = [1, 2, 3, 4, 5] }:
           </header>
           <div className="dash-content">
             {allowedLevels.includes(level)
-              ? children
+              ? pathname === "/admin" && level === 5
+                ? <div className="level-five-home">
+                  <div className="dash-welcome"><div><span className="demo-badge">Acesso básico · nível 5</span><h2>Painel de cadastro</h2><p>Este perfil pode cadastrar, consultar e autorizar associados.</p></div></div>
+                  <Link className="quick-card" href="/admin/associados"><UserPlus /><strong>Cadastrar associado</strong><small>Criar cadastro pendente ou liberar o login imediatamente.</small></Link>
+                  <section className="panel"><h3>Limites deste acesso</h3><p>Este nível não visualiza financeiro, transparência, diretoria, documentos administrativos, configurações, logs ou gestão de administradores.</p></section>
+                </div>
+                : children
               : <section className="panel access-denied"><LockKeyhole /><h2>Acesso não permitido</h2><p>Seu nível administrativo não possui permissão para abrir este módulo.</p><Link className="button button-sm" href="/admin">Voltar ao painel</Link></section>}
           </div>
         </main>

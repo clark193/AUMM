@@ -269,6 +269,11 @@ td { padding:13px 10px; border-bottom:1px solid #eee; white-space:nowrap; }
 .access-denied>svg { width:45px; height:45px; color:var(--red); }
 .access-denied h2 { font-size:28px; }
 .access-denied p { margin-bottom:22px; color:var(--muted); }
+.level-five-home { display:grid; gap:18px; max-width:760px; }
+.level-five-home .dash-welcome { margin-bottom:0; }
+.level-five-home .dash-welcome h2 { margin-top:12px; }
+.level-five-home .quick-card { min-height:190px; }
+.level-five-home .panel p { margin-bottom:0; color:var(--muted); line-height:1.6; }
 
 /* Card and transparency */
 .id-page { min-height:100vh; padding:70px 20px; background:#202226; }
