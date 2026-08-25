@@ -3,6 +3,7 @@ import { AdminShell } from "@/components/AdminShell";
 import { ApplicationReviewAdmin } from "@/components/ApplicationReviewAdmin";
 import { BoardAdmin } from "@/components/BoardAdmin";
 import { MemberAdmin } from "@/components/MemberAdmin";
+import { NewsAdmin } from "@/components/NewsAdmin";
 import { PasswordResetAdmin } from "@/components/PasswordResetAdmin";
 
 type Module = { title: string; description: string; headers: string[]; rows?: string[][] };
@@ -41,6 +42,7 @@ export default async function ModulePage({ params }: Props) {
   if (module === "recrutamento") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Novo associado</h2><p>Cadastre um associado e decida se o acesso será ativado imediatamente.</p></div></div><MemberAdmin registrationOnly /></AdminShell>;
   if (module === "associados") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Cadastros e associados</h2><p>Analise inscrições recebidas, evite duplicidades e consulte quem já faz parte da AUMM.</p></div></div><ApplicationReviewAdmin /><MemberAdmin /></AdminShell>;
   if (module === "diretoria") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Diretoria da AUMM</h2><p>As alterações feitas aqui aparecem no mural da página inicial.</p></div></div><BoardAdmin /></AdminShell>;
+  if (module === "noticias") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Notícias da AUMM</h2><p>Crie publicações e escolha quais destaques vão rodar no topo da página inicial.</p></div></div><NewsAdmin /></AdminShell>;
   if (module === "recuperacao-senha") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Recuperação de senha</h2><p>Responda pelo WhatsApp somente após confirmar a identidade do solicitante.</p></div></div><PasswordResetAdmin /></AdminShell>;
   return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>{item.title}</h2><p>{item.description}</p></div></div><section className="panel">{item.rows?.length ? <div className="table-wrap"><table><thead><tr>{item.headers.map(header => <th key={header}>{header}</th>)}</tr></thead><tbody>{item.rows.map((row, index) => <tr key={index}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cellIndex === 0 ? <strong>{cell}</strong> : cell}</td>)}</tr>)}</tbody></table></div> : <div className="empty-state">Nenhum registro cadastrado.</div>}</section></AdminShell>;
 }
