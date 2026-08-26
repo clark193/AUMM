@@ -7,27 +7,29 @@ service cloud.firestore {
     }
     function superAdmin() {
       return signedIn() && adminProfile().data.active == true
-        && (adminProfile().data.superAdmin == true || adminProfile().data.level == 1);
+        && (adminProfile().data.superAdmin == true
+          || adminProfile().data.level == 1
+          || adminProfile().data.level == '1');
     }
     function levelAllows(permission) {
       return signedIn() && adminProfile().data.active == true && (
-        adminProfile().data.level == 1
-        || (adminProfile().data.level == 2 && permission in [
+        adminProfile().data.level in [1, '1']
+        || (adminProfile().data.level in [2, '2'] && permission in [
           'applications.read','applications.review','users.read','users.update','members.read','members.write',
           'roles.manage','board.manage','news.read','news.create','news.edit','news.delete','communications.read',
           'communications.write','content.manage','requests.read','requests.write','finance.read','finance.write',
           'transparency.write','documents.read','documents.write','notifications.write','settings.read',
           'passwordResets.read','passwordResets.manage','dashboard.read'
         ])
-        || (adminProfile().data.level == 3 && permission in [
+        || (adminProfile().data.level in [3, '3'] && permission in [
           'applications.read','applications.review','users.read','users.update','members.read','members.write',
           'requests.read','requests.write','documents.read','notifications.write',
           'passwordResets.read','passwordResets.manage','dashboard.read'
         ])
-        || (adminProfile().data.level == 4 && permission in [
+        || (adminProfile().data.level in [4, '4'] && permission in [
           'news.read','news.create','news.edit','communications.read','communications.write','content.manage','documents.read','dashboard.read'
         ])
-        || (adminProfile().data.level == 5 && permission in [
+        || (adminProfile().data.level in [5, '5'] && permission in [
           'dashboard.read','members.create'
         ])
       );
@@ -544,7 +546,8 @@ service cloud.firestore {
       allow write: if hasPermission('communications.write');
     }
     match /{collectionName}/{id} {
-      allow read: if collectionName in ['partners','benefits','events'] && resource.data.status == 'active';
+      allow read: if collectionName in ['partners','benefits','events']
+        && (resource.data.status == 'active' || hasPermission('content.manage'));
       allow write: if collectionName in ['partners','benefits','events'] && hasPermission('content.manage');
     }
     match /documents/{id} {

@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { Edit3, Plus, RotateCcw, Save, Search, Trash2 } from "lucide-react";
 import { firebaseEnabled, getFirebaseServices } from "@/lib/firebase";
+import { firebaseErrorMessage } from "@/lib/firebaseErrorMessage";
 import { operationalModules, type AdminField } from "@/lib/adminModuleConfig";
 
 type Row = Record<string, unknown> & { id: string };
@@ -64,7 +65,7 @@ export function OperationalAdmin({ module }: { module: string }) {
         const loaded = snapshot.docs.map((item) => ({ id: item.id, ...item.data() } as Row));
         loaded.sort((a, b) => String(b.updatedAt || b.createdAt || "").localeCompare(String(a.updatedAt || a.createdAt || "")));
         setRows(loaded);
-      }, (error) => setMessage({ type: "error", text: error.message }));
+      }, (error) => setMessage({ type: "error", text: firebaseErrorMessage(error, "Não foi possível carregar os registros.") }));
     });
     return () => { stopAuth(); stopRows?.(); };
   }, [config.collection]);
@@ -134,7 +135,7 @@ export function OperationalAdmin({ module }: { module: string }) {
       setEditingId(null);
       setForm(blankForm(config.fields));
     } catch (reason) {
-      setMessage({ type: "error", text: reason instanceof Error ? reason.message : "Não foi possível salvar." });
+      setMessage({ type: "error", text: firebaseErrorMessage(reason, "Não foi possível salvar.") });
     } finally {
       setBusy(false);
     }
@@ -150,7 +151,7 @@ export function OperationalAdmin({ module }: { module: string }) {
       if (editingId === row.id) reset();
       setMessage({ type: "success", text: `${config.singular} excluído.` });
     } catch (reason) {
-      setMessage({ type: "error", text: reason instanceof Error ? reason.message : "Não foi possível excluir." });
+      setMessage({ type: "error", text: firebaseErrorMessage(reason, "Não foi possível excluir.") });
     } finally {
       setBusy(false);
     }

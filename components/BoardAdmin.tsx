@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { collection, doc, getDocs, serverTimestamp, writeBatch } from "firebase/firestore";
 import { CheckCircle2, Plus, Save } from "lucide-react";
 import { firebaseEnabled, getFirebaseServices } from "@/lib/firebase";
+import { firebaseErrorMessage } from "@/lib/firebaseErrorMessage";
 import { initialBoard, type BoardMember } from "./BoardWall";
 
 export function BoardAdmin() {
@@ -29,7 +30,7 @@ export function BoardAdmin() {
       members.forEach(member => batch.set(doc(db, "boardMembers", member.id), { name: member.name.trim(), title: member.title.trim(), photoURL: member.photoURL.trim(), order: Number(member.order), active: member.active, updatedAt: serverTimestamp() }, { merge: true }));
       await batch.commit();
       setMessage("Mural da diretoria atualizado.");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Não foi possível salvar."); }
+    } catch (error) { setMessage(firebaseErrorMessage(error, "Não foi possível salvar.")); }
     finally { setBusy(false); }
   }
 

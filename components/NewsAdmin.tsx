@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { firebaseEnabled, getFirebaseServices } from "@/lib/firebase";
+import { firebaseErrorMessage } from "@/lib/firebaseErrorMessage";
 
 type NewsRow = {
   id: string;
@@ -130,7 +131,7 @@ export function NewsAdmin() {
       setMessage({ type: "success", text: form.status === "published" ? "Notícia publicada com sucesso." : "Rascunho salvo com sucesso." });
       reset();
     } catch (error) {
-      setMessage({ type: "error", text: error instanceof Error ? error.message : "Não foi possível salvar a notícia." });
+      setMessage({ type: "error", text: firebaseErrorMessage(error, "Não foi possível salvar a notícia.") });
     } finally {
       setBusy(false);
     }
@@ -144,7 +145,7 @@ export function NewsAdmin() {
       if (editingId === item.id) reset();
       setMessage({ type: "success", text: "Notícia excluída." });
     } catch (error) {
-      setMessage({ type: "error", text: error instanceof Error ? error.message : "Não foi possível excluir." });
+      setMessage({ type: "error", text: firebaseErrorMessage(error, "Não foi possível excluir.") });
     } finally {
       setBusy(false);
     }

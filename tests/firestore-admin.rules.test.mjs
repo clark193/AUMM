@@ -18,6 +18,7 @@ beforeEach(async () => {
     const db = context.firestore();
     await Promise.all([
       setDoc(doc(db, "adminRoles", "master"), { active: true, level: 1, superAdmin: true, role: "TI", permissions: {} }),
+      setDoc(doc(db, "adminRoles", "legacy-master"), { active: true, level: "1", role: "TI legado", permissions: {} }),
       setDoc(doc(db, "adminRoles", "communication"), { active: true, level: 4, superAdmin: false, role: "Comunicação", permissions: {} }),
       setDoc(doc(db, "requests", "request-1"), { ownerUid: "member", subject: "Ajuda", status: "pending" }),
       setDoc(doc(db, "associados", "member"), { uid: "member", status: "active" }),
@@ -46,6 +47,21 @@ test("nível 1 grava todos os módulos operacionais e administra acessos", async
   await assertSucceeds(updateDoc(doc(db, "requests", "request-1"), { status: "resolved", updatedAt: serverTimestamp() }));
   await assertSucceeds(addDoc(collection(db, "auditLogs"), { action: "TEST", resource: "settings", resourceId: "public", actorUid: "master", timestamp: serverTimestamp() }));
   await assertSucceeds(getDocs(collection(db, "adminRoles")));
+});
+
+test("nível 1 legado salvo como texto continua com acesso master", async () => {
+  const db = env.authenticatedContext("legacy-master").firestore();
+  await assertSucceeds(getDocs(collection(db, "adminRoles")));
+  await assertSucceeds(setDoc(doc(db, "partners", "legacy-partner"), { name: "Parceiro legado", status: "draft" }));
+  await assertSucceeds(setDoc(doc(db, "settings", "public"), { associationName: "Associação União Maior Motoboys" }));
+});
+
+test("administrador de conteúdo lista também rascunhos e arquivados", async () => {
+  await env.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "partners", "draft-partner"), { name: "Rascunho", status: "draft" });
+  });
+  const db = env.authenticatedContext("communication").firestore();
+  await assertSucceeds(getDocs(collection(db, "partners")));
 });
 
 test("nível 4 gerencia conteúdo mas não cria administradores nem finanças", async () => {

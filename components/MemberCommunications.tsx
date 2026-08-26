@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { Bell } from "lucide-react";
 import { getFirebaseServices } from "@/lib/firebase";
+import { firebaseErrorMessage } from "@/lib/firebaseErrorMessage";
 
 type Communication = { id: string; subject?: string; body?: string; updatedAt?: { toDate(): Date } };
 
@@ -16,7 +17,7 @@ export function MemberCommunications() {
     const refresh = () => setRows([...loaded.values()].sort((a, b) => (b.updatedAt?.toDate().getTime() || 0) - (a.updatedAt?.toDate().getTime() || 0)));
     const stops = ["all", "members"].map((audience) => onSnapshot(query(collection(db, "communications"), where("status", "==", "published"), where("audience", "==", audience)), (snapshot) => {
       snapshot.docs.forEach((item) => loaded.set(item.id, { id: item.id, ...item.data() } as Communication)); refresh();
-    }, (reason) => setError(reason.message)));
+    }, (reason) => setError(firebaseErrorMessage(reason, "Não foi possível carregar os comunicados."))));
     return () => stops.forEach((stop) => stop());
   }, []);
   if (error) return <div className="form-message error">{error}</div>;

@@ -5,6 +5,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { Save, Settings } from "lucide-react";
 import { getFirebaseServices } from "@/lib/firebase";
+import { firebaseErrorMessage } from "@/lib/firebaseErrorMessage";
 
 const initial = { associationName: "Associação União Maior Motoboys", acronym: "AUMM", email: "", phone: "", whatsapp: "", address: "", city: "Blumenau", state: "SC", instagram: "", facebook: "", siteMessage: "", cardValidityText: "Válida enquanto o associado estiver ativo" };
 
@@ -31,7 +32,7 @@ export function SettingsAdmin() {
       ]);
       await addDoc(collection(db, "auditLogs"), { action: "SETTINGS_UPDATED", resource: "settings", resourceId: "public", actorUid: uid, timestamp: serverTimestamp() }).catch(() => undefined);
       setMessage({ type: "success", text: "Configurações salvas com sucesso." });
-    } catch (reason) { setMessage({ type: "error", text: reason instanceof Error ? reason.message : "Não foi possível salvar." }); }
+    } catch (reason) { setMessage({ type: "error", text: firebaseErrorMessage(reason, "Não foi possível salvar.") }); }
     finally { setBusy(false); }
   }
   return <section className="panel operational-editor"><div className="panel-head"><div><h3><Settings size={18} /> Dados institucionais</h3><p>Informações oficiais usadas pela plataforma e pela carteirinha.</p></div></div><form onSubmit={submit}><div className="form-grid">

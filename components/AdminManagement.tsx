@@ -6,6 +6,7 @@ import { createUserWithEmailAndPassword, getAuth, onAuthStateChanged, sendPasswo
 import { addDoc, collection, doc, onSnapshot, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { KeyRound, Save, Search, ShieldCheck, UserPlus, UserX } from "lucide-react";
 import { firebaseConfig, getFirebaseServices } from "@/lib/firebase";
+import { firebaseErrorMessage } from "@/lib/firebaseErrorMessage";
 
 type AdminRow = {
   id: string;
@@ -44,7 +45,7 @@ export function AdminManagement() {
       stopRows?.();
       stopRows = onSnapshot(collection(db, "adminRoles"), (snapshot) => {
         setRows(snapshot.docs.map((item) => ({ id: item.id, ...item.data() } as AdminRow)).sort((a, b) => Number(a.level || 9) - Number(b.level || 9)));
-      }, (error) => setMessage({ type: "error", text: error.message }));
+      }, (error) => setMessage({ type: "error", text: firebaseErrorMessage(error, "Não foi possível carregar os administradores.") }));
     });
     return () => { stopAuth(); stopRows?.(); };
   }, []);
@@ -86,7 +87,7 @@ export function AdminManagement() {
       setForm(initial);
       setMessage({ type: "success", text: "Administrador criado. Ele já pode entrar com o e-mail e a senha informados." });
     } catch (reason) {
-      const detail = reason instanceof Error ? reason.message : "Não foi possível criar o administrador.";
+      const detail = firebaseErrorMessage(reason, "Não foi possível criar o administrador.");
       setMessage({ type: "error", text: detail.includes("email-already-in-use") ? "Este e-mail já possui uma conta. Use outro e-mail ou atribua o UID pelo Firebase." : detail });
     } finally {
       await deleteApp(secondary);
@@ -107,7 +108,7 @@ export function AdminManagement() {
       await audit("ADMIN_ACCESS_UPDATED", row.id).catch(() => undefined);
       setMessage({ type: "success", text: "Permissões administrativas atualizadas." });
     } catch (reason) {
-      setMessage({ type: "error", text: reason instanceof Error ? reason.message : "Não foi possível atualizar." });
+      setMessage({ type: "error", text: firebaseErrorMessage(reason, "Não foi possível atualizar.") });
     } finally {
       setBusy(false);
     }
@@ -119,7 +120,7 @@ export function AdminManagement() {
       await sendPasswordResetEmail(getFirebaseServices().auth, row.email);
       setMessage({ type: "success", text: `E-mail de redefinição enviado para ${row.email}.` });
     } catch (reason) {
-      setMessage({ type: "error", text: reason instanceof Error ? reason.message : "Não foi possível enviar o e-mail." });
+      setMessage({ type: "error", text: firebaseErrorMessage(reason, "Não foi possível enviar o e-mail.") });
     }
   }
 

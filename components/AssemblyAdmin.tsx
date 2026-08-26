@@ -27,6 +27,7 @@ import {
   Vote,
 } from "lucide-react";
 import { getFirebaseServices } from "@/lib/firebase";
+import { firebaseErrorMessage } from "@/lib/firebaseErrorMessage";
 import { calculateQuorum, formatSaoPaulo } from "@/lib/assemblyRules";
 import {
   closeAgenda,
@@ -111,7 +112,7 @@ export function AssemblyAdmin() {
         .sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
       setAssemblies(rows);
       setSelectedId((current) => current || rows[0]?.id || "");
-    }, (error) => setMessage({ type: "error", text: error.message }));
+    }, (error) => setMessage({ type: "error", text: firebaseErrorMessage(error, "Não foi possível carregar as assembleias.") }));
     return () => { stopAuth(); stopData(); };
   }, []);
 
@@ -148,7 +149,7 @@ export function AssemblyAdmin() {
   }), [assemblies]);
 
   function report(error: unknown, success?: string) {
-    setMessage(error ? { type: "error", text: error instanceof Error ? error.message : "Não foi possível concluir a operação." } : { type: "success", text: success || "Operação concluída." });
+    setMessage(error ? { type: "error", text: firebaseErrorMessage(error) } : { type: "success", text: success || "Operação concluída." });
   }
 
   async function run(label: string, action: () => Promise<unknown>, success: string) {
