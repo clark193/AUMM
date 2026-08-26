@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getFirebaseServices } from "@/lib/firebase";
 import { withBasePath } from "@/lib/paths";
+import { MemberCommunications } from "./MemberCommunications";
 
 type Member = {
   fullName?: string;
@@ -129,7 +130,7 @@ export function MemberPortalContent() {
               <div className="panel-head">
                 <h3>Comunicados</h3>
               </div>
-              <div className="empty-state">Nenhum comunicado disponível.</div>
+              <MemberCommunications />
             </section>
             <section className="panel">
               <div className="panel-head">

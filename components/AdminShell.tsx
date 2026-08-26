@@ -43,6 +43,7 @@ const links = [
   ["/admin/comunicados", "Comunicados", Bell, [1, 2, 4]],
   ["/admin/eventos", "Eventos", CalendarDays, [1, 2, 4]],
   ["/admin/beneficios", "Benefícios", Handshake, [1, 2, 4]],
+  ["/admin/parceiros", "Parceiros", Handshake, [1, 2, 4]],
   ["/admin/solicitacoes", "Solicitações", MessageSquareText, [1, 2, 3]],
   ["/admin/recuperacao-senha", "Recuperar senhas", LockKeyhole, [1, 2, 3]],
   ["/admin/transparencia", "Transparência", BarChart3, [1, 2]],

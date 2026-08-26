@@ -260,6 +260,9 @@ td { padding:13px 10px; border-bottom:1px solid #eee; white-space:nowrap; }
 .status.active,.status.approved { color:#087447; background:#daf4e7; }
 .status.pending { color:#805b00; background:#fff0bd; }
 .status.suspended,.status.rejected { color:#9e141b; background:#ffe0e1; }
+.status.in_progress { color:#0b5f88; background:#dff2fb; }
+.status.resolved { color:#087447; background:#daf4e7; }
+.status.archived { color:#666; background:#e8e8e8; }
 .activity-list { display:grid; gap:17px; }
 .activity { display:grid; grid-template-columns:10px 1fr; gap:10px; font-size:11px; }
 .activity i { width:8px; height:8px; margin-top:3px; border-radius:50%; background:var(--red); }
@@ -473,6 +476,26 @@ td { padding:13px 10px; border-bottom:1px solid #eee; white-space:nowrap; }
 .text-link { display:inline-flex; margin-top:8px; color:var(--red); font-size:11px; font-weight:800; }
 .assembly-actions button:focus-visible,.assembly-list-item:focus-visible,.vote-options button:focus-visible { outline:3px solid rgb(215 25 32 / 28%); outline-offset:2px; }
 
+/* Módulos administrativos operacionais */
+.operational-admin { display:grid; gap:18px; }
+.operational-editor .panel-head h3 { display:flex; align-items:center; gap:8px; }
+.operational-editor form>.button { margin-top:20px; }
+.operational-editor .authorization-switch.full { grid-column:1/-1; }
+.admin-role-list { display:grid; gap:12px; }
+.admin-role-card { display:grid; grid-template-columns:minmax(210px,1fr) 150px minmax(180px,.7fr) auto; gap:14px; align-items:end; padding:17px; background:#f7f7f6; border:1px solid var(--line); border-radius:9px; }
+.admin-role-card>div:first-child { align-self:center; min-width:0; }
+.admin-role-card h3 { margin:8px 0 3px; font-family:var(--font-body); font-size:15px; text-transform:none; }
+.admin-role-card p { overflow:hidden; margin:0; color:var(--muted); font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
+.admin-role-card .table-actions { align-self:end; }
+.managed-public-section { margin-top:45px; }
+.managed-public-section .page-card strong,.managed-public-section .page-card small { display:flex; align-items:center; gap:6px; margin:5px 0; color:#5f6267; font-size:11px; }
+.communication-list { display:grid; gap:10px; }
+.communication-list article { display:grid; grid-template-columns:auto 1fr; gap:11px; padding:14px; background:#f7f7f6; border:1px solid var(--line); border-radius:8px; }
+.communication-list article>svg { color:var(--red); }
+.communication-list h4 { margin:0 0 5px; font-size:13px; }
+.communication-list p { margin:0; color:var(--muted); font-size:11px; line-height:1.5; white-space:pre-wrap; }
+.communication-list small { display:block; margin-top:7px; color:#8a8c91; font-size:9px; }
+
 @media (max-width:1050px) {
   .main-nav { gap:13px; font-size:11px; }.brand { min-width:205px; }.brand small { display:none; }
   .hero-grid { grid-template-columns:1.12fr .88fr; gap:20px; }.feature-grid { grid-template-columns:repeat(2,1fr); }.feature-card:nth-child(3){border-left:1px solid var(--line)}
@@ -483,6 +506,8 @@ td { padding:13px 10px; border-bottom:1px solid #eee; white-space:nowrap; }
   .assembly-workspace { grid-template-columns:1fr; }.assembly-list { position:relative; top:auto; max-height:none; grid-template-columns:repeat(2,1fr); }.assembly-list .panel-head { grid-column:1/-1; }
   .assembly-stats { grid-template-columns:repeat(3,1fr); }
   .document-grid { grid-template-columns:repeat(2,1fr); }
+  .admin-role-card { grid-template-columns:1fr 1fr; }
+  .admin-role-card>div:first-child,.admin-role-card .table-actions { grid-column:1/-1; }
 }
 @media (max-width:800px) {
   .container { width:min(100% - 28px,1180px); }.topline-inner span:last-child { display:none; }.nav-wrap { height:74px; }
@@ -515,6 +540,8 @@ td { padding:13px 10px; border-bottom:1px solid #eee; white-space:nowrap; }
   .board-grid,.board-admin-row { grid-template-columns:1fr; }.board-photo-url { grid-column:auto; }
   .credentials-box,.verification-search { grid-template-columns:1fr; }.credentials-box .button,.verification-search .button { width:100%; }
   .table-actions { flex-direction:column; }
+  .admin-role-card { grid-template-columns:1fr; }
+  .admin-role-card>div:first-child,.admin-role-card .table-actions { grid-column:auto; }
   .news-admin-item { grid-template-columns:1fr; }
   .news-admin-thumb { width:100%; }
   .news-admin-actions { justify-content:stretch; }

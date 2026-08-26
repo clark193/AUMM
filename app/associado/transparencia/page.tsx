@@ -4,6 +4,7 @@ import { BarChart3, CreditCard, FileText, Home, KeyRound } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { withBasePath } from "@/lib/paths";
 import { DocumentLibrary } from "@/components/DocumentLibrary";
+import { MemberTransparencyFeed } from "@/components/MemberTransparencyFeed";
 
 export default function MemberTransparency() {
   return (
@@ -50,6 +51,7 @@ export default function MemberTransparency() {
                 </p>
               </div>
             </div>
+            <MemberTransparencyFeed />
             <section className="panel">
               <div className="panel-head">
                 <h3>

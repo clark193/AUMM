@@ -7,6 +7,11 @@ import { NewsAdmin } from "@/components/NewsAdmin";
 import { PasswordResetAdmin } from "@/components/PasswordResetAdmin";
 import { AssemblyAdmin } from "@/components/AssemblyAdmin";
 import { DocumentAdmin } from "@/components/DocumentAdmin";
+import { OperationalAdmin } from "@/components/OperationalAdmin";
+import { AdminManagement } from "@/components/AdminManagement";
+import { SettingsAdmin } from "@/components/SettingsAdmin";
+import { AuditLogAdmin } from "@/components/AuditLogAdmin";
+import { operationalModules } from "@/lib/adminModuleConfig";
 
 type Module = { title: string; description: string; headers: string[]; rows?: string[][] };
 const modules: Record<string, Module> = {
@@ -20,6 +25,7 @@ const modules: Record<string, Module> = {
   comunicados: { title: "Comunicados", description: "Mensagens internas destinadas aos associados.", headers: ["Assunto", "Público", "Data", "Status"] },
   eventos: { title: "Eventos", description: "Agenda, locais e inscrições.", headers: ["Evento", "Data", "Local", "Status"] },
   beneficios: { title: "Benefícios", description: "Vantagens oferecidas aos associados ativos.", headers: ["Benefício", "Parceiro", "Validade", "Status"] },
+  parceiros: { title: "Parceiros", description: "Empresas e profissionais parceiros da associação.", headers: ["Parceiro", "Categoria", "Contato", "Status"] },
   solicitacoes: { title: "Solicitações", description: "Protocolos abertos pelos associados.", headers: ["Protocolo", "Associado", "Assunto", "Atualização", "Status"] },
   "recuperacao-senha": { title: "Recuperação de senha", description: "Pedidos recebidos para atendimento pelo WhatsApp.", headers: [] },
   transparencia: { title: "Transparência", description: "Publicações, documentos e prestações de contas.", headers: ["Publicação", "Categoria", "Competência", "Status"] },
@@ -31,7 +37,7 @@ const modules: Record<string, Module> = {
 };
 
 const moduleAccess: Record<string, readonly number[]> = {
-  recrutamento: [5], associados: [1, 2, 3], filiacoes: [1], assembleias: [1], cargos: [1, 2], diretoria: [1, 2], noticias: [1, 2, 4], comunicados: [1, 2, 4], eventos: [1, 2, 4], beneficios: [1, 2, 4], solicitacoes: [1, 2, 3], "recuperacao-senha": [1, 2, 3], transparencia: [1, 2], financeiro: [1, 2], documentos: [1, 2, 3], administradores: [1], logs: [1], configuracoes: [1],
+  recrutamento: [5], associados: [1, 2, 3], filiacoes: [1], assembleias: [1], cargos: [1, 2], diretoria: [1, 2], noticias: [1, 2, 4], comunicados: [1, 2, 4], eventos: [1, 2, 4], beneficios: [1, 2, 4], parceiros: [1, 2, 4], solicitacoes: [1, 2, 3], "recuperacao-senha": [1, 2, 3], transparencia: [1, 2], financeiro: [1, 2], documentos: [1, 2, 3], administradores: [1], logs: [1], configuracoes: [1],
 };
 
 export function generateStaticParams() { return Object.keys(modules).map(module => ({ module })); }
@@ -51,5 +57,9 @@ export default async function ModulePage({ params }: Props) {
   if (module === "noticias") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Notícias da AUMM</h2><p>Crie publicações e escolha quais destaques vão rodar no topo da página inicial.</p></div></div><NewsAdmin /></AdminShell>;
   if (module === "recuperacao-senha") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Recuperação de senha</h2><p>Responda pelo WhatsApp somente após confirmar a identidade do solicitante.</p></div></div><PasswordResetAdmin /></AdminShell>;
   if (module === "documentos") return <AdminShell title={item.title} allowedLevels={allowedLevels} requiredPermissions={["canManageDocuments","canPublishDocuments","canArchiveDocuments"]}><div className="dash-welcome"><div><h2>Documentos Institucionais</h2><p>Estatutos, atas, editais, normas e prestação de contas.</p></div></div><DocumentAdmin /></AdminShell>;
+  if (module in operationalModules) return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>{item.title}</h2><p>{item.description}</p></div></div><OperationalAdmin module={module} /></AdminShell>;
+  if (module === "administradores") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Administradores</h2><p>Crie contas, defina níveis e revogue acessos administrativos.</p></div></div><AdminManagement /></AdminShell>;
+  if (module === "logs") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Logs de auditoria</h2><p>Consulte as alterações realizadas no painel.</p></div></div><AuditLogAdmin /></AdminShell>;
+  if (module === "configuracoes") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Configurações</h2><p>Atualize dados oficiais e preferências institucionais.</p></div></div><SettingsAdmin /></AdminShell>;
   return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>{item.title}</h2><p>{item.description}</p></div></div><section className="panel">{item.rows?.length ? <div className="table-wrap"><table><thead><tr>{item.headers.map(header => <th key={header}>{header}</th>)}</tr></thead><tbody>{item.rows.map((row, index) => <tr key={index}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cellIndex === 0 ? <strong>{cell}</strong> : cell}</td>)}</tr>)}</tbody></table></div> : <div className="empty-state">Nenhum registro cadastrado.</div>}</section></AdminShell>;
 }

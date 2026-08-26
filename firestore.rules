@@ -539,7 +539,8 @@ service cloud.firestore {
       allow delete: if hasPermission('news.delete');
     }
     match /communications/{id} {
-      allow read: if signedIn() && (resource.data.audience == 'all' || resource.data.userIds.hasAny([request.auth.uid]) || request.auth.token.roles.hasAny(resource.data.roleIds)) || hasPermission('communications.read');
+      allow read: if hasPermission('communications.read')
+        || (activeMember() && resource.data.status == 'published' && resource.data.audience in ['all','members']);
       allow write: if hasPermission('communications.write');
     }
     match /{collectionName}/{id} {
@@ -605,7 +606,10 @@ service cloud.firestore {
     }
     match /auditLogs/{id} {
       allow read: if hasPermission('audit.read');
-      allow create: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.timestamp == request.time
+        && request.resource.data.keys().hasOnly(['action','resource','resourceId','actorUid','timestamp']);
       allow update, delete: if false;
     }
     match /dashboardActivity/{id} {

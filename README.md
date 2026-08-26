@@ -24,7 +24,8 @@ Plataforma web da AUMM — Associação União Maior Motoboys. O projeto reúne 
 - Mural da diretoria editável pelo admin, com nome, cargo, ordem e URL da foto;
 - Carteirinha digital mobile-first, QR Code, impressão/PDF e compartilhamento;
 - Verificação pública por token não sequencial, sem dados sensíveis;
-- Painel administrativo para associados, cargos configuráveis, diretoria, notícias, comunicados, eventos, benefícios, solicitações, recuperação de acesso, transparência, financeiro, documentos, administradores, logs e configurações;
+- Painel administrativo operacional para associados, filiações, cargos configuráveis, diretoria, notícias, comunicados, parceiros, eventos, benefícios, solicitações, recuperação de acesso, transparência, financeiro, documentos, administradores, logs e configurações, com cadastro, pesquisa, edição e exclusão/arquivamento conforme cada módulo;
+- Gestão de administradores pelo próprio nível 1, incluindo criação da conta, definição de nível, alteração de função, desativação e recuperação de senha;
 - RBAC por níveis de 1 a 5 e permissões específicas nas regras do Firestore;
 - Deploy automatizado e documentação de operação.
 

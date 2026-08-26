@@ -135,6 +135,12 @@ O nível 5 é o perfil de recrutador. Ele consulta o Dashboard visual sem abrir,
 4. Esse usuário entra em `/associado/login?destino=admin`.
 5. O perfil nível 5 não recebe permissões de escrita no Firestore.
 
+### Criar administradores pelo painel
+
+Depois que o primeiro Super Admin estiver configurado, os demais acessos podem ser criados em **Admin → Administradores**. Informe nome, e-mail, senha inicial, função e nível. O painel cria a conta no Firebase Authentication sem desconectar o administrador atual e grava o perfil correspondente em `adminRoles/{UID}`.
+
+O nível 1 também pode alterar nível e função, desativar ou reativar o acesso e enviar o e-mail de redefinição de senha. A desativação preserva a conta e os registros de auditoria. O próprio administrador conectado não pode desativar nem rebaixar a própria conta master.
+
 ## 13. Configurar App Check
 
 Faça primeiro em modo de monitoramento. Só ative a aplicação forçada depois de confirmar que não existem requisições legítimas bloqueadas.
