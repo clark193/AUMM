@@ -50,6 +50,7 @@ export function AssemblyMember() {
   const [member, setMember] = useState<Member | null>(null);
   const [assemblies, setAssemblies] = useState<Assembly[]>([]);
   const [selectedId, setSelectedId] = useState("");
+  const [eligibleForSelected, setEligibleForSelected] = useState(false);
   const [agendas, setAgendas] = useState<AssemblyAgenda[]>([]);
   const [comments, setComments] = useState<AssemblyComment[]>([]);
   const [acknowledged, setAcknowledged] = useState(false);
@@ -93,12 +94,18 @@ export function AssemblyMember() {
   useEffect(() => {
     if (!selectedId || !actor) return;
     const { db } = getFirebaseServices();
+    setEligibleForSelected(false);
     const stop = onSnapshot(collection(db, "assemblies", selectedId, "agenda"), (snapshot) =>
       setAgendas(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as AssemblyAgenda).sort((a, b) => a.order - b.order)));
     Promise.all([
+      getDoc(doc(db, "assemblies", selectedId, "eligibleVoters", actor.uid)),
       getDoc(doc(db, "assemblies", selectedId, "acknowledgements", actor.uid)),
       getDoc(doc(db, "assemblies", selectedId, "presence", actor.uid)),
-    ]).then(([ack, presence]) => { setAcknowledged(ack.exists()); setPresent(presence.exists()); });
+    ]).then(([eligibility, ack, presence]) => {
+      setEligibleForSelected(eligibility.exists() && eligibility.data().eligible === true);
+      setAcknowledged(ack.exists());
+      setPresent(presence.exists());
+    }).catch((error) => setMessage({ type: "error", text: error instanceof Error ? error.message : "Não foi possível consultar sua habilitação." }));
     if (selected?.minutesStatus === "finalized") {
       getDoc(doc(db, "assemblies", selectedId, "minutes", "official")).then((snapshot) => setMinutes(snapshot.exists() ? snapshot.data() : null));
       getDoc(doc(db, "assemblies", selectedId, "minutes", "official", "approvals", actor.uid)).then((snapshot) => setMinutesApproved(snapshot.exists())).catch(() => setMinutesApproved(false));
@@ -129,7 +136,7 @@ export function AssemblyMember() {
     const match = assemblies.find((item) => next === "upcoming" ? item.status === "published" : next === "closed" ? item.status === "closed" : !["published", "closed"].includes(item.status));
     setSelectedId(match?.id || "");
   }
-  const eligible = member?.status === "active" && member.eligibleToVote !== false;
+  const eligible = member?.status === "active" && member.eligibleToVote !== false && eligibleForSelected;
 
   return <div className="dashboard member-dashboard assembly-member">
     <aside className="sidebar">
@@ -143,9 +150,9 @@ export function AssemblyMember() {
       <div className="dash-content">
         <div className="dash-welcome"><div><span className="access-badge">Participação estatutária</span><h2>Assembleias Gerais da AUMM</h2><p>Convocações, presença, discussão e voto realizados integralmente por escrito.</p></div><div className="assembly-mini-stats"><span>{upcoming} próximas</span><span>{live} em curso</span></div></div>
         {message && <div className={`form-message ${message.type}`}>{message.type === "success" && <CheckCircle2 size={16} />} {message.text}</div>}
-        {!eligible && <div className="form-message error">Seu cadastro não está habilitado para votar. Procure a administração para revisar sua situação.</div>}
+        {selected && !eligible && <div className="form-message error">{member?.eligibleToVote === false ? "Seu cadastro não está habilitado para votar. Procure a administração para revisar sua situação." : "Você pode acompanhar esta assembleia, mas não faz parte da lista de votantes habilitados desta convocação."}</div>}
         <div className="assembly-workspace">
-          <section className="panel assembly-list"><div className="panel-head"><div><h3>Convocações e histórico</h3><p>Selecione uma assembleia.</p></div></div><div className="assembly-tabs"><button className={tab === "upcoming" ? "active" : ""} onClick={() => changeTab("upcoming")}>Próximas</button><button className={tab === "live" ? "active" : ""} onClick={() => changeTab("live")}>Em andamento</button><button className={tab === "closed" ? "active" : ""} onClick={() => changeTab("closed")}>Encerradas</button></div>{visibleAssemblies.length === 0 ? <div className="empty-state">Nenhuma assembleia nesta categoria.</div> : visibleAssemblies.map((item) => <button key={item.id} className={`assembly-list-item ${item.id === selectedId ? "active" : ""}`} onClick={() => { setSelectedId(item.id); setAgendas([]); setComments([]); setAcknowledged(false); setPresent(false); setOwnVote(null); setResult(null); setMinutes(null); setMinutesApproved(false); }}><strong>{item.title}</strong><small>{formatSaoPaulo(item.firstCallAt.toDate())}</small><span className={`status ${item.status}`}>{statusNames[item.status]}</span></button>)}</section>
+          <section className="panel assembly-list"><div className="panel-head"><div><h3>Convocações e histórico</h3><p>Selecione uma assembleia.</p></div></div><div className="assembly-tabs"><button className={tab === "upcoming" ? "active" : ""} onClick={() => changeTab("upcoming")}>Próximas</button><button className={tab === "live" ? "active" : ""} onClick={() => changeTab("live")}>Em andamento</button><button className={tab === "closed" ? "active" : ""} onClick={() => changeTab("closed")}>Encerradas</button></div>{visibleAssemblies.length === 0 ? <div className="empty-state">Nenhuma assembleia nesta categoria.</div> : visibleAssemblies.map((item) => <button key={item.id} className={`assembly-list-item ${item.id === selectedId ? "active" : ""}`} onClick={() => { setSelectedId(item.id); setEligibleForSelected(false); setAgendas([]); setComments([]); setAcknowledged(false); setPresent(false); setOwnVote(null); setResult(null); setMinutes(null); setMinutesApproved(false); }}><strong>{item.title}</strong><small>{formatSaoPaulo(item.firstCallAt.toDate())}</small><span className={`status ${item.status}`}>{statusNames[item.status]}</span></button>)}</section>
           <section className="panel assembly-console">
             {!selected ? <div className="empty-state">Selecione uma assembleia para ver os detalhes.</div> : <>
               <div className="panel-head"><div><span className="access-badge">{statusNames[selected.status]}</span><h2>{selected.title}</h2><p>{selected.description}</p></div></div>

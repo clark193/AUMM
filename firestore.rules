@@ -341,7 +341,7 @@ service cloud.firestore {
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.createdAt == request.time;
       allow read: if assemblyStaff()
-        || (eligibleVoter(assemblyId) && visibleAssemblyStatus(resource.data.status));
+        || (activeMember() && visibleAssemblyStatus(resource.data.status));
       allow update: if (
           hasAssemblyPermission('canManageAssemblies')
           && resource.data.status == 'draft'
@@ -431,7 +431,7 @@ service cloud.firestore {
           && assemblyData(assemblyId).status == 'draft'
           && request.resource.data.status == 'pending';
         allow read: if assemblyStaff()
-          || (eligibleVoter(assemblyId) && visibleAssemblyStatus(assemblyData(assemblyId).status));
+          || (activeMember() && visibleAssemblyStatus(assemblyData(assemblyId).status));
         allow update: if hasAssemblyPermission('canPresideAssembly')
           && assemblyData(assemblyId).status == 'in_session'
           && resource.data.status != 'closed'
@@ -458,7 +458,8 @@ service cloud.firestore {
                 && agendaData(assemblyId, agendaId).commentsOpen == true)
               || (request.resource.data.type == 'admin_response' && hasAssemblyPermission('canModerateAssembly'))
             );
-          allow read: if hasAssemblyPermission('canModerateAssembly') || eligibleVoter(assemblyId);
+          allow read: if hasAssemblyPermission('canModerateAssembly')
+            || (activeMember() && visibleAssemblyStatus(assemblyData(assemblyId).status));
           allow update: if hasAssemblyPermission('canModerateAssembly')
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hidden','moderationReason','moderatedAt','moderatedBy'])
             && request.resource.data.hidden == true
@@ -488,7 +489,9 @@ service cloud.firestore {
             && assemblyData(assemblyId).status == 'in_session'
             && agendaAfterData(assemblyId, agendaId).votingOpen == false;
           allow read: if hasAssemblyPermission('canCertifyResults')
-            || (eligibleVoter(assemblyId) && agendaData(assemblyId, agendaId).resultPublished == true);
+            || (activeMember()
+              && visibleAssemblyStatus(assemblyData(assemblyId).status)
+              && agendaData(assemblyId, agendaId).resultPublished == true);
           allow update, delete: if false;
         }
       }
@@ -508,7 +511,9 @@ service cloud.firestore {
           && assemblyData(assemblyId).status == 'closed'
           && resource.data.status != 'finalized';
         allow read: if hasAssemblyPermission('canFinalizeMinutes')
-          || (eligibleVoter(assemblyId) && resource.data.status == 'finalized');
+          || (activeMember()
+            && visibleAssemblyStatus(assemblyData(assemblyId).status)
+            && resource.data.status == 'finalized');
         allow delete: if false;
       }
       match /minutes/{minutesId}/approvals/{uid} {

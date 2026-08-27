@@ -6,13 +6,19 @@ import {
   initializeTestEnvironment,
 } from "@firebase/rules-unit-testing";
 import {
+  collection,
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
   serverTimestamp,
   setDoc,
   Timestamp,
   updateDoc,
+  where,
   writeBatch,
 } from "firebase/firestore";
 
@@ -39,6 +45,8 @@ beforeEach(async () => {
       setDoc(doc(db, "adminRoles", "admin-1"), { active: true, level: 1, role: "Presidente" }),
       setDoc(doc(db, "associados", "member-1"), { uid: "member-1", status: "active", eligibleToVote: true, role: "Associado" }),
       setDoc(doc(db, "associados", "member-present"), { uid: "member-present", status: "active", eligibleToVote: true, role: "Associado" }),
+      setDoc(doc(db, "associados", "member-viewer"), { uid: "member-viewer", status: "active", eligibleToVote: true, role: "Associado" }),
+      setDoc(doc(db, "associados", "member-inactive"), { uid: "member-inactive", status: "inactive", eligibleToVote: false, role: "Associado" }),
       setDoc(doc(db, "assemblies", assemblyId), {
         type: "extraordinary", title: "Teste", description: "Teste de regras", orderOfDay: "Pauta",
         additionalInfo: "", format: "eletrônico", status: "in_session", minimumNoticeDays: 15,
@@ -88,6 +96,25 @@ test("associado habilitado lê a assembleia, mas não cria nem eleva privilégio
   await assertSucceeds(getDoc(doc(db, "assemblies", assemblyId)));
   await assertFails(setDoc(doc(db, "assemblies", "forged"), { status: "draft", createdAt: serverTimestamp() }));
   await assertFails(updateDoc(doc(db, "associados", "member-1"), { adminLevel: 1, eligibleToVote: true }));
+});
+
+test("associado ativo acompanha assembleias visíveis sem ganhar direito de voto", async () => {
+  const db = environment.authenticatedContext("member-viewer").firestore();
+  await assertSucceeds(getDoc(doc(db, "assemblies", assemblyId)));
+  await assertSucceeds(getDocs(query(
+    collection(db, "assemblies"),
+    where("status", "in", ["published", "first_call", "waiting_second_call", "second_call", "waiting_third_call", "third_call", "in_session", "closed"]),
+    orderBy("firstCallAt", "desc"),
+    limit(50),
+  )));
+  await assertFails(setDoc(doc(db, "assemblies", assemblyId, "agenda", "agenda-open", "votes", "member-viewer"), {
+    voterUid: "member-viewer", choice: "APROVO", createdAt: serverTimestamp(), assemblyId, agendaId: "agenda-open",
+  }));
+});
+
+test("associado inativo continua sem acesso às assembleias", async () => {
+  const db = environment.authenticatedContext("member-inactive").firestore();
+  await assertFails(getDoc(doc(db, "assemblies", assemblyId)));
 });
 
 test("associado não vota sem presença nem antes do horário", async () => {
