@@ -47,5 +47,6 @@ next-env.d.ts
 /functions/lib/
 /.firebase/
 /.wrangler/
+/.deploy-gh-pages/
 /outputs/
 /work/

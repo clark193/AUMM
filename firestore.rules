@@ -325,7 +325,17 @@ service cloud.firestore {
     match /associados/{id} {
       allow read: if (signedIn() && resource.data.uid == request.auth.uid) || hasPermission('members.read');
       allow create: if hasPermission('members.create') || hasPermission('members.write') || membershipStaff();
-      allow update: if hasPermission('members.write');
+      allow update: if hasPermission('members.write')
+        || (signedIn() && resource.data.uid == request.auth.uid
+          && request.resource.data.updatedAt == request.time
+          && (
+            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoURL','updatedAt'])
+              && request.resource.data.photoURL is string
+              && request.resource.data.photoURL.size() <= 2048)
+            || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword','updatedAt'])
+              && resource.data.mustChangePassword == true
+              && request.resource.data.mustChangePassword == false)
+          ));
       allow delete: if superAdmin();
     }
     match /publicMembers/{token} {

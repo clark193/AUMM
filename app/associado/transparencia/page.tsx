@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BarChart3, CreditCard, FileText, Home, KeyRound } from "lucide-react";
+import { BarChart3, CreditCard, FileText, Gift, Home, KeyRound, Vote } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { withBasePath } from "@/lib/paths";
 import { DocumentLibrary } from "@/components/DocumentLibrary";
@@ -25,6 +25,8 @@ export default function MemberTransparency() {
             <Link href="/associado/carteirinha">
               <CreditCard /> Carteirinha
             </Link>
+            <Link href="/associado/assembleias"><Vote /> Assembleias</Link>
+            <Link href="/associado/beneficios"><Gift /> Benefícios</Link>
             <Link className="active" href="/associado/transparencia">
               <BarChart3 /> Transparência
             </Link>

@@ -21,7 +21,7 @@ beforeEach(async () => {
       setDoc(doc(db, "adminRoles", "legacy-master"), { active: true, level: "1", role: "TI legado", permissions: {} }),
       setDoc(doc(db, "adminRoles", "communication"), { active: true, level: 4, superAdmin: false, role: "Comunicação", permissions: {} }),
       setDoc(doc(db, "requests", "request-1"), { ownerUid: "member", subject: "Ajuda", status: "pending" }),
-      setDoc(doc(db, "associados", "member"), { uid: "member", status: "active" }),
+      setDoc(doc(db, "associados", "member"), { uid: "member", status: "active", mustChangePassword: true }),
       setDoc(doc(db, "communications", "published"), { audience: "all", status: "published", subject: "Aviso" }),
       setDoc(doc(db, "communications", "draft"), { audience: "all", status: "draft", subject: "Rascunho" }),
     ]);
@@ -78,6 +78,13 @@ test("associado lê apenas comunicados publicados", async () => {
   await assertSucceeds(getDocs(query(collection(db, "communications"), where("status", "==", "published"), where("audience", "==", "all"))));
   await assertFails(getDocs(collection(db, "communications")));
   await assertFails(updateDoc(doc(db, "communications", "published"), { subject: "Alterado" }));
+});
+
+test("associado atualiza somente a própria foto de perfil", async () => {
+  const db = env.authenticatedContext("member").firestore();
+  await assertSucceeds(updateDoc(doc(db, "associados", "member"), { photoURL: "https://firebasestorage.googleapis.com/foto.webp", updatedAt: serverTimestamp() }));
+  await assertFails(updateDoc(doc(db, "associados", "member"), { fullName: "Nome alterado", updatedAt: serverTimestamp() }));
+  await assertSucceeds(updateDoc(doc(db, "associados", "member"), { mustChangePassword: false, updatedAt: serverTimestamp() }));
 });
 
 test("log de auditoria não pode fingir outro administrador", async () => {

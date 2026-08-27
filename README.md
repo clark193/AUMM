@@ -6,7 +6,7 @@ Plataforma web da AUMM — Associação União Maior Motoboys. O projeto reúne 
 
 - Next.js 16, React 19 e TypeScript;
 - Vinext/Vite para a prévia hospedada no Sites;
-- Firebase Authentication, Cloud Firestore e Firebase Hosting no plano Spark;
+- Firebase Authentication, Cloud Firestore, Cloud Storage e Firebase Hosting;
 - Firebase App Check com reCAPTCHA Enterprise (opcional, recomendado em produção);
 - QR Code e Lucide Icons;
 - GitHub Actions para validação e deploy.
@@ -14,17 +14,20 @@ Plataforma web da AUMM — Associação União Maior Motoboys. O projeto reúne 
 ## Módulos implementados
 
 - Site institucional responsivo: início, quem somos, diretoria, projetos, ações, benefícios, parceiros, eventos, contato e páginas legais;
-- Notícias com listagem vazia inicial, metadados, sitemap, robots e Open Graph;
+- Notícias com resumo, texto completo em página própria, imagem, metadados, sitemap, robots e Open Graph;
 - Filiação pública simplificada com CPF validado, aceite versionado do Estatuto, acompanhamento após recarga e proteção atômica contra duplicidade;
 - Estatuto Social de 2021 integral em HTML, com índice, busca local, âncoras por artigo e impressão;
 - Estrutura preparada para aprovação, número único, perfil público mínimo e log de auditoria;
 - Login Firebase, solicitação de recuperação atendida pelo WhatsApp e separação de acesso de associado/admin;
-- Portal do associado, perfil resumido, alteração de senha e carteirinha;
+- Portal do associado com comunicados, atalhos, benefícios, perfil, alteração obrigatória da senha inicial e carteirinha;
+- Foto da carteirinha enviada diretamente pelo associado em JPG, PNG ou WebP, sem depender de link público;
 - Portal da transparência protegido dentro da área do associado;
 - Mural da diretoria editável pelo admin, com nome, cargo, ordem e URL da foto;
 - Carteirinha digital mobile-first, QR Code, impressão/PDF e compartilhamento;
 - Verificação pública por token não sequencial, sem dados sensíveis;
 - Painel administrativo operacional para associados, filiações, cargos configuráveis, diretoria, notícias, comunicados, parceiros, eventos, benefícios, solicitações, recuperação de acesso, transparência, financeiro, documentos, administradores, logs e configurações, com cadastro, pesquisa, edição e exclusão/arquivamento conforme cada módulo;
+- Importação em lote de associados por planilha XLSX, com consolidação de duplicidades, relatório de inconsistências e criação de login com troca obrigatória no primeiro acesso;
+- Dados da página de contato e do rodapé atualizados pelo painel administrativo;
 - Gestão de administradores pelo próprio nível 1, incluindo criação da conta, definição de nível, alteração de função, desativação e recuperação de senha;
 - RBAC por níveis de 1 a 5 e permissões específicas nas regras do Firestore;
 - Deploy automatizado e documentação de operação.
@@ -78,7 +81,7 @@ Nunca versione `.env.local`, `.firebaserc`, chaves de conta de serviço ou crede
 
 ## Deploy
 
-O fluxo previsto é `main → GitHub Actions → Firebase Hosting`. A aplicação é exportada como site estático para funcionar no plano Spark, sem SSR, Functions ou Storage.
+O fluxo previsto é `main → publicação do site estático`. A aplicação não depende de SSR ou Functions; as fotos de perfil usam o Cloud Storage protegido por regras de acesso.
 
 Leia [CONFIGURACAO_AUMM.md](CONFIGURACAO_AUMM.md) antes do primeiro deploy.
 

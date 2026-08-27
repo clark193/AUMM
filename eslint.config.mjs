@@ -15,6 +15,7 @@ const eslintConfig = defineConfig([
     "work/**",
     ".vinext/**",
     ".wrangler/**",
+    ".deploy-gh-pages/**",
     "functions/lib/**",
     "functions/node_modules/**",
     "next-env.d.ts",

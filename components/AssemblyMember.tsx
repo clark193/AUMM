@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   Clock3,
   CreditCard,
+  Gift,
   Home,
   KeyRound,
   LogOut,
@@ -94,7 +95,6 @@ export function AssemblyMember() {
   useEffect(() => {
     if (!selectedId || !actor) return;
     const { db } = getFirebaseServices();
-    setEligibleForSelected(false);
     const stop = onSnapshot(collection(db, "assemblies", selectedId, "agenda"), (snapshot) =>
       setAgendas(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as AssemblyAgenda).sort((a, b) => a.order - b.order)));
     Promise.all([
@@ -141,7 +141,7 @@ export function AssemblyMember() {
   return <div className="dashboard member-dashboard assembly-member">
     <aside className="sidebar">
       <Link className="sidebar-brand" href="/"><Image src={withBasePath("/logo.png")} width={51} height={51} alt="AUMM" /><span><strong>AUMM</strong><small>Portal do associado</small></span></Link>
-      <nav className="side-nav"><Link href="/associado"><Home /> Início</Link><Link href="/associado/carteirinha"><CreditCard /> Carteirinha</Link><Link className="active" href="/associado/assembleias"><Vote /> Assembleias</Link><Link href="/associado/transparencia"><BarChart3 /> Transparência</Link><Link href="/associado/alterar-senha"><KeyRound /> Alterar senha</Link></nav>
+      <nav className="side-nav"><Link href="/associado"><Home /> Início</Link><Link href="/associado/carteirinha"><CreditCard /> Carteirinha</Link><Link className="active" href="/associado/assembleias"><Vote /> Assembleias</Link><Link href="/associado/beneficios"><Gift /> Benefícios</Link><Link href="/associado/transparencia"><BarChart3 /> Transparência</Link><Link href="/associado/alterar-senha"><KeyRound /> Alterar senha</Link></nav>
       <button className="sidebar-logout" onClick={logout}><LogOut size={16} /> Sair</button>
       <div className="sidebar-footer">{member?.memberNumber || "Associado"}</div>
     </aside>

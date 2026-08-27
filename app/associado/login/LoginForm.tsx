@@ -48,6 +48,13 @@ export function LoginForm() {
         const access = await getDoc(doc(db, "adminRoles", credential.user.uid));
         if (!access.exists() || access.data().active !== true)
           throw new Error("Este usuário não possui acesso administrativo.");
+      } else {
+        const member = await getDoc(doc(db, "associados", credential.user.uid));
+        if (!member.exists() || member.data().status !== "active") throw new Error("Seu cadastro ainda não está autorizado para acessar o portal.");
+        if (member.data().mustChangePassword === true) {
+          router.push("/associado/alterar-senha?primeiro=1");
+          return;
+        }
       }
       router.push(admin ? "/admin" : "/associado");
     } catch (reason) {

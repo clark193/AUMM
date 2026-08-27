@@ -30,6 +30,7 @@ type NewsRow = {
   id: string;
   title?: string;
   summary?: string;
+  content?: string;
   category?: string;
   imageUrl?: string;
   status?: "draft" | "published";
@@ -42,6 +43,7 @@ const emptyForm = {
   title: "",
   category: "Institucional",
   summary: "",
+  content: "",
   imageUrl: "",
   status: "draft" as "draft" | "published",
   showOnHome: false,
@@ -95,6 +97,7 @@ export function NewsAdmin() {
       title: item.title || "",
       category: item.category || "Institucional",
       summary: item.summary || "",
+      content: item.content || item.summary || "",
       imageUrl: item.imageUrl || "",
       status: item.status || "draft",
       showOnHome: item.showOnHome === true,
@@ -109,6 +112,7 @@ export function NewsAdmin() {
     if (!firebaseEnabled) return setMessage({ type: "error", text: "Configure o Firebase para salvar." });
     if (form.title.trim().length < 5) return setMessage({ type: "error", text: "Informe um título com pelo menos 5 caracteres." });
     if (form.summary.trim().length < 20) return setMessage({ type: "error", text: "Escreva um resumo com pelo menos 20 caracteres." });
+    if (form.content.trim().length < 40) return setMessage({ type: "error", text: "Escreva o texto completo da publicação com pelo menos 40 caracteres." });
     if (form.imageUrl && !form.imageUrl.startsWith("https://")) return setMessage({ type: "error", text: "A imagem precisa usar uma URL pública iniciada por https://." });
 
     setBusy(true);
@@ -120,6 +124,7 @@ export function NewsAdmin() {
         title: form.title.trim(),
         category: form.category.trim() || "Notícia",
         summary: form.summary.trim(),
+        content: form.content.trim(),
         imageUrl: form.imageUrl.trim(),
         status: form.status,
         showOnHome: form.showOnHome,
@@ -167,6 +172,7 @@ export function NewsAdmin() {
             <label className="field"><span>Categoria *</span><input value={form.category} onChange={(event) => update("category", event.target.value)} maxLength={60} required /></label>
             <label className="field"><span>Status</span><select value={form.status} onChange={(event) => update("status", event.target.value as "draft" | "published")}><option value="draft">Rascunho</option><option value="published">Publicada</option></select></label>
             <label className="field full"><span>Resumo *</span><textarea value={form.summary} onChange={(event) => update("summary", event.target.value)} maxLength={420} required placeholder="Texto que aparecerá no destaque e na lista de notícias." /></label>
+            <label className="field full"><span>Texto completo da publicação *</span><textarea className="news-content-input" value={form.content} onChange={(event) => update("content", event.target.value)} minLength={40} maxLength={12000} required placeholder="Escreva aqui a notícia completa. Os parágrafos serão preservados na página da publicação." /><small>Este conteúdo será aberto quando o visitante clicar em “Ver publicação”.</small></label>
             <label className="field full"><span><ImageIcon size={14} /> URL pública da imagem de fundo</span><input type="url" value={form.imageUrl} onChange={(event) => update("imageUrl", event.target.value)} placeholder="https://..." /><small>Use uma imagem horizontal. Sem imagem, será usado o fundo institucional.</small></label>
           </div>
           <label className={`home-feature-switch ${form.showOnHome ? "active" : ""}`}>

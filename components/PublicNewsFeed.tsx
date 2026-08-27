@@ -27,7 +27,7 @@ export function PublicNewsFeed({ compact = false }: Props) {
             <small>{item.publishedAt?.toDate?.().toLocaleDateString("pt-BR") || "AUMM"}</small>
             <h3>{item.title}</h3>
             <p>{item.summary}</p>
-            <Link className="read-more" href="/noticias">
+            <Link className="read-more" href={`/noticias/publicacao?id=${encodeURIComponent(item.id)}`}>
               Ver publicação <ArrowRight size={16} />
             </Link>
           </div>

@@ -35,7 +35,7 @@ export function SettingsAdmin() {
     } catch (reason) { setMessage({ type: "error", text: firebaseErrorMessage(reason, "Não foi possível salvar.") }); }
     finally { setBusy(false); }
   }
-  return <section className="panel operational-editor"><div className="panel-head"><div><h3><Settings size={18} /> Dados institucionais</h3><p>Informações oficiais usadas pela plataforma e pela carteirinha.</p></div></div><form onSubmit={submit}><div className="form-grid">
+  return <section className="panel operational-editor"><div className="panel-head"><div><h3><Settings size={18} /> Dados institucionais e página de contato</h3><p>Estas informações aparecem no rodapé, na página “Contato” e na carteirinha.</p></div></div><form onSubmit={submit}><div className="form-grid">
     <label className="field full"><span>Nome oficial</span><input required value={form.associationName} onChange={(event) => setForm({ ...form, associationName: event.target.value })} /></label>
     <label className="field"><span>Sigla</span><input required value={form.acronym} onChange={(event) => setForm({ ...form, acronym: event.target.value })} /></label><label className="field"><span>E-mail</span><input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} /></label>
     <label className="field"><span>Telefone</span><input value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} /></label><label className="field"><span>WhatsApp</span><input value={form.whatsapp} onChange={(event) => setForm({ ...form, whatsapp: event.target.value })} /></label>

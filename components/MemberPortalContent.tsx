@@ -12,12 +12,17 @@ import {
   KeyRound,
   LogOut,
   Vote,
+  Gift,
+  FileText,
+  Headphones,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getFirebaseServices } from "@/lib/firebase";
 import { withBasePath } from "@/lib/paths";
 import { MemberCommunications } from "./MemberCommunications";
+import { MemberPhotoUpload } from "./MemberPhotoUpload";
+import { MemberBenefits } from "./MemberBenefits";
 
 type Member = {
   fullName?: string;
@@ -26,6 +31,9 @@ type Member = {
   status?: string;
   city?: string;
   createdAt?: Timestamp;
+  photoURL?: string;
+  email?: string;
+  phone?: string;
 };
 
 export function MemberPortalContent() {
@@ -76,6 +84,9 @@ export function MemberPortalContent() {
           <Link href="/associado/assembleias">
             <Vote /> Assembleias
           </Link>
+          <Link href="/associado/beneficios">
+            <Gift /> Benefícios
+          </Link>
           <Link href="/associado/transparencia">
             <BarChart3 /> Transparência
           </Link>
@@ -99,7 +110,7 @@ export function MemberPortalContent() {
           <div className="dash-profile">
             <Bell size={18} />
             <span>{name}</span>
-            <div className="avatar">{initials || "A"}</div>
+            <div className="avatar member-avatar">{member?.photoURL ? <Image src={member.photoURL} width={32} height={32} unoptimized alt="" /> : initials || "A"}</div>
           </div>
         </header>
         <div className="dash-content">
@@ -125,6 +136,16 @@ export function MemberPortalContent() {
               Ver carteirinha
             </Link>
           </section>
+          <section className="member-profile-strip">
+            <MemberPhotoUpload photoURL={member?.photoURL} name={name} onUploaded={(photoURL) => setMember(current => current ? { ...current, photoURL } : current)} />
+            <div className="member-profile-copy"><span>Seu perfil</span><h2>{name}</h2><p>Mantenha sua foto atualizada para que a carteirinha digital fique completa.</p></div>
+          </section>
+          <div className="member-quick-grid">
+            <Link href="/associado/beneficios"><Gift /><span><strong>Benefícios</strong><small>Vantagens e parceiros</small></span></Link>
+            <Link href="/associado/assembleias"><Vote /><span><strong>Assembleias</strong><small>Participe das decisões</small></span></Link>
+            <Link href="/associado/transparencia"><FileText /><span><strong>Documentos</strong><small>Atas e transparência</small></span></Link>
+            <Link href="/contato"><Headphones /><span><strong>Fale com a AUMM</strong><small>Canais de atendimento</small></span></Link>
+          </div>
           <div className="dashboard-grid">
             <section className="panel">
               <div className="panel-head">
@@ -159,6 +180,7 @@ export function MemberPortalContent() {
               </div>
             </section>
           </div>
+          <section className="panel member-benefits-preview"><div className="panel-head"><div><h3><Gift size={18} /> Benefícios em destaque</h3><p>Condições cadastradas pela administração para associados ativos.</p></div><Link href="/associado/beneficios">Ver todos</Link></div><MemberBenefits limit={3} /></section>
         </div>
       </main>
     </div>

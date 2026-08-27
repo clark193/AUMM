@@ -9,6 +9,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
 import { getFirebaseServices } from "@/lib/firebase";
 import { withBasePath } from "@/lib/paths";
+import { MemberPhotoUpload } from "./MemberPhotoUpload";
 
 type Member = {
   fullName?: string;
@@ -16,6 +17,7 @@ type Member = {
   role?: string;
   status?: string;
   createdAt?: Timestamp;
+  photoURL?: string;
 };
 
 export function MemberCardContent() {
@@ -74,7 +76,7 @@ export function MemberCardContent() {
           </div>
           <div className="id-body">
             <div className="member-photo">
-              <UserRound size={50} />
+              {member?.photoURL ? <Image src={member.photoURL} width={100} height={124} unoptimized alt={`Foto de ${member.fullName || "associado"}`} /> : <UserRound size={50} />}
             </div>
             <div className="id-data">
               <small>Associado</small>
@@ -96,6 +98,7 @@ export function MemberCardContent() {
             )}
           </div>
         </div>
+        <div className="id-photo-editor"><MemberPhotoUpload compact photoURL={member?.photoURL} name={member?.fullName || "Associado"} onUploaded={(photoURL) => setMember(current => current ? { ...current, photoURL } : current)} /></div>
         <button
           className="button"
           style={{ width: "100%", marginTop: 18 }}

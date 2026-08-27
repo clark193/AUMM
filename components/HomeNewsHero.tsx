@@ -14,6 +14,7 @@ export type PublicNews = {
   id: string;
   title: string;
   summary: string;
+  content?: string;
   category: string;
   imageUrl?: string;
   status: "draft" | "published";

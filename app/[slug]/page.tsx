@@ -7,6 +7,7 @@ import { PublicShell } from "@/components/PublicShell";
 import { PublicNewsFeed } from "@/components/PublicNewsFeed";
 import { publicPages } from "@/lib/content";
 import { ManagedPublicFeed } from "@/components/ManagedPublicFeed";
+import { PublicContactDetails } from "@/components/PublicContactDetails";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -30,7 +31,7 @@ export default async function PublicPage({ params }: Props) {
   if (!page) notFound();
   return <PublicShell>
     <section className="page-hero"><div className="container"><span className="eyebrow light">{page.eyebrow}</span><h1>{page.title}</h1><p>{page.intro}</p></div></section>
-    <section className="page-body"><div className="container">{page.sections.length ? <div className="page-cards">{page.sections.map((section,index)=><article className="page-card" key={section.title}><span>0{index+1}</span><h2>{section.title}</h2><p>{section.text}</p></article>)}</div> : !["beneficios","eventos","parceiros"].includes(slug) && <div className="empty-state">Nenhum registro publicado.</div>}{slug === "beneficios" && <ManagedPublicFeed collectionName="benefits" />}{slug === "eventos" && <ManagedPublicFeed collectionName="events" />}{slug === "parceiros" && <ManagedPublicFeed collectionName="partners" />}</div></section>
+    <section className="page-body"><div className="container">{slug === "contato" ? <PublicContactDetails /> : page.sections.length ? <div className="page-cards">{page.sections.map((section,index)=><article className="page-card" key={section.title}><span>0{index+1}</span><h2>{section.title}</h2><p>{section.text}</p></article>)}</div> : !["beneficios","eventos","parceiros"].includes(slug) && <div className="empty-state">Nenhum registro publicado.</div>}{slug === "beneficios" && <ManagedPublicFeed collectionName="benefits" />}{slug === "eventos" && <ManagedPublicFeed collectionName="events" />}{slug === "parceiros" && <ManagedPublicFeed collectionName="partners" />}</div></section>
   </PublicShell>;
 }
 

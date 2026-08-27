@@ -31,6 +31,7 @@ import {
   Search,
   ShieldCheck,
   UserPlus,
+  MessageCircle,
 } from "lucide-react";
 import {
   firebaseConfig,
@@ -38,6 +39,7 @@ import {
   getFirebaseServices,
 } from "@/lib/firebase";
 import { withBasePath } from "@/lib/paths";
+import { BulkMemberImport } from "./BulkMemberImport";
 
 type MemberRow = {
   id: string;
@@ -389,7 +391,7 @@ export function MemberAdmin({ registrationOnly = false }: MemberAdminProps) {
       </section>
 
       {!registrationOnly && (
-        <section className="panel" style={{ marginTop: 18 }}>
+        <><BulkMemberImport /><section className="panel" style={{ marginTop: 18 }}>
           <div className="panel-head">
             <div>
               <h3>Associados cadastrados</h3>
@@ -441,7 +443,7 @@ export function MemberAdmin({ registrationOnly = false }: MemberAdminProps) {
                         </span>
                       </td>
                       <td>
-                        <button
+                        <div className="member-table-actions">{member.phone && <a className="whatsapp-button" href={`https://wa.me/55${member.phone.replace(/\D/g, "").replace(/^55/, "")}`} target="_blank" rel="noreferrer" aria-label={`Conversar com ${member.fullName} pelo WhatsApp`}><MessageCircle /> WhatsApp</a>}<button
                           type="button"
                           className="button button-sm button-dark"
                           onClick={() => toggleVotingEligibility(member)}
@@ -450,7 +452,7 @@ export function MemberAdmin({ registrationOnly = false }: MemberAdminProps) {
                           {member.status === "active" && member.eligibleToVote !== false
                             ? "Habilitado"
                             : "Desabilitado"}
-                        </button>
+                        </button></div>
                       </td>
                     </tr>
                   ))}
@@ -458,7 +460,7 @@ export function MemberAdmin({ registrationOnly = false }: MemberAdminProps) {
               </table>
             </div>
           )}
-        </section>
+        </section></>
       )}
     </>
   );

@@ -26,33 +26,47 @@ import {
   Tags,
   UsersRound,
   Vote,
+  Menu,
+  X,
+  type LucideIcon,
 } from "lucide-react";
 import { AuthGate } from "./AuthGate";
 import { firebaseEnabled, getFirebaseServices } from "@/lib/firebase";
 import { withBasePath } from "@/lib/paths";
 
-const links = [
-  ["/admin", "Dashboard", LayoutDashboard, [1, 2, 3, 4, 5]],
-  ["/admin/recrutamento", "Novo associado", UsersRound, [5]],
-  ["/admin/associados", "Cadastros e associados", UsersRound, [1, 2, 3]],
-  ["/admin/filiacoes", "Filiações", ClipboardCheck, [1]],
-  ["/admin/assembleias", "Assembleias eletrônicas", Vote, [1]],
-  ["/admin/cargos", "Cargos", Tags, [1, 2]],
-  ["/admin/diretoria", "Diretoria", ShieldCheck, [1, 2]],
-  ["/admin/noticias", "Notícias", Newspaper, [1, 2, 4]],
-  ["/admin/comunicados", "Comunicados", Bell, [1, 2, 4]],
-  ["/admin/eventos", "Eventos", CalendarDays, [1, 2, 4]],
-  ["/admin/beneficios", "Benefícios", Handshake, [1, 2, 4]],
-  ["/admin/parceiros", "Parceiros", Handshake, [1, 2, 4]],
-  ["/admin/solicitacoes", "Solicitações", MessageSquareText, [1, 2, 3]],
-  ["/admin/recuperacao-senha", "Recuperar senhas", LockKeyhole, [1, 2, 3]],
-  ["/admin/transparencia", "Transparência", BarChart3, [1, 2]],
-  ["/admin/financeiro", "Financeiro", ReceiptText, [1, 2]],
-  ["/admin/documentos", "Documentos", FileText, [1, 2, 3]],
-  ["/admin/administradores", "Administradores", UsersRound, [1]],
-  ["/admin/logs", "Logs", ScrollText, [1]],
-  ["/admin/configuracoes", "Configurações", Settings, [1]],
-] as const;
+type AdminLink = { href: string; label: string; icon: LucideIcon; levels: readonly number[] };
+const navGroups: { label: string; links: AdminLink[] }[] = [
+  { label: "Visão geral", links: [
+    { href: "/admin", label: "Dashboard", icon: LayoutDashboard, levels: [1, 2, 3, 4, 5] },
+  ] },
+  { label: "Pessoas", links: [
+    { href: "/admin/recrutamento", label: "Novo associado", icon: UsersRound, levels: [5] },
+    { href: "/admin/associados", label: "Associados", icon: UsersRound, levels: [1, 2, 3] },
+    { href: "/admin/filiacoes", label: "Filiações", icon: ClipboardCheck, levels: [1] },
+    { href: "/admin/cargos", label: "Cargos", icon: Tags, levels: [1, 2] },
+    { href: "/admin/diretoria", label: "Diretoria", icon: ShieldCheck, levels: [1, 2] },
+  ] },
+  { label: "Comunicação", links: [
+    { href: "/admin/noticias", label: "Notícias", icon: Newspaper, levels: [1, 2, 4] },
+    { href: "/admin/comunicados", label: "Comunicados", icon: Bell, levels: [1, 2, 4] },
+    { href: "/admin/eventos", label: "Eventos", icon: CalendarDays, levels: [1, 2, 4] },
+    { href: "/admin/beneficios", label: "Benefícios", icon: Handshake, levels: [1, 2, 4] },
+    { href: "/admin/parceiros", label: "Parceiros", icon: Handshake, levels: [1, 2, 4] },
+  ] },
+  { label: "Atendimento e gestão", links: [
+    { href: "/admin/solicitacoes", label: "Solicitações", icon: MessageSquareText, levels: [1, 2, 3] },
+    { href: "/admin/recuperacao-senha", label: "Recuperar senhas", icon: LockKeyhole, levels: [1, 2, 3] },
+    { href: "/admin/assembleias", label: "Assembleias", icon: Vote, levels: [1] },
+    { href: "/admin/transparencia", label: "Transparência", icon: BarChart3, levels: [1, 2] },
+    { href: "/admin/financeiro", label: "Financeiro", icon: ReceiptText, levels: [1, 2] },
+    { href: "/admin/documentos", label: "Documentos", icon: FileText, levels: [1, 2, 3] },
+  ] },
+  { label: "Sistema", links: [
+    { href: "/admin/administradores", label: "Administradores", icon: UsersRound, levels: [1] },
+    { href: "/admin/logs", label: "Auditoria", icon: ScrollText, levels: [1] },
+    { href: "/admin/configuracoes", label: "Configurações e contato", icon: Settings, levels: [1] },
+  ] },
+];
 
 type Props = {
   title: string;
@@ -73,6 +87,7 @@ export function AdminShell({
   const [role, setRole] = useState("Administrador");
   const [permissions, setPermissions] = useState<Record<string, boolean>>({});
   const [loggingOut, setLoggingOut] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!firebaseEnabled) return;
@@ -105,8 +120,9 @@ export function AdminShell({
           <div className="empty-state">Carregando permissões…</div>
         </div>
       ) : (
-        <div className="dashboard">
-          <aside className="sidebar">
+        <div className={`dashboard ${menuOpen ? "menu-open" : ""}`}>
+          <button className="sidebar-backdrop" aria-label="Fechar menu" onClick={() => setMenuOpen(false)} />
+          <aside className="sidebar" aria-label="Navegação administrativa">
             <Link href="/admin" className="sidebar-brand">
               <Image
                 src={withBasePath("/logo.png")}
@@ -119,22 +135,16 @@ export function AdminShell({
                 <small>Administração · Nível {level}</small>
               </span>
             </Link>
+            <button className="sidebar-close" aria-label="Fechar menu" onClick={() => setMenuOpen(false)}><X /></button>
             <nav className="side-nav" aria-label="Menu administrativo">
-              {links
-                .filter(([href, , , levels]) =>
-                  (levels as readonly number[]).includes(level)
+              {navGroups.map((group) => {
+                const visible = group.links.filter(({ href, levels }) =>
+                  levels.includes(level)
                     || (href === "/admin/assembleias" && ["canManageAssemblies","canPublishAssembly","canPresideAssembly","canModerateAssembly","canCertifyResults","canFinalizeMinutes"].some((permission) => permissions[permission] === true))
-                    || (href === "/admin/filiacoes" && permissions.canManageMembershipRequests === true),
-                )
-                .map(([href, label, Icon]) => (
-                  <Link
-                    key={href}
-                    className={pathname === href ? "active" : ""}
-                    href={href}
-                  >
-                    <Icon /> {label}
-                  </Link>
-                ))}
+                    || (href === "/admin/filiacoes" && permissions.canManageMembershipRequests === true));
+                if (!visible.length) return null;
+                return <section className="nav-group" key={group.label}><h2>{group.label}</h2>{visible.map(({ href, label, icon: Icon }) => <Link key={href} className={pathname === href ? "active" : ""} href={href} onClick={() => setMenuOpen(false)}><Icon /> <span>{label}</span></Link>)}</section>;
+              })}
             </nav>
             <div className="sidebar-footer">
               <BookOpenText size={15} /> Acesso {role} · nível {level}
@@ -150,7 +160,7 @@ export function AdminShell({
           </aside>
           <main className="dashboard-main">
             <header className="dash-top">
-              <h1>{title}</h1>
+              <div className="dash-title"><button className="admin-menu-toggle" aria-label="Abrir menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}><Menu /></button><h1>{title}</h1></div>
               <div className="dash-profile">
                 <Bell size={18} />
                 <span>{role}</span>

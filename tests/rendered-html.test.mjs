@@ -38,3 +38,17 @@ test("renderiza o Estatuto integral e a filiação simplificada", async () => {
   assert.match(membershipHtml, /Consultando sua solicitação/);
   assert.doesNotMatch(membershipHtml, /CNH|comprovante de renda|placa da moto/i);
 });
+
+test("exporta as novas rotas de publicação e benefícios", async () => {
+  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
+  workerUrl.searchParams.set("portal-test", `${process.pid}-${Date.now()}`);
+  const { default: worker } = await import(workerUrl.href);
+  const assets = { fetch: async () => new Response("Not found", { status: 404 }) };
+  const context = { waitUntil() {}, passThroughOnException() {} };
+  const publication = await worker.fetch(new Request("http://localhost/noticias/publicacao/?id=teste", { headers: { accept: "text/html" } }), { ASSETS: assets }, context);
+  assert.equal(publication.status, 200);
+  assert.match(await publication.text(), /Publica.+AUMM/);
+  const benefits = await worker.fetch(new Request("http://localhost/associado/beneficios/", { headers: { accept: "text/html" } }), { ASSETS: assets }, context);
+  assert.equal(benefits.status, 200);
+  assert.match(await benefits.text(), /Benef.+AUMM/);
+});
