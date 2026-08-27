@@ -1,8 +1,9 @@
 import type { NextConfig } from "next";
 
-const isGitHubPages = process.env.GITHUB_PAGES === "true";
-const repositoryName = process.env.GITHUB_REPOSITORY?.split("/")[1] || "AUMM";
-const basePath = isGitHubPages ? `/${repositoryName}` : "";
+// The production site is served from the root of the custom domain
+// (https://aumm.com.br), so exported assets must not use the repository name
+// as a URL prefix. A subpath can still be requested explicitly for previews.
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH?.trim() || "";
 
 const nextConfig: NextConfig = {
   agentRules: false,
