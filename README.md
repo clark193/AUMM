@@ -6,7 +6,7 @@ Plataforma web da AUMM — Associação União Maior Motoboys. O projeto reúne 
 
 - Next.js 16, React 19 e TypeScript;
 - Vinext/Vite para a prévia hospedada no Sites;
-- Firebase Authentication, Cloud Firestore, Cloud Storage e Firebase Hosting;
+- Firebase Authentication, Cloud Firestore e Firebase Hosting;
 - Firebase App Check com reCAPTCHA Enterprise (opcional, recomendado em produção);
 - QR Code e Lucide Icons;
 - GitHub Actions para validação e deploy.
@@ -81,7 +81,7 @@ Nunca versione `.env.local`, `.firebaserc`, chaves de conta de serviço ou crede
 
 ## Deploy
 
-O fluxo previsto é `main → publicação do site estático`. A aplicação não depende de SSR ou Functions; as fotos de perfil usam o Cloud Storage protegido por regras de acesso.
+O fluxo previsto é `main → publicação do site estático`. A aplicação não depende de SSR ou Functions; as fotos de perfil são comprimidas no navegador e salvas em uma coleção privada do Firebase.
 
 Leia [CONFIGURACAO_AUMM.md](CONFIGURACAO_AUMM.md) antes do primeiro deploy.
 

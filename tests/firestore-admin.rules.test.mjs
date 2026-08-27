@@ -82,7 +82,8 @@ test("associado lê apenas comunicados publicados", async () => {
 
 test("associado atualiza somente a própria foto de perfil", async () => {
   const db = env.authenticatedContext("member").firestore();
-  await assertSucceeds(updateDoc(doc(db, "associados", "member"), { photoURL: "https://firebasestorage.googleapis.com/foto.webp", updatedAt: serverTimestamp() }));
+  await assertSucceeds(setDoc(doc(db, "memberPhotos", "member"), { uid: "member", dataUrl: "data:image/webp;base64,AAAA", contentType: "image/webp", updatedAt: serverTimestamp() }));
+  await assertFails(setDoc(doc(db, "memberPhotos", "outra-pessoa"), { uid: "outra-pessoa", dataUrl: "data:image/webp;base64,AAAA", contentType: "image/webp", updatedAt: serverTimestamp() }));
   await assertFails(updateDoc(doc(db, "associados", "member"), { fullName: "Nome alterado", updatedAt: serverTimestamp() }));
   await assertSucceeds(updateDoc(doc(db, "associados", "member"), { mustChangePassword: false, updatedAt: serverTimestamp() }));
 });

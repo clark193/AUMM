@@ -1,7 +1,6 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 
 export const firebaseConfig = {
@@ -27,5 +26,5 @@ export const getFirebaseServices = () => {
     initializeAppCheck(app, { provider: new ReCaptchaEnterpriseProvider(siteKey), isTokenAutoRefreshEnabled: true });
     (globalThis as typeof globalThis & { __aummAppCheck?: boolean }).__aummAppCheck = true;
   }
-  return { app, auth: getAuth(app), db: getFirestore(app), storage: getStorage(app) };
+  return { app, auth: getAuth(app), db: getFirestore(app) };
 };

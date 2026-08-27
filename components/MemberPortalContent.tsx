@@ -44,10 +44,9 @@ export function MemberPortalContent() {
     () =>
       onAuthStateChanged(getFirebaseServices().auth, async (user) => {
         if (!user) return;
-        const snapshot = await getDoc(
-          doc(getFirebaseServices().db, "associados", user.uid),
-        );
-        setMember(snapshot.exists() ? (snapshot.data() as Member) : null);
+        const { db } = getFirebaseServices();
+        const [snapshot, photo] = await Promise.all([getDoc(doc(db, "associados", user.uid)), getDoc(doc(db, "memberPhotos", user.uid))]);
+        setMember(snapshot.exists() ? { ...(snapshot.data() as Member), photoURL: photo.data()?.dataUrl || "" } : null);
       }),
     [],
   );
