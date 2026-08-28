@@ -31,6 +31,12 @@ const publicContentStatusOptions = [
   { value: "archived", label: "Arquivado" },
 ] as const;
 
+const financialStatusOptions = [
+  { value: "draft", label: "Rascunho (não visível)" },
+  { value: "published", label: "Publicado e visível" },
+  { value: "archived", label: "Arquivado" },
+] as const;
+
 export const operationalModules: Record<string, AdminModuleConfig> = {
   cargos: {
     collection: "roles",
@@ -155,7 +161,7 @@ export const operationalModules: Record<string, AdminModuleConfig> = {
         { value: "members", label: "Associados" },
         { value: "public", label: "Público" },
       ] },
-      { key: "status", label: "Status", type: "select", required: true, options: statusOptions },
+      { key: "status", label: "Status", type: "select", required: true, options: financialStatusOptions },
     ],
   },
   financeiro: {
@@ -177,7 +183,7 @@ export const operationalModules: Record<string, AdminModuleConfig> = {
         { value: "members", label: "Associados" },
         { value: "public", label: "Público" },
       ] },
-      { key: "status", label: "Status", type: "select", required: true, options: statusOptions },
+      { key: "status", label: "Status", type: "select", required: true, options: financialStatusOptions },
     ],
   },
 };

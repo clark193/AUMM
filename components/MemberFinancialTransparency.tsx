@@ -23,7 +23,7 @@ function formatDate(value?: string) {
   return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString("pt-BR");
 }
 
-export function MemberFinancialTransparency() {
+export function MemberFinancialTransparency({ publicOnly = false }: { publicOnly?: boolean }) {
   const [rows, setRows] = useState<FinancialEntry[]>([]);
   const [error, setError] = useState("");
 
@@ -31,7 +31,7 @@ export function MemberFinancialTransparency() {
     query(
       collection(getFirebaseServices().db, "financialEntries"),
       where("status", "==", "published"),
-      where("visibility", "in", ["public", "members"]),
+      publicOnly ? where("visibility", "==", "public") : where("visibility", "in", ["public", "members"]),
       orderBy("date", "desc"),
       limit(100),
     ),
@@ -40,7 +40,7 @@ export function MemberFinancialTransparency() {
       setRows(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as FinancialEntry));
     },
     (reason) => setError(firebaseErrorMessage(reason, "Não foi possível carregar os lançamentos financeiros.")),
-  ), []);
+  ), [publicOnly]);
 
   const totals = useMemo(() => rows.reduce((result, item) => {
     const amount = Number(item.amount || 0);
@@ -58,7 +58,7 @@ export function MemberFinancialTransparency() {
       <article><WalletCards /><span>Saldo dos lançamentos</span><strong>{money.format(totals.income - totals.expense)}</strong></article>
     </section>
     <section className="panel">
-      <div className="panel-head"><div><h3>Movimentações financeiras</h3><p>Somente receitas e despesas publicadas pela administração.</p></div></div>
+      <div className="panel-head"><div><h3>Movimentações financeiras</h3><p>{publicOnly ? "Receitas e despesas públicas cadastradas pela administração." : "Somente receitas e despesas publicadas pela administração."}</p></div></div>
       {rows.length === 0
         ? <div className="empty-state">Nenhuma movimentação financeira foi publicada.</div>
         : <div className="financial-entry-list">{rows.map((item) => <article key={item.id}>

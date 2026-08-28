@@ -82,3 +82,22 @@ test("publica o Centro de Apoio ao Motoboy sem autenticação", async () => {
   assert.match(html, /canonical/);
   assert.doesNotMatch(html, /Verificando acesso seguro/);
 });
+
+test("publica a transparência financeira e o menu completo", async () => {
+  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
+  workerUrl.searchParams.set("public-transparency-test", `${process.pid}-${Date.now()}`);
+  const { default: worker } = await import(workerUrl.href);
+  const response = await worker.fetch(
+    new Request("http://localhost/transparencia/", { headers: { accept: "text/html" } }),
+    { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
+    { waitUntil() {}, passThroughOnException() {} },
+  );
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /Transparência financeira/);
+  assert.match(html, /Entradas publicadas/);
+  assert.match(html, /Saldo dos lançamentos/);
+  assert.match(html, /Abrir menu completo/);
+  assert.match(html, /canonical/);
+  assert.doesNotMatch(html, /Verificando acesso seguro/);
+});
