@@ -10,6 +10,7 @@ export type NewsItem = {
 export const navItems = [
   { label: "Início", href: "/" },
   { label: "A AUMM", href: "/quem-somos" },
+  { label: "O que já fizemos", href: "/realizacoes" },
   { label: "Notícias", href: "/noticias" },
   { label: "Benefícios", href: "/beneficios" },
   { label: "Contato", href: "/contato" },
@@ -20,12 +21,11 @@ export const news: NewsItem[] = [];
 export const publicPages: Record<string, { eyebrow: string; title: string; intro: string; sections: { title: string; text: string }[] }> = {
   "quem-somos": {
     eyebrow: "A associação",
-    title: "A força de quem movimenta Blumenau",
-    intro: "A AUMM representa motoboys e motociclistas, promovendo respeito, segurança, qualificação e melhores condições para toda a categoria.",
+    title: "A força da organização dos trabalhadores!",
+    intro: "A Associação União Maior Motoboys (AUMM) é uma organização sem fins lucrativos, formada por motofretistas e entregadores(as) de bicicleta, com atuação em todo o território brasileiro.",
     sections: [
-      { title: "Nossa missão", text: "Unir, representar e defender os profissionais que fazem a cidade acontecer todos os dias." },
-      { title: "Nossa visão", text: "Ser referência regional em proteção, desenvolvimento e valorização do trabalho sobre duas rodas." },
-      { title: "Nossos valores", text: "União, transparência, respeito, responsabilidade e compromisso com a vida." },
+      { title: "ASSOCIAÇÃO UNIÃO MAIOR MOTOBOYS – AUMM", text: "A AUMM tem como princípio a organização coletiva da classe trabalhadora, fortalecendo a união entre os trabalhadores para promover ajuda mútua, defender direitos, conquistar melhores condições de trabalho e lutar por dignidade, respeito e justiça social." },
+      { title: "Organizados somos mais fortes", text: "Porque organizados somos mais fortes, e juntos podemos transformar nossa realidade." },
     ],
   },
   diretoria: {
@@ -61,7 +61,7 @@ export const publicPages: Record<string, { eyebrow: string; title: string; intro
   beneficios: {
     eyebrow: "Vantagens",
     title: "Benefícios que acompanham sua rotina",
-    intro: "Uma rede de parceiros pensada para reduzir custos e cuidar de quem vive sobre duas rodas.",
+    intro: "Condições especiais oferecidas por parceiros que valorizam motofretistas e entregadores em todo o Brasil.",
     sections: [
       { title: "Oficinas e peças", text: "Condições especiais em manutenção, pneus, peças e acessórios." },
       { title: "Saúde e bem-estar", text: "Acesso facilitado a serviços de saúde, proteção e qualidade de vida." },
@@ -71,7 +71,19 @@ export const publicPages: Record<string, { eyebrow: string; title: string; intro
   parceiros: {
     eyebrow: "Rede AUMM",
     title: "Parceiros que valorizam a categoria",
-    intro: "Empresas locais que reconhecem a importância dos motoboys e motociclistas para Blumenau.",
+    intro: "Empresas e profissionais que oferecem vantagens especiais aos associados da AUMM em todo o Brasil.",
+    sections: [],
+  },
+  patrocinadores: {
+    eyebrow: "Quem fortalece a AUMM",
+    title: "Apoio e patrocínio",
+    intro: "Organizações e marcas que fortalecem a atuação nacional da associação.",
+    sections: [],
+  },
+  realizacoes: {
+    eyebrow: "Nossa trajetória",
+    title: "O que a AUMM já fez",
+    intro: "Ações, conquistas, mobilizações e projetos realizados pela associação em defesa dos trabalhadores.",
     sections: [],
   },
   eventos: {

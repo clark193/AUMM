@@ -1,28 +1,21 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { doc, getDoc, Timestamp } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc, serverTimestamp, Timestamp, updateDoc } from "firebase/firestore";
 import {
-  BarChart3,
-  Bell,
-  CreditCard,
-  Home,
-  KeyRound,
-  LogOut,
   Vote,
   Gift,
   FileText,
   Headphones,
+  CalendarDays,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getFirebaseServices } from "@/lib/firebase";
-import { withBasePath } from "@/lib/paths";
 import { MemberCommunications } from "./MemberCommunications";
 import { MemberPhotoUpload } from "./MemberPhotoUpload";
 import { MemberBenefits } from "./MemberBenefits";
+import { MemberSidebar, MemberTopbar } from "./MemberNavigation";
 
 type Member = {
   fullName?: string;
@@ -34,11 +27,13 @@ type Member = {
   photoURL?: string;
   email?: string;
   phone?: string;
+  cardIssuedAt?: Timestamp;
+  cardValidUntil?: Timestamp;
 };
 
 export function MemberPortalContent() {
-  const router = useRouter();
   const [member, setMember] = useState<Member | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
 
   useEffect(
     () =>
@@ -46,72 +41,23 @@ export function MemberPortalContent() {
         if (!user) return;
         const { db } = getFirebaseServices();
         const [snapshot, photo] = await Promise.all([getDoc(doc(db, "associados", user.uid)), getDoc(doc(db, "memberPhotos", user.uid))]);
-        setMember(snapshot.exists() ? { ...(snapshot.data() as Member), photoURL: photo.data()?.dataUrl || "" } : null);
+        const data = snapshot.exists() ? { ...(snapshot.data() as Member), photoURL: photo.data()?.dataUrl || "" } : null;
+        setMember(data);
+        setCurrentTime(Date.now());
+        if (data?.memberNumber && data.photoURL) await updateDoc(doc(db, "publicMembers", data.memberNumber), { photoDataUrl: data.photoURL, updatedAt: serverTimestamp() }).catch(() => undefined);
       }),
     [],
   );
 
-  async function logout() {
-    await signOut(getFirebaseServices().auth);
-    router.push("/associado/login");
-  }
-
   const name = member?.fullName || "Associado";
-  const initials = name
-    .split(" ")
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
+  const cardValidUntil = member?.cardValidUntil?.toDate();
+  const cardExpired = Boolean(cardValidUntil && cardValidUntil.getTime() < currentTime);
+  const cardDaysLeft = cardValidUntil ? Math.ceil((cardValidUntil.getTime() - currentTime) / 86_400_000) : null;
   return (
     <div className="dashboard member-dashboard">
-      <aside className="sidebar">
-        <Link className="sidebar-brand" href="/">
-          <Image src={withBasePath("/logo.png")} width={51} height={51} alt="AUMM" />
-          <span>
-            <strong>AUMM</strong>
-            <small>Portal do associado</small>
-          </span>
-        </Link>
-        <nav className="side-nav">
-          <Link className="active" href="/associado">
-            <Home /> Início
-          </Link>
-          <Link href="/associado/carteirinha">
-            <CreditCard /> Carteirinha
-          </Link>
-          <Link href="/associado/assembleias">
-            <Vote /> Assembleias
-          </Link>
-          <Link href="/associado/beneficios">
-            <Gift /> Benefícios
-          </Link>
-          <Link href="/associado/transparencia">
-            <BarChart3 /> Transparência
-          </Link>
-          <Link href="/associado/alterar-senha">
-            <KeyRound /> Alterar senha
-          </Link>
-        </nav>
-        <button className="sidebar-logout" onClick={logout}>
-          <LogOut size={16} /> Sair
-        </button>
-        <div className="sidebar-footer">
-          {member?.status === "active"
-            ? "Associado ativo"
-            : "Cadastro em análise"}
-          {member?.memberNumber ? ` · ${member.memberNumber}` : ""}
-        </div>
-      </aside>
+      <MemberSidebar footer={`${member?.status === "active" ? "Associado ativo" : "Cadastro em análise"}${member?.memberNumber ? ` · ${member.memberNumber}` : ""}`} />
       <main className="dashboard-main">
-        <header className="dash-top">
-          <h1>Portal do associado</h1>
-          <div className="dash-profile">
-            <Bell size={18} />
-            <span>{name}</span>
-            <div className="avatar member-avatar">{member?.photoURL ? <Image src={member.photoURL} width={32} height={32} unoptimized alt="" /> : initials || "A"}</div>
-          </div>
-        </header>
+        <MemberTopbar title="Portal do associado" />
         <div className="dash-content">
           <div className="dash-welcome">
             <div>
@@ -123,6 +69,7 @@ export function MemberPortalContent() {
               {member?.status === "active" ? "Associado ativo" : "Em análise"}
             </span>
           </div>
+          {(!member?.photoURL || !member?.cardIssuedAt || cardExpired || (cardDaysLeft !== null && cardDaysLeft <= 30)) && <section className={`credential-dashboard-alert ${cardExpired ? "danger" : ""}`}><CalendarDays /><div><strong>{!member?.photoURL ? "Sua carteirinha precisa de uma foto" : !member?.cardIssuedAt ? "Emita sua carteirinha anual" : cardExpired ? "Sua carteirinha está vencida" : `Sua carteirinha vence em ${cardDaysLeft} dia(s)`}</strong><p>{!member?.photoURL ? "Adicione uma foto nas configurações para liberar a emissão." : cardExpired ? "Emita uma nova credencial para voltar a usar o QR Code." : "A carteirinha tem validade de um ano e pode ser renovada após o vencimento."}</p></div><Link className="button button-sm" href={!member?.photoURL ? "/associado/configuracoes" : "/associado/carteirinha"}>{!member?.photoURL ? "Adicionar foto" : "Abrir carteirinha"}</Link></section>}
           <section className="member-hero">
             <div>
               <h2>Sua carteirinha digital</h2>
@@ -142,7 +89,8 @@ export function MemberPortalContent() {
           <div className="member-quick-grid">
             <Link href="/associado/beneficios"><Gift /><span><strong>Benefícios</strong><small>Vantagens e parceiros</small></span></Link>
             <Link href="/associado/assembleias"><Vote /><span><strong>Assembleias</strong><small>Participe das decisões</small></span></Link>
-            <Link href="/associado/transparencia"><FileText /><span><strong>Documentos</strong><small>Atas e transparência</small></span></Link>
+            <Link href="/associado/eventos"><CalendarDays /><span><strong>Eventos</strong><small>Agenda da associação</small></span></Link>
+            <Link href="/associado/documentos"><FileText /><span><strong>Documentos</strong><small>Atas, editais e normas</small></span></Link>
             <Link href="/contato"><Headphones /><span><strong>Fale com a AUMM</strong><small>Canais de atendimento</small></span></Link>
           </div>
           <div className="dashboard-grid">

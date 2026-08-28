@@ -15,6 +15,7 @@ import { Edit3, Plus, RotateCcw, Save, Search, Trash2 } from "lucide-react";
 import { firebaseEnabled, getFirebaseServices } from "@/lib/firebase";
 import { firebaseErrorMessage } from "@/lib/firebaseErrorMessage";
 import { operationalModules, type AdminField } from "@/lib/adminModuleConfig";
+import { writeAdminAudit } from "@/lib/audit";
 
 type Row = Record<string, unknown> & { id: string };
 type FormState = Record<string, string | boolean>;
@@ -100,14 +101,7 @@ export function OperationalAdmin({ module }: { module: string }) {
 
   async function audit(action: string, resourceId: string) {
     if (!actorUid) return;
-    const { db } = getFirebaseServices();
-    await addDoc(collection(db, "auditLogs"), {
-      action,
-      resource: config.collection,
-      resourceId,
-      actorUid,
-      timestamp: serverTimestamp(),
-    });
+    await writeAdminAudit({ action, resource: config.collection, resourceId, description: `${action === "ADMIN_RECORD_CREATED" ? "Cadastrou" : action === "ADMIN_RECORD_UPDATED" ? "Editou" : "Excluiu"} ${config.singular} no módulo ${module}.` });
   }
 
   async function submit(event: FormEvent) {

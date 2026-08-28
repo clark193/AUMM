@@ -4,6 +4,8 @@ import { PublicShell } from "@/components/PublicShell";
 import { BoardWall } from "@/components/BoardWall";
 import { HomeNewsHero } from "@/components/HomeNewsHero";
 import { PublicNewsFeed } from "@/components/PublicNewsFeed";
+import { SponsorShowcase } from "@/components/SponsorShowcase";
+import { AccomplishmentsFeed } from "@/components/AccomplishmentsFeed";
 
 export default function HomePage() {
   return <PublicShell>
@@ -23,6 +25,8 @@ export default function HomePage() {
       <div className="section-heading"><div><span className="eyebrow">Fique por dentro</span><h2>Notícias da AUMM</h2></div><Link className="text-link" href="/noticias">Ver todas <ArrowRight size={17}/></Link></div>
       <PublicNewsFeed compact />
     </div></section>
+    <section className="section surface"><div className="container"><div className="section-heading"><div><span className="eyebrow">Nossa trajetória</span><h2>O que a AUMM já fez</h2></div><Link className="text-link" href="/realizacoes">Ver todas as realizações <ArrowRight size={17}/></Link></div><AccomplishmentsFeed compact /></div></section>
+    <section className="section"><div className="container"><div className="section-heading"><div><span className="eyebrow">Quem fortalece a associação</span><h2>Apoio e patrocínio</h2></div><p>Organizações e marcas que acreditam na organização dos trabalhadores.</p></div><SponsorShowcase compact /></div></section>
     <BoardWall/>
   </PublicShell>;
 }

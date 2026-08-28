@@ -23,6 +23,7 @@ import {
   Play,
   Plus,
   Send,
+  Trash2,
   UsersRound,
   Vote,
 } from "lucide-react";
@@ -45,6 +46,8 @@ import {
   setAgendaOperation,
   waitForNextCall,
   moderateComment,
+  deleteDraftAgenda,
+  skipPendingAgenda,
   type AgendaDraft,
   type AssemblyActor,
 } from "@/lib/assemblyService";
@@ -161,17 +164,26 @@ export function AssemblyAdmin() {
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!actor) return;
+    const intent = ((event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null)?.value || "draft";
     const first = new Date(form.firstCall);
     const second = new Date(first.getTime() + 30 * 60_000);
     const third = new Date(first.getTime() + 60 * 60_000);
-    await run("create", async () => {
+    await run(intent === "schedule" ? "schedule" : "create", async () => {
       const id = await createAssemblyDraft({ ...form, minutesApproverUids: form.minutesApprovers.split(",").map((item) => item.trim()).filter(Boolean), firstCallAt: first, secondCallAt: second, thirdCallAt: third }, actor);
+      if (intent === "schedule") {
+        const created = await getDoc(doc(getFirebaseServices().db, "assemblies", id));
+        await publishAssembly({ id, ...created.data() } as Assembly, actor);
+      }
       setSelectedId(id); setForm({ type: "ordinary", title: "", description: "", orderOfDay: "", additionalInfo: "", firstCall: initialDate(16), minutesApprovers: "", agendas: [newAgenda()] });
-    }, "Rascunho da assembleia criado.");
+    }, intent === "schedule" ? "Assembleia marcada e convocação publicada para os associados." : "Rascunho da assembleia criado.");
   }
 
   function updateAgenda(index: number, field: keyof AgendaDraft, value: unknown) {
     setForm((current) => ({ ...current, agendas: current.agendas.map((agenda, itemIndex) => itemIndex === index ? { ...agenda, [field]: value } : agenda) }));
+  }
+
+  function removeFormAgenda(index: number) {
+    setForm((current) => ({ ...current, agendas: current.agendas.filter((_, itemIndex) => itemIndex !== index) }));
   }
 
   async function exportCollection(path: string, filename: string) {
@@ -234,7 +246,7 @@ export function AssemblyAdmin() {
             <label className="field full"><span>UIDs responsáveis por conferir a ata (separados por vírgula)</span><input value={form.minutesApprovers} onChange={(e) => setForm({ ...form, minutesApprovers: e.target.value })} placeholder="UID do Presidente, UID do Secretário" /><small>Esses usuários poderão registrar confirmação interna após a ata ser finalizada.</small></label>
           </div>
           <div className="agenda-builder">
-            {form.agendas.map((agenda, index) => <fieldset key={index} className="agenda-editor"><legend>Pauta {index + 1}</legend>
+            {form.agendas.map((agenda, index) => <fieldset key={index} className="agenda-editor"><legend>Pauta {index + 1}</legend>{form.agendas.length > 1 && <button className="agenda-remove-draft" type="button" onClick={() => removeFormAgenda(index)}><Trash2 /> Remover pauta</button>}
               <label className="field"><span>Título</span><input value={agenda.title} onChange={(e) => updateAgenda(index, "title", e.target.value)} required /></label>
               <label className="field"><span>Resumo</span><textarea value={agenda.description} onChange={(e) => updateAgenda(index, "description", e.target.value)} required /></label>
               <label className="field"><span>Texto integral</span><textarea value={agenda.fullText} onChange={(e) => updateAgenda(index, "fullText", e.target.value)} required /></label>
@@ -242,7 +254,7 @@ export function AssemblyAdmin() {
               <div className="assembly-switches"><label><input type="checkbox" checked={agenda.allowComments} onChange={(e) => updateAgenda(index, "allowComments", e.target.checked)} /> Discussão escrita</label><label><input type="checkbox" checked={agenda.allowVoting} onChange={(e) => updateAgenda(index, "allowVoting", e.target.checked)} /> Votação</label><label><input type="checkbox" checked={agenda.votePrivacy === "reserved"} onChange={(e) => updateAgenda(index, "votePrivacy", e.target.checked ? "reserved" : "nominal")} /> Voto reservado</label></div>
             </fieldset>)}
           </div>
-          <div className="assembly-actions"><button type="button" className="button button-sm button-dark" onClick={() => setForm((current) => ({ ...current, agendas: [...current.agendas, newAgenda()] }))}><Plus size={15} /> Adicionar pauta</button><button className="button" disabled={!!busy}><FileCheck2 size={16} /> Salvar rascunho</button></div>
+          <div className="assembly-actions"><button type="button" className="button button-sm button-dark" onClick={() => setForm((current) => ({ ...current, agendas: [...current.agendas, newAgenda()] }))}><Plus size={15} /> Adicionar pauta</button><button className="button button-dark" name="intent" value="draft" disabled={!!busy}><FileCheck2 size={16} /> Salvar rascunho</button><button className="button" name="intent" value="schedule" disabled={!!busy}><CalendarClock size={16} /> Salvar e marcar assembleia</button></div>
         </form>
       </section>
 
@@ -271,6 +283,8 @@ export function AssemblyAdmin() {
             </div>
 
             <div className="agenda-admin-list"><h3>Pautas</h3>{agendas.map((agenda) => <article key={agenda.id} className={`agenda-card ${agenda.id === selected.currentAgendaId ? "active" : ""}`}><header><span>{agenda.order}</span><div><strong>{agenda.title}</strong><small>{statusNames[agenda.status]}</small></div></header><p>{agenda.description}</p>
+              {selected.status === "draft" && agenda.status === "pending" && actor && <div className="assembly-actions"><button className="table-action-danger" type="button" onClick={() => run("agenda-delete", () => deleteDraftAgenda(selected.id, agenda.id, actor), "Pauta removida do rascunho.")}><Trash2 size={14} /> Remover pauta</button></div>}
+              {["published", "in_session"].includes(selected.status) && agenda.status === "pending" && actor && <div className="assembly-actions"><button className="button button-sm button-dark" type="button" onClick={() => { const reason = window.prompt("Por que esta pauta não será realizada?"); if (reason) run("agenda-skip", () => skipPendingAgenda(selected.id, agenda.id, reason, actor), "Pauta fechada sem realização e justificativa registrada."); }}>Fechar sem realizar</button></div>}
               {selected.status === "in_session" && actor && <div className="assembly-actions">
                 {agenda.status === "pending" && !selected.currentAgendaId && <button className="button button-sm" onClick={() => run("agenda", () => setAgendaOperation(selected.id, agenda, "open", actor), "Pauta aberta.")}><Play size={14} /> Abrir pauta</button>}
                 {agenda.allowComments && agenda.status === "open" && <button className="button button-sm" onClick={() => run("comments", () => setAgendaOperation(selected.id, agenda, "open_comments", actor), "Discussão aberta.")}><MessageSquareText size={14} /> Abrir discussão</button>}

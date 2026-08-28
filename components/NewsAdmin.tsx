@@ -25,6 +25,7 @@ import {
 import { useEffect, useState, type FormEvent } from "react";
 import { firebaseEnabled, getFirebaseServices } from "@/lib/firebase";
 import { firebaseErrorMessage } from "@/lib/firebaseErrorMessage";
+import { writeAdminAudit } from "@/lib/audit";
 
 type NewsRow = {
   id: string;
@@ -133,6 +134,8 @@ export function NewsAdmin() {
         updatedBy: auth.currentUser?.uid || "",
         ...(!editingId ? { createdAt: serverTimestamp(), createdBy: auth.currentUser?.uid || "" } : {}),
       }, { merge: true });
+      const action = form.status === "published" && previous?.status !== "published" ? "NEWS_PUBLISHED" : editingId ? "NEWS_UPDATED" : "NEWS_CREATED";
+      await writeAdminAudit({ action, resource: "news", resourceId: reference.id, description: `${action === "NEWS_PUBLISHED" ? "Publicou" : editingId ? "Editou" : "Criou"} a notícia “${form.title.trim()}”.` }).catch(() => undefined);
       setMessage({ type: "success", text: form.status === "published" ? "Notícia publicada com sucesso." : "Rascunho salvo com sucesso." });
       reset();
     } catch (error) {
@@ -147,6 +150,7 @@ export function NewsAdmin() {
     setBusy(true);
     try {
       await deleteDoc(doc(getFirebaseServices().db, "news", item.id));
+      await writeAdminAudit({ action: "NEWS_DELETED", resource: "news", resourceId: item.id, description: `Excluiu a notícia “${item.title || "Sem título"}”.` }).catch(() => undefined);
       if (editingId === item.id) reset();
       setMessage({ type: "success", text: "Notícia excluída." });
     } catch (error) {

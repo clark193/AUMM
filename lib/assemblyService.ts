@@ -355,6 +355,19 @@ export async function closeAgenda(assemblyId: string, agendaId: string, actor: A
   await batch.commit();
 }
 
+export async function deleteDraftAgenda(assemblyId: string, agendaId: string, actor: AssemblyActor) {
+  const { db } = getFirebaseServices(); const assemblyRef = doc(db, "assemblies", assemblyId);
+  const assembly = await getDoc(assemblyRef); const agenda = await getDoc(doc(assemblyRef, "agenda", agendaId));
+  if (assembly.data()?.status !== "draft" || agenda.data()?.status !== "pending") throw new Error("Somente uma pauta pendente de uma assembleia em rascunho pode ser removida.");
+  const batch = writeBatch(db); batch.delete(doc(assemblyRef, "agenda", agendaId)); batch.set(doc(collection(assemblyRef, "auditLogs")), auditPayload("AGENDA_DELETED", actor, assemblyId, { title: String(agenda.data()?.title || "") }, agendaId)); await batch.commit();
+}
+
+export async function skipPendingAgenda(assemblyId: string, agendaId: string, reason: string, actor: AssemblyActor) {
+  if (reason.trim().length < 5) throw new Error("Informe uma justificativa com pelo menos 5 caracteres.");
+  const { db } = getFirebaseServices(); const assemblyRef = doc(db, "assemblies", assemblyId); const agendaRef = doc(assemblyRef, "agenda", agendaId);
+  const batch = writeBatch(db); batch.update(agendaRef, { status: "closed", commentsOpen: false, votingOpen: false, closedAt: serverTimestamp(), skippedBy: actor.uid, skippedReason: reason.trim() }); batch.set(doc(collection(assemblyRef, "auditLogs")), auditPayload("AGENDA_SKIPPED", actor, assemblyId, { reason: reason.trim() }, agendaId)); await batch.commit();
+}
+
 export async function closeAssembly(assemblyId: string, actor: AssemblyActor) {
   const { db } = getFirebaseServices();
   const assemblyRef = doc(db, "assemblies", assemblyId);

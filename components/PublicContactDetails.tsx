@@ -1,6 +1,6 @@
 "use client";
 
-import { AtSign, ExternalLink, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
+import { AtSign, Building2, ExternalLink, Mail, MessageCircle, Phone } from "lucide-react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { firebaseEnabled, getFirebaseServices } from "@/lib/firebase";
@@ -16,14 +16,14 @@ export type PublicSettings = {
   instagram?: string;
   facebook?: string;
   siteMessage?: string;
+  cnpj?: string;
 };
 
 export const publicSettingsFallback: PublicSettings = {
   associationName: "Associação União Maior Motoboys",
   email: "contato@aumm.com.br",
-  city: "Blumenau",
-  state: "SC",
-  instagram: "@aummblumenau",
+  instagram: "https://www.instagram.com/aumm.oficial/",
+  cnpj: "45.115.209/0001-39",
 };
 
 export function usePublicSettings() {
@@ -31,7 +31,10 @@ export function usePublicSettings() {
   useEffect(() => {
     if (!firebaseEnabled) return;
     return onSnapshot(doc(getFirebaseServices().db, "settings", "public"), (snapshot) => {
-      if (snapshot.exists()) setSettings({ ...publicSettingsFallback, ...snapshot.data() });
+      if (snapshot.exists()) {
+        const stored = snapshot.data() as PublicSettings;
+        setSettings({ ...publicSettingsFallback, ...stored, instagram: !stored.instagram || stored.instagram === "@aummblumenau" ? publicSettingsFallback.instagram : stored.instagram, cnpj: stored.cnpj || publicSettingsFallback.cnpj });
+      }
     });
   }, []);
   return settings;
@@ -61,8 +64,8 @@ export function PublicContactDetails() {
     <div className="contact-list">
       {settings.email && <a href={`mailto:${settings.email}`}><Mail /><span><small>E-mail</small><strong>{settings.email}</strong></span></a>}
       {(settings.phone || settings.whatsapp) && <a href={`tel:+55${digits(settings.phone || settings.whatsapp).replace(/^55/, "")}`}><Phone /><span><small>Telefone</small><strong>{settings.phone || settings.whatsapp}</strong></span></a>}
-      {(settings.address || settings.city) && <div><MapPin /><span><small>Endereço</small><strong>{[settings.address, [settings.city, settings.state].filter(Boolean).join(" · ")].filter(Boolean).join(" — ")}</strong></span></div>}
-      {instagram && <a href={instagram} target="_blank" rel="noreferrer"><AtSign /><span><small>Instagram</small><strong>{settings.instagram}</strong></span><ExternalLink /></a>}
+      {settings.cnpj && <div><Building2 /><span><small>CNPJ</small><strong>{settings.cnpj}</strong></span></div>}
+      {instagram && <a href={instagram} target="_blank" rel="noreferrer"><AtSign /><span><small>Instagram</small><strong>@aumm.oficial</strong></span><ExternalLink /></a>}
       {facebook && <a href={facebook} target="_blank" rel="noreferrer"><AtSign /><span><small>Facebook</small><strong>{settings.facebook}</strong></span><ExternalLink /></a>}
     </div>
   </div>;

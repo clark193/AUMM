@@ -92,17 +92,14 @@ export function HomeNewsHero() {
       </div>
       <div className="hero-grid container">
         <div className="hero-copy">
-          <span className="eyebrow light">
-            <span className="pulse" /> Blumenau sobre duas rodas
-          </span>
           <h1>
             Mais união.<br />
             <em>Mais respeito.</em><br />
             Mais segurança.
           </h1>
           <p>
-            A AUMM representa quem trabalha, se desloca e movimenta Blumenau
-            todos os dias. Juntos, somos uma voz mais forte.
+            A AUMM organiza e representa motofretistas e entregadores de
+            bicicleta em todo o Brasil. Juntos, somos uma voz mais forte.
           </p>
           <div className="hero-actions">
             <Link className="button" href="/associe-se">

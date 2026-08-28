@@ -19,7 +19,7 @@ service cloud.firestore {
           'roles.manage','board.manage','news.read','news.create','news.edit','news.delete','communications.read',
           'communications.write','content.manage','requests.read','requests.write','finance.read','finance.write',
           'transparency.write','documents.read','documents.write','notifications.write','settings.read',
-          'passwordResets.read','passwordResets.manage','dashboard.read'
+          'dashboard.read'
         ])
         || (adminProfile().data.level in [3, '3'] && permission in [
           'applications.read','applications.review','users.read','users.update','members.read','members.write',
@@ -311,8 +311,10 @@ service cloud.firestore {
     }
     match /passwordResetRequests/{id} {
       allow create: if validPasswordResetRequest();
-      allow read: if hasPermission('passwordResets.read');
+      allow read: if hasPermission('passwordResets.read')
+        && !(adminProfile().data.level in [2, '2']);
       allow update: if hasPermission('passwordResets.manage')
+        && !(adminProfile().data.level in [2, '2'])
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','contactedAt','resolvedAt','updatedBy']);
       allow delete: if superAdmin();
     }
@@ -328,9 +330,24 @@ service cloud.firestore {
       allow update: if hasPermission('members.write')
         || (signedIn() && resource.data.uid == request.auth.uid
           && request.resource.data.updatedAt == request.time
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword','updatedAt'])
-          && resource.data.mustChangePassword == true
-          && request.resource.data.mustChangePassword == false);
+          && (
+            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword','updatedAt'])
+              && resource.data.mustChangePassword == true
+              && request.resource.data.mustChangePassword == false)
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['phone','whatsapp','updatedAt'])
+            || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cardIssuedAt','cardValidUntil','updatedAt'])
+              && exists(/databases/$(database)/documents/memberPhotos/$(request.auth.uid))
+              && request.resource.data.cardIssuedAt == request.time
+              && request.resource.data.cardValidUntil >= request.time + duration.value(364, 'd')
+              && request.resource.data.cardValidUntil <= request.time + duration.value(366, 'd')
+              && (!('cardValidUntil' in resource.data) || resource.data.cardValidUntil <= request.time))
+            || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','authorized','eligibleToVote','disassociatedAt','disassociationSource','updatedAt'])
+              && request.resource.data.status == 'inactive'
+              && request.resource.data.authorized == false
+              && request.resource.data.eligibleToVote == false
+              && request.resource.data.disassociatedAt == request.time
+              && request.resource.data.disassociationSource == 'self_service')
+          ));
       allow delete: if superAdmin();
     }
     match /memberPhotos/{uid} {
@@ -344,10 +361,86 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
       allow delete: if own(uid) || hasPermission('members.write');
     }
+    match /adminPhotos/{uid} {
+      allow read: if own(uid);
+      allow create, update: if own(uid)
+        && request.resource.data.keys().hasOnly(['uid','dataUrl','contentType','updatedAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.dataUrl is string
+        && request.resource.data.dataUrl.size() <= 500000
+        && request.resource.data.contentType in ['image/jpeg','image/webp']
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if own(uid);
+    }
     match /publicMembers/{token} {
       allow read: if true;
-      allow create: if hasPermission('members.create') || hasPermission('members.write') || membershipStaff();
-      allow update, delete: if hasPermission('members.write');
+      allow create: if hasPermission('members.create') || hasPermission('members.write') || membershipStaff()
+        || (signedIn() && adminProfile().data.active == true
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.credentialType == 'admin'
+          && request.resource.data.memberNumber == token
+          && existsAfter(/databases/$(database)/documents/adminCards/$(request.auth.uid))
+          && getAfter(/databases/$(database)/documents/adminCards/$(request.auth.uid)).data.cardNumber == token
+          && request.resource.data.cardValidUntil == getAfter(/databases/$(database)/documents/adminCards/$(request.auth.uid)).data.validUntil);
+      allow update: if hasPermission('members.write') || (
+        signedIn() && resource.data.uid == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && (
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoDataUrl','updatedAt'])
+            && (!('photoDataUrl' in request.resource.data) || (request.resource.data.photoDataUrl is string && request.resource.data.photoDataUrl.size() <= 500000)))
+          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt'])
+            && request.resource.data.status == 'inactive')
+          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['credentialType','photoDataUrl','cardIssuedAt','cardValidUntil','updatedAt'])
+            && request.resource.data.credentialType == 'member'
+            && exists(/databases/$(database)/documents/memberPhotos/$(request.auth.uid))
+            && request.resource.data.photoDataUrl == get(/databases/$(database)/documents/memberPhotos/$(request.auth.uid)).data.dataUrl
+            && request.resource.data.cardIssuedAt == request.time
+            && request.resource.data.cardValidUntil >= request.time + duration.value(364, 'd')
+            && request.resource.data.cardValidUntil <= request.time + duration.value(366, 'd')
+            && getAfter(/databases/$(database)/documents/associados/$(request.auth.uid)).data.cardValidUntil == request.resource.data.cardValidUntil)
+        )
+      ) || (signedIn() && adminProfile().data.active == true
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.credentialType == 'admin'
+        && request.resource.data.memberNumber == token
+        && existsAfter(/databases/$(database)/documents/adminCards/$(request.auth.uid))
+        && getAfter(/databases/$(database)/documents/adminCards/$(request.auth.uid)).data.cardNumber == token
+        && request.resource.data.cardValidUntil == getAfter(/databases/$(database)/documents/adminCards/$(request.auth.uid)).data.validUntil);
+      allow delete: if hasPermission('members.write');
+    }
+    match /adminCards/{uid} {
+      allow read: if own(uid) || superAdmin();
+      allow create: if own(uid)
+        && adminProfile().data.active == true
+        && exists(/databases/$(database)/documents/adminPhotos/$(uid))
+        && request.resource.data.keys().hasOnly(['uid','cardNumber','fullName','role','level','status','issuedAt','validUntil','updatedAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.role == adminProfile().data.role
+        && request.resource.data.status == 'active'
+        && request.resource.data.issuedAt == request.time
+        && request.resource.data.validUntil >= request.time + duration.value(364, 'd')
+        && request.resource.data.validUntil <= request.time + duration.value(366, 'd');
+      allow update: if own(uid)
+        && adminProfile().data.active == true
+        && exists(/databases/$(database)/documents/adminPhotos/$(uid))
+        && resource.data.validUntil <= request.time
+        && request.resource.data.cardNumber == resource.data.cardNumber
+        && request.resource.data.role == adminProfile().data.role
+        && request.resource.data.status == 'active'
+        && request.resource.data.issuedAt == request.time
+        && request.resource.data.validUntil >= request.time + duration.value(364, 'd')
+        && request.resource.data.validUntil <= request.time + duration.value(366, 'd');
+      allow delete: if superAdmin();
+    }
+    match /membershipCancellations/{uid} {
+      allow create: if own(uid)
+        && request.resource.data.keys().hasOnly(['uid','memberNumber','fullName','requestedAt','source','status'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.requestedAt == request.time
+        && request.resource.data.source == 'self_service'
+        && request.resource.data.status == 'completed';
+      allow read: if own(uid) || hasPermission('members.read');
+      allow update, delete: if false;
     }
     match /assemblies/{assemblyId} {
       allow create: if hasAssemblyPermission('canManageAssemblies')
@@ -455,7 +548,17 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'status','openedAt','closedAt','commentsOpen','votingOpen','votingStartsAt',
             'votingEndsAt','votingClosedAt','resultPublished','resultPublishedAt'
-          ]);
+          ]) || (
+            hasAssemblyPermission('canPresideAssembly')
+            && assemblyData(assemblyId).status in ['published','in_session']
+            && resource.data.status == 'pending'
+            && request.resource.data.status == 'closed'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','commentsOpen','votingOpen','closedAt','skippedBy','skippedReason'])
+            && request.resource.data.closedAt == request.time
+            && request.resource.data.skippedBy == request.auth.uid
+            && request.resource.data.skippedReason is string
+            && request.resource.data.skippedReason.size() >= 5
+          );
         allow delete: if hasAssemblyPermission('canManageAssemblies')
           && assemblyData(assemblyId).status == 'draft';
 
@@ -566,10 +669,22 @@ service cloud.firestore {
         || (activeMember() && resource.data.status == 'published' && resource.data.audience in ['all','members']);
       allow write: if hasPermission('communications.write');
     }
+    match /sponsors/{id} {
+      allow read: if (resource.data.status == 'active' && resource.data.type in ['sponsor','support'])
+        || (resource.data.status == 'active' && resource.data.type == 'partner' && activeMember())
+        || hasPermission('content.manage');
+      allow create, update: if hasPermission('content.manage')
+        && request.resource.data.logoDataUrl is string
+        && request.resource.data.logoDataUrl.size() <= 500000
+        && request.resource.data.type in ['sponsor','support','partner']
+        && request.resource.data.status in ['active','archived'];
+      allow delete: if hasPermission('content.manage');
+    }
     match /{collectionName}/{id} {
-      allow read: if collectionName in ['partners','benefits','events']
-        && (resource.data.status == 'active' || hasPermission('content.manage'));
-      allow write: if collectionName in ['partners','benefits','events'] && hasPermission('content.manage');
+      allow read: if (collectionName in ['events','accomplishments'] && resource.data.status == 'active')
+        || (collectionName in ['partners','benefits'] && activeMember() && resource.data.status == 'active')
+        || (collectionName in ['partners','benefits','events','accomplishments'] && hasPermission('content.manage'));
+      allow write: if collectionName in ['partners','benefits','events','accomplishments'] && hasPermission('content.manage');
     }
     match /documents/{id} {
       allow read: if (resource.data.published == true && resource.data.status != 'archived' && resource.data.visibility == 'public')
@@ -628,12 +743,30 @@ service cloud.firestore {
       allow create: if hasPermission('notifications.write');
       allow delete: if signedIn() && resource.data.userId == request.auth.uid;
     }
+    match /notificationReads/{uid} {
+      allow read: if own(uid);
+      allow create, update: if own(uid)
+        && request.resource.data.keys().hasOnly(['uid','lastReadAt','updatedAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.lastReadAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if own(uid);
+    }
+    match /userPreferences/{uid} {
+      allow read: if own(uid);
+      allow create, update: if own(uid)
+        && request.resource.data.keys().hasOnly(['uid','notificationBadge','showPhotoOnVerification','updatedAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.notificationBadge is bool
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if own(uid);
+    }
     match /auditLogs/{id} {
       allow read: if hasPermission('audit.read');
       allow create: if signedIn()
         && request.resource.data.actorUid == request.auth.uid
         && request.resource.data.timestamp == request.time
-        && request.resource.data.keys().hasOnly(['action','resource','resourceId','actorUid','timestamp']);
+        && request.resource.data.keys().hasOnly(['action','resource','resourceId','description','metadata','actorUid','actorName','actorEmail','actorRole','actorLevel','timestamp']);
       allow update, delete: if false;
     }
     match /dashboardActivity/{id} {

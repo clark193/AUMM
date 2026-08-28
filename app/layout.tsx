@@ -17,14 +17,14 @@ const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").re
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: { default: "AUMM — União que move Blumenau", template: "%s | AUMM" },
-  description: "Associação União Maior Motoboys de Blumenau. Representação, segurança, benefícios e transparência.",
+  title: { default: "AUMM — A força da organização dos trabalhadores", template: "%s | AUMM" },
+  description: "Associação União Maior Motoboys. Organização, representação, benefícios e defesa dos trabalhadores em todo o Brasil.",
   icons: {
     icon: withBasePath("/logo.png"),
     shortcut: withBasePath("/logo.png"),
   },
-  openGraph: { title: "AUMM — União que move Blumenau", description: "Motoboys e motociclistas unidos por respeito, segurança e futuro.", images: [{ url: `${siteUrl}/logo.png`, width: 1694, height: 1384, alt: "Logo da Associação União Maior Motoboys" }], locale: "pt_BR", type: "website" },
-  twitter: { card: "summary", title: "AUMM — União que move Blumenau", description: "Motoboys e motociclistas unidos por respeito, segurança e futuro.", images: [`${siteUrl}/logo.png`] },
+  openGraph: { title: "AUMM — A força da organização dos trabalhadores", description: "Motofretistas e entregadores unidos em todo o Brasil.", images: [{ url: `${siteUrl}/logo.png`, width: 1694, height: 1384, alt: "Logo da Associação União Maior Motoboys" }], locale: "pt_BR", type: "website" },
+  twitter: { card: "summary", title: "AUMM — A força da organização dos trabalhadores", description: "Motofretistas e entregadores unidos em todo o Brasil.", images: [`${siteUrl}/logo.png`] },
 };
 
 export default function RootLayout({

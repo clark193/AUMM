@@ -2,14 +2,14 @@
 
 import Image from "next/image";
 import { Camera, LoaderCircle, UserRound } from "lucide-react";
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { useRef, useState } from "react";
 import { getFirebaseServices } from "@/lib/firebase";
 import { firebaseErrorMessage } from "@/lib/firebaseErrorMessage";
 
 const acceptedTypes = ["image/jpeg", "image/png", "image/webp"];
 
-async function compressedDataUrl(file: File) {
+export async function compressedDataUrl(file: File, dimension = 480) {
   const objectUrl = URL.createObjectURL(file);
   try {
     const image = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -20,10 +20,10 @@ async function compressedDataUrl(file: File) {
     });
     const size = Math.min(image.naturalWidth, image.naturalHeight);
     const canvas = document.createElement("canvas");
-    canvas.width = 480; canvas.height = 480;
+    canvas.width = dimension; canvas.height = dimension;
     const context = canvas.getContext("2d");
     if (!context) throw new Error("Seu navegador não conseguiu preparar a foto.");
-    context.drawImage(image, (image.naturalWidth - size) / 2, (image.naturalHeight - size) / 2, size, size, 0, 0, 480, 480);
+    context.drawImage(image, (image.naturalWidth - size) / 2, (image.naturalHeight - size) / 2, size, size, 0, 0, dimension, dimension);
     let dataUrl = canvas.toDataURL("image/webp", .78);
     if (dataUrl.length > 420_000) dataUrl = canvas.toDataURL("image/jpeg", .68);
     if (dataUrl.length > 500_000) throw new Error("A foto ficou muito grande. Escolha uma imagem menor.");
@@ -48,6 +48,11 @@ export function MemberPhotoUpload({ photoURL, name, onUploaded, compact = false 
       if (!user) throw new Error("Sua sessão expirou. Entre novamente.");
       const dataUrl = await compressedDataUrl(file);
       await setDoc(doc(db, "memberPhotos", user.uid), { uid: user.uid, dataUrl, contentType: dataUrl.startsWith("data:image/webp") ? "image/webp" : "image/jpeg", updatedAt: serverTimestamp() }, { merge: true });
+      const member = await getDoc(doc(db, "associados", user.uid));
+      const memberNumber = String(member.data()?.memberNumber || "");
+      if (memberNumber) {
+        await updateDoc(doc(db, "publicMembers", memberNumber), { photoDataUrl: dataUrl, updatedAt: serverTimestamp() });
+      }
       onUploaded(dataUrl);
       setMessage("Foto atualizada com sucesso.");
     } catch (error) {

@@ -1,9 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import {
   collection,
   doc,
@@ -16,25 +15,18 @@ import {
 } from "firebase/firestore";
 import {
   ArrowLeft,
-  BarChart3,
   CheckCircle2,
   Clock3,
-  CreditCard,
-  Gift,
-  Home,
-  KeyRound,
-  LogOut,
   MessageSquareText,
   Send,
   UsersRound,
   Vote,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { getFirebaseServices } from "@/lib/firebase";
-import { withBasePath } from "@/lib/paths";
 import { formatSaoPaulo } from "@/lib/assemblyRules";
 import { acknowledgeNotice, castVote, confirmMinutesApproval, createAssemblyComment, registerPresence, type AssemblyActor } from "@/lib/assemblyService";
 import { ASSEMBLY_MEMBER_VISIBLE_STATUSES, type Assembly, type AssemblyAgenda, type AssemblyComment, type AssemblyResult } from "@/lib/assemblyTypes";
+import { MemberSidebar, MemberTopbar } from "./MemberNavigation";
 
 type Member = { fullName?: string; memberNumber?: string; role?: string; status?: string; eligibleToVote?: boolean };
 
@@ -46,7 +38,6 @@ const statusNames: Record<string, string> = {
 };
 
 export function AssemblyMember() {
-  const router = useRouter();
   const [actor, setActor] = useState<AssemblyActor | null>(null);
   const [member, setMember] = useState<Member | null>(null);
   const [assemblies, setAssemblies] = useState<Assembly[]>([]);
@@ -130,7 +121,6 @@ export function AssemblyMember() {
     finally { setBusy(false); }
   }
 
-  async function logout() { await signOut(getFirebaseServices().auth); router.push("/associado/login"); }
   function changeTab(next: "upcoming" | "live" | "closed") {
     setTab(next);
     const match = assemblies.find((item) => next === "upcoming" ? item.status === "published" : next === "closed" ? item.status === "closed" : !["published", "closed"].includes(item.status));
@@ -139,14 +129,9 @@ export function AssemblyMember() {
   const eligible = member?.status === "active" && member.eligibleToVote !== false && eligibleForSelected;
 
   return <div className="dashboard member-dashboard assembly-member">
-    <aside className="sidebar">
-      <Link className="sidebar-brand" href="/"><Image src={withBasePath("/logo.png")} width={51} height={51} alt="AUMM" /><span><strong>AUMM</strong><small>Portal do associado</small></span></Link>
-      <nav className="side-nav"><Link href="/associado"><Home /> Início</Link><Link href="/associado/carteirinha"><CreditCard /> Carteirinha</Link><Link className="active" href="/associado/assembleias"><Vote /> Assembleias</Link><Link href="/associado/beneficios"><Gift /> Benefícios</Link><Link href="/associado/transparencia"><BarChart3 /> Transparência</Link><Link href="/associado/alterar-senha"><KeyRound /> Alterar senha</Link></nav>
-      <button className="sidebar-logout" onClick={logout}><LogOut size={16} /> Sair</button>
-      <div className="sidebar-footer">{member?.memberNumber || "Associado"}</div>
-    </aside>
+    <MemberSidebar footer={member?.memberNumber || "Associado"} />
     <main className="dashboard-main">
-      <header className="dash-top"><h1>Assembleias eletrônicas</h1><div className="dash-profile"><Vote size={18} /><span>{member?.fullName || "Associado"}</span></div></header>
+      <MemberTopbar title="Assembleias eletrônicas" />
       <div className="dash-content">
         <div className="dash-welcome"><div><span className="access-badge">Participação estatutária</span><h2>Assembleias Gerais da AUMM</h2><p>Convocações, presença, discussão e voto realizados integralmente por escrito.</p></div><div className="assembly-mini-stats"><span>{upcoming} próximas</span><span>{live} em curso</span></div></div>
         {message && <div className={`form-message ${message.type}`}>{message.type === "success" && <CheckCircle2 size={16} />} {message.text}</div>}

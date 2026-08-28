@@ -94,7 +94,7 @@ export function LoginForm() {
             só lugar.
           </p>
         </div>
-        <small>Área protegida · Blumenau/SC</small>
+        <small>Área protegida · Brasil</small>
       </section>
       <section className="auth-panel">
         <div className="auth-card" key={admin ? "admin" : "associado"}>

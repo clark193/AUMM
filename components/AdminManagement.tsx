@@ -3,10 +3,11 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { deleteApp, initializeApp } from "firebase/app";
 import { createUserWithEmailAndPassword, getAuth, onAuthStateChanged, sendPasswordResetEmail, signOut } from "firebase/auth";
-import { addDoc, collection, doc, onSnapshot, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { collection, doc, onSnapshot, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { KeyRound, Save, Search, ShieldCheck, UserPlus, UserX } from "lucide-react";
 import { firebaseConfig, getFirebaseServices } from "@/lib/firebase";
 import { firebaseErrorMessage } from "@/lib/firebaseErrorMessage";
+import { writeAdminAudit } from "@/lib/audit";
 
 type AdminRow = {
   id: string;
@@ -56,8 +57,7 @@ export function AdminManagement() {
   }, [rows, search]);
 
   async function audit(action: string, resourceId: string) {
-    const { db } = getFirebaseServices();
-    await addDoc(collection(db, "auditLogs"), { action, resource: "adminRoles", resourceId, actorUid: currentUid, timestamp: serverTimestamp() });
+    await writeAdminAudit({ action, resource: "adminRoles", resourceId, description: action === "ADMIN_CREATED" ? "Criou uma conta administrativa." : "Alterou nível, função ou situação de uma conta administrativa." });
   }
 
   async function submit(event: FormEvent) {

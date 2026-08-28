@@ -7,7 +7,8 @@
     { "collectionGroup": "financialEntries", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "visibility", "order": "ASCENDING" }, { "fieldPath": "date", "order": "DESCENDING" }] },
     { "collectionGroup": "assemblies", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "firstCallAt", "order": "DESCENDING" }] },
     { "collectionGroup": "documents", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "published", "order": "ASCENDING" }, { "fieldPath": "visibility", "order": "ASCENDING" }, { "fieldPath": "documentDate", "order": "DESCENDING" }] },
-    { "collectionGroup": "documents", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "category", "order": "ASCENDING" }, { "fieldPath": "isCurrent", "order": "ASCENDING" }] }
+    { "collectionGroup": "documents", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "category", "order": "ASCENDING" }, { "fieldPath": "isCurrent", "order": "ASCENDING" }] },
+    { "collectionGroup": "sponsors", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "type", "order": "ASCENDING" }] }
   ],
   "fieldOverrides": []
 }

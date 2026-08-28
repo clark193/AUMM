@@ -60,6 +60,20 @@ export const operationalModules: Record<string, AdminModuleConfig> = {
       { key: "status", label: "Status", type: "select", required: true, options: statusOptions },
     ],
   },
+  realizacoes: {
+    collection: "accomplishments",
+    singular: "realização",
+    titleField: "title",
+    searchFields: ["title", "description", "actionDate"],
+    fields: [
+      { key: "title", label: "Título da ação ou conquista", required: true, full: true },
+      { key: "description", label: "Texto da publicação", type: "textarea", required: true, full: true },
+      { key: "imageUrl", label: "Link público da imagem", type: "url", required: true, placeholder: "https://...", full: true },
+      { key: "actionDate", label: "Data da realização", type: "date", required: true },
+      { key: "url", label: "Link externo opcional", type: "url", placeholder: "https://..." },
+      { key: "status", label: "Status", type: "select", required: true, options: publicContentStatusOptions },
+    ],
+  },
   parceiros: {
     collection: "partners",
     singular: "parceiro",

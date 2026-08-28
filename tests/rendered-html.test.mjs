@@ -39,7 +39,7 @@ test("renderiza o Estatuto integral e a filiação simplificada", async () => {
   assert.doesNotMatch(membershipHtml, /CNH|comprovante de renda|placa da moto/i);
 });
 
-test("exporta as novas rotas de publicação e benefícios", async () => {
+test("exporta as novas rotas dos portais", async () => {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("portal-test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
@@ -51,4 +51,9 @@ test("exporta as novas rotas de publicação e benefícios", async () => {
   const benefits = await worker.fetch(new Request("http://localhost/associado/beneficios/", { headers: { accept: "text/html" } }), { ASSETS: assets }, context);
   assert.equal(benefits.status, 200);
   assert.match(await benefits.text(), /Benef.+AUMM/);
+  for (const [path, expected] of [["/associado/documentos/", /Documentos do associado/], ["/associado/eventos/", /Eventos do associado/], ["/associado/configuracoes/", /Configurações do associado/], ["/patrocinadores/", /Apoio e patrocínio/], ["/realizacoes/", /O que a AUMM já fez/], ["/admin/carteirinha/", /Minha carteirinha/]]) {
+    const response = await worker.fetch(new Request(`http://localhost${path}`, { headers: { accept: "text/html" } }), { ASSETS: assets }, context);
+    assert.equal(response.status, 200);
+    assert.match(await response.text(), expected);
+  }
 });

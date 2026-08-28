@@ -12,7 +12,7 @@ export function SiteHeader() {
   return (
     <header className="site-header">
       <a className="skip-link" href="#conteudo">Pular para o conteúdo</a>
-      <div className="topline"><div className="container topline-inner"><span>Blumenau · Santa Catarina</span><span>Unidos por respeito, segurança e futuro</span></div></div>
+      <div className="topline"><div className="container topline-inner"><span>Atuação em todo o Brasil</span><span>A força da organização dos trabalhadores</span></div></div>
       <div className="container nav-wrap">
         <Link href="/" className="brand" aria-label="AUMM — Início">
           <Image src={withBasePath("/logo.png")} width={72} height={72} priority alt="Logo da AUMM" />

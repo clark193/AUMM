@@ -7,6 +7,7 @@ import { AlertTriangle, CheckCircle2, FileSpreadsheet, LoaderCircle, Upload, Use
 import { useState } from "react";
 import readXlsxFile, { type Row } from "read-excel-file/browser";
 import { firebaseConfig, getFirebaseServices } from "@/lib/firebase";
+import { writeAdminAudit } from "@/lib/audit";
 
 type Candidate = {
   fullName: string; email: string; cpf: string; phone: string; birthDate: string; rg: string;
@@ -117,6 +118,7 @@ export function BulkMemberImport() {
         setProgress(index + 1);
       }
       setResult({ created, existing, failed });
+      await writeAdminAudit({ action: "MEMBERS_IMPORTED", resource: "associados", resourceId: "excel-import", description: `Importou ${created} associados pela planilha; ${existing} já existiam e ${failed} ficaram pendentes.`, metadata: { created, existing, failed } }).catch(() => undefined);
       setMessage(failed ? "Importação concluída com algumas pendências. Revise o resumo abaixo." : "Importação concluída com sucesso.");
     } finally {
       try { await signOut(secondaryAuth); } catch { /* sessão já encerrada */ }

@@ -6,6 +6,7 @@ import { CheckCircle2, Plus, Save } from "lucide-react";
 import { firebaseEnabled, getFirebaseServices } from "@/lib/firebase";
 import { firebaseErrorMessage } from "@/lib/firebaseErrorMessage";
 import { initialBoard, type BoardMember } from "./BoardWall";
+import { writeAdminAudit } from "@/lib/audit";
 
 export function BoardAdmin() {
   const [members, setMembers] = useState(initialBoard);
@@ -29,6 +30,7 @@ export function BoardAdmin() {
       const batch = writeBatch(db);
       members.forEach(member => batch.set(doc(db, "boardMembers", member.id), { name: member.name.trim(), title: member.title.trim(), photoURL: member.photoURL.trim(), order: Number(member.order), active: member.active, updatedAt: serverTimestamp() }, { merge: true }));
       await batch.commit();
+      await writeAdminAudit({ action: "BOARD_UPDATED", resource: "boardMembers", resourceId: "board", description: `Atualizou o mural da diretoria com ${members.length} integrante(s).` }).catch(() => undefined);
       setMessage("Mural da diretoria atualizado.");
     } catch (error) { setMessage(firebaseErrorMessage(error, "Não foi possível salvar.")); }
     finally { setBusy(false); }

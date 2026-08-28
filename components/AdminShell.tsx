@@ -8,6 +8,7 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import {
   BarChart3,
+  BadgeCheck,
   Bell,
   BookOpenText,
   CalendarDays,
@@ -22,6 +23,7 @@ import {
   LogOut,
   ScrollText,
   Settings,
+  CreditCard,
   ShieldCheck,
   Tags,
   UsersRound,
@@ -33,6 +35,7 @@ import {
 import { AuthGate } from "./AuthGate";
 import { firebaseEnabled, getFirebaseServices } from "@/lib/firebase";
 import { withBasePath } from "@/lib/paths";
+import { NotificationBell } from "./NotificationBell";
 
 type AdminLink = { href: string; label: string; icon: LucideIcon; levels: readonly number[] };
 const navGroups: { label: string; links: AdminLink[] }[] = [
@@ -40,31 +43,33 @@ const navGroups: { label: string; links: AdminLink[] }[] = [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard, levels: [1, 2, 3, 4, 5] },
   ] },
   { label: "Pessoas", links: [
-    { href: "/admin/recrutamento", label: "Novo associado", icon: UsersRound, levels: [5] },
-    { href: "/admin/associados", label: "Associados", icon: UsersRound, levels: [1, 2, 3] },
+    { href: "/admin/recrutamento", label: "Cadastrar associado", icon: UsersRound, levels: [1, 2, 3, 5] },
+    { href: "/admin/associados", label: "Lista de associados", icon: UsersRound, levels: [1, 2, 3] },
     { href: "/admin/filiacoes", label: "Filiações", icon: ClipboardCheck, levels: [1] },
     { href: "/admin/cargos", label: "Cargos", icon: Tags, levels: [1, 2] },
     { href: "/admin/diretoria", label: "Diretoria", icon: ShieldCheck, levels: [1, 2] },
   ] },
   { label: "Comunicação", links: [
     { href: "/admin/noticias", label: "Notícias", icon: Newspaper, levels: [1, 2, 4] },
+    { href: "/admin/realizacoes", label: "O que já fizemos", icon: BadgeCheck, levels: [1, 2, 4] },
     { href: "/admin/comunicados", label: "Comunicados", icon: Bell, levels: [1, 2, 4] },
     { href: "/admin/eventos", label: "Eventos", icon: CalendarDays, levels: [1, 2, 4] },
     { href: "/admin/beneficios", label: "Benefícios", icon: Handshake, levels: [1, 2, 4] },
-    { href: "/admin/parceiros", label: "Parceiros", icon: Handshake, levels: [1, 2, 4] },
+    { href: "/admin/patrocinadores", label: "Apoio, patrocínio e parceiros", icon: Handshake, levels: [1, 2, 4] },
   ] },
   { label: "Atendimento e gestão", links: [
     { href: "/admin/solicitacoes", label: "Solicitações", icon: MessageSquareText, levels: [1, 2, 3] },
-    { href: "/admin/recuperacao-senha", label: "Recuperar senhas", icon: LockKeyhole, levels: [1, 2, 3] },
+    { href: "/admin/recuperacao-senha", label: "Recuperar senhas", icon: LockKeyhole, levels: [1, 3] },
     { href: "/admin/assembleias", label: "Assembleias", icon: Vote, levels: [1] },
     { href: "/admin/transparencia", label: "Transparência", icon: BarChart3, levels: [1, 2] },
     { href: "/admin/financeiro", label: "Financeiro", icon: ReceiptText, levels: [1, 2] },
     { href: "/admin/documentos", label: "Documentos", icon: FileText, levels: [1, 2, 3] },
   ] },
   { label: "Sistema", links: [
+    { href: "/admin/carteirinha", label: "Minha carteirinha", icon: CreditCard, levels: [1, 2, 3, 4, 5] },
     { href: "/admin/administradores", label: "Administradores", icon: UsersRound, levels: [1] },
     { href: "/admin/logs", label: "Auditoria", icon: ScrollText, levels: [1] },
-    { href: "/admin/configuracoes", label: "Configurações e contato", icon: Settings, levels: [1] },
+    { href: "/admin/configuracoes", label: "Configurações", icon: Settings, levels: [1, 2, 3, 4, 5] },
   ] },
 ];
 
@@ -88,13 +93,15 @@ export function AdminShell({
   const [permissions, setPermissions] = useState<Record<string, boolean>>({});
   const [loggingOut, setLoggingOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [photoURL, setPhotoURL] = useState("");
 
   useEffect(() => {
     if (!firebaseEnabled) return;
     const { auth, db } = getFirebaseServices();
     return onAuthStateChanged(auth, async (user) => {
       if (!user) return;
-      const access = await getDoc(doc(db, "adminRoles", user.uid));
+      const [access, photo] = await Promise.all([getDoc(doc(db, "adminRoles", user.uid)), getDoc(doc(db, "adminPhotos", user.uid))]);
+      setPhotoURL(String(photo.data()?.dataUrl || ""));
       if (access.exists()) {
         setLevel(Number(access.data().level || 5));
         setRole(String(access.data().role || "Administrador"));
@@ -162,9 +169,9 @@ export function AdminShell({
             <header className="dash-top">
               <div className="dash-title"><button className="admin-menu-toggle" aria-label="Abrir menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}><Menu /></button><h1>{title}</h1></div>
               <div className="dash-profile">
-                <Bell size={18} />
+                <NotificationBell audience="admin" />
                 <span>{role}</span>
-                <div className="avatar">N{level}</div>
+                <Link className="avatar" href="/admin/configuracoes" aria-label="Abrir configurações do perfil">{photoURL ? <Image src={photoURL} width={32} height={32} unoptimized alt="" /> : `N${level}`}</Link>
               </div>
             </header>
             <div className="dash-content">
