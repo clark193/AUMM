@@ -21,7 +21,7 @@ const modules: Record<string, Module> = {
   associados: { title: "Cadastros e associados", description: "Análise de inscrições, autorização e situação dos associados.", headers: ["Nome", "Número", "E-mail", "Cidade", "Status"] },
   filiacoes: { title: "Solicitações de Filiação", description: "Análise, conferência estatutária e decisão sobre pedidos de filiação.", headers: [] },
   assembleias: { title: "Assembleias eletrônicas", description: "Convocação, quórum, pautas, votação, resultados e atas.", headers: [] },
-  cargos: { title: "Cargos", description: "Crie e organize cargos sem alterar o código.", headers: ["Cargo", "Descrição", "Ordem", "Status"] },
+  cargos: { title: "Cargos", description: "Cadastre as funções institucionais disponíveis para os administradores e suas carteirinhas.", headers: ["Cargo", "Descrição", "Ordem", "Status"] },
   diretoria: { title: "Diretoria", description: "Gestão dos nomes e fotos exibidos no mural público.", headers: [] },
   noticias: { title: "Notícias", description: "Criação, revisão e publicação de notícias.", headers: ["Título", "Categoria", "Data", "Status"] },
   comunicados: { title: "Comunicados", description: "Mensagens internas destinadas aos associados.", headers: ["Assunto", "Público", "Data", "Status"] },

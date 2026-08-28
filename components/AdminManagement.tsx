@@ -14,10 +14,13 @@ type AdminRow = {
   fullName?: string;
   email?: string;
   role?: string;
+  roleId?: string;
   level?: number;
   active?: boolean;
   superAdmin?: boolean;
 };
+
+type RoleRow = { id: string; name?: string; description?: string; order?: number; active?: boolean };
 
 const levelNames: Record<number, string> = {
   1: "Master — acesso completo",
@@ -27,10 +30,11 @@ const levelNames: Record<number, string> = {
   5: "Cadastro — novos associados",
 };
 
-const initial = { fullName: "", email: "", password: "", role: "", level: "2" };
+const initial = { fullName: "", email: "", password: "", role: "", roleId: "", level: "2" };
 
 export function AdminManagement() {
   const [rows, setRows] = useState<AdminRow[]>([]);
+  const [roles, setRoles] = useState<RoleRow[]>([]);
   const [form, setForm] = useState(initial);
   const [search, setSearch] = useState("");
   const [currentUid, setCurrentUid] = useState("");
@@ -40,6 +44,7 @@ export function AdminManagement() {
   useEffect(() => {
     const { auth, db } = getFirebaseServices();
     let stopRows: (() => void) | undefined;
+    let stopRoles: (() => void) | undefined;
     const stopAuth = onAuthStateChanged(auth, (user) => {
       if (!user) return;
       setCurrentUid(user.uid);
@@ -47,9 +52,16 @@ export function AdminManagement() {
       stopRows = onSnapshot(collection(db, "adminRoles"), (snapshot) => {
         setRows(snapshot.docs.map((item) => ({ id: item.id, ...item.data() } as AdminRow)).sort((a, b) => Number(a.level || 9) - Number(b.level || 9)));
       }, (error) => setMessage({ type: "error", text: firebaseErrorMessage(error, "Não foi possível carregar os administradores.") }));
+      stopRoles?.();
+      stopRoles = onSnapshot(collection(db, "roles"), (snapshot) => {
+        setRoles(snapshot.docs.map((item) => ({ id: item.id, ...item.data() } as RoleRow)).sort((a, b) => Number(a.order || 999) - Number(b.order || 999)));
+      }, (error) => setMessage({ type: "error", text: firebaseErrorMessage(error, "Não foi possível carregar o catálogo de cargos.") }));
     });
-    return () => { stopAuth(); stopRows?.(); };
+    return () => { stopAuth(); stopRows?.(); stopRoles?.(); };
   }, []);
+
+  const activeRoles = useMemo(() => roles.filter((role) => role.active !== false && role.name?.trim()), [roles]);
+  const selectedRole = activeRoles.find((role) => role.id === form.roleId);
 
   const filtered = useMemo(() => {
     const needle = search.toLowerCase();
@@ -73,7 +85,8 @@ export function AdminManagement() {
       await setDoc(doc(db, "adminRoles", credential.user.uid), {
         fullName: form.fullName.trim(),
         email: form.email.trim().toLowerCase(),
-        role: form.role.trim() || levelNames[level].split(" — ")[0],
+        role: form.role.trim(),
+        roleId: form.roleId,
         level,
         active: true,
         superAdmin: level === 1,
@@ -132,13 +145,13 @@ export function AdminManagement() {
         <label className="field"><span>E-mail</span><input type="email" required value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} /></label>
         <label className="field"><span>Senha inicial</span><input type="password" minLength={8} required value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} /><small>O administrador poderá trocar a senha depois.</small></label>
         <label className="field"><span>Nível de acesso</span><select value={form.level} onChange={(event) => setForm({ ...form, level: event.target.value })}>{Object.entries(levelNames).map(([level, name]) => <option key={level} value={level}>Nível {level} — {name}</option>)}</select></label>
-        <label className="field full"><span>Cargo/função</span><input required value={form.role} placeholder="Ex.: Tesoureiro, Comunicação, TI" onChange={(event) => setForm({ ...form, role: event.target.value })} /></label>
-      </div>{message && <div className={`form-message ${message.type}`}>{message.text}</div>}<button className="button" disabled={busy}><ShieldCheck size={16} /> {busy ? "Criando…" : "Criar administrador"}</button></form>
+        <label className="field full"><span>Cargo/função institucional</span><select required value={form.roleId} onChange={(event) => { const role = activeRoles.find((item) => item.id === event.target.value); setForm({ ...form, roleId: role?.id || "", role: role?.name || "" }); }}><option value="">Selecione um cargo cadastrado</option>{activeRoles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}</select>{selectedRole?.description && <small>{selectedRole.description}</small>}{activeRoles.length === 0 && <small>Cadastre e ative pelo menos um cargo na aba “Cargos” antes de criar administradores.</small>}</label>
+      </div>{message && <div className={`form-message ${message.type}`}>{message.text}</div>}<button className="button" disabled={busy || activeRoles.length === 0}><ShieldCheck size={16} /> {busy ? "Criando…" : "Criar administrador"}</button></form>
     </section>
     <section className="panel">
       <div className="panel-head"><div><h3>Administradores cadastrados</h3><p>Desativar remove o acesso ao painel, mas preserva o histórico das ações.</p></div></div>
       <label className="admin-search"><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Pesquisar nome, e-mail, cargo ou UID" /></label>
-      {filtered.length === 0 ? <div className="empty-state">Nenhum administrador encontrado.</div> : <div className="admin-role-list">{filtered.map((row) => <article className="admin-role-card" key={row.id}><div><span className={`status ${row.active ? "active" : "suspended"}`}>{row.active ? "Ativo" : "Desativado"}</span><h3>{row.fullName || row.role || "Administrador"}</h3><p>{row.email || `UID: ${row.id}`}</p></div><label className="field"><span>Nível</span><select value={row.level || 5} disabled={busy || row.id === currentUid} onChange={(event) => updateAdmin(row, { level: Number(event.target.value) })}>{Object.keys(levelNames).map((level) => <option key={level} value={level}>Nível {level}</option>)}</select></label><label className="field"><span>Função</span><input defaultValue={row.role || "Administrador"} disabled={busy} onBlur={(event) => event.target.value !== row.role && updateAdmin(row, { role: event.target.value })} /></label><div className="table-actions"><button type="button" className="button button-sm button-dark" onClick={() => resetPassword(row)}><KeyRound size={14} /> Redefinir senha</button><button type="button" className={row.active ? "table-action-danger" : "button button-sm"} disabled={busy || row.id === currentUid} onClick={() => updateAdmin(row, { active: !row.active })}>{row.active ? <><UserX size={14} /> Desativar</> : <><Save size={14} /> Reativar</>}</button></div></article>)}</div>}
+      {filtered.length === 0 ? <div className="empty-state">Nenhum administrador encontrado.</div> : <div className="admin-role-list">{filtered.map((row) => { const hasCatalogRole = activeRoles.some((role) => role.id === row.roleId); const currentValue = hasCatalogRole ? row.roleId! : `legacy:${row.role || "Administrador"}`; return <article className="admin-role-card" key={row.id}><div><span className={`status ${row.active ? "active" : "suspended"}`}>{row.active ? "Ativo" : "Desativado"}</span><h3>{row.fullName || row.role || "Administrador"}</h3><p>{row.email || `UID: ${row.id}`}</p></div><label className="field"><span>Nível</span><select value={row.level || 5} disabled={busy || row.id === currentUid} onChange={(event) => updateAdmin(row, { level: Number(event.target.value) })}>{Object.keys(levelNames).map((level) => <option key={level} value={level}>Nível {level}</option>)}</select></label><label className="field"><span>Cargo institucional</span><select value={currentValue} disabled={busy} onChange={(event) => { const role = roles.find((item) => item.id === event.target.value); if (role?.name) updateAdmin(row, { roleId: role.id, role: role.name }); }}>{!hasCatalogRole && <option value={currentValue}>{row.role || "Administrador"} (legado)</option>}{activeRoles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}</select></label><div className="table-actions"><button type="button" className="button button-sm button-dark" onClick={() => resetPassword(row)}><KeyRound size={14} /> Redefinir senha</button><button type="button" className={row.active ? "table-action-danger" : "button button-sm"} disabled={busy || row.id === currentUid} onClick={() => updateAdmin(row, { active: !row.active })}>{row.active ? <><UserX size={14} /> Desativar</> : <><Save size={14} /> Reativar</>}</button></div></article>; })}</div>}
     </section>
   </div>;
 }

@@ -45,9 +45,9 @@ export const operationalModules: Record<string, AdminModuleConfig> = {
     searchFields: ["name", "description"],
     fields: [
       { key: "name", label: "Nome do cargo", required: true },
-      { key: "description", label: "Descrição", type: "textarea", required: true, full: true },
-      { key: "order", label: "Ordem de exibição", type: "number", required: true },
-      { key: "active", label: "Cargo ativo", type: "checkbox" },
+      { key: "description", label: "Atribuições e descrição do cargo", type: "textarea", required: true, full: true },
+      { key: "order", label: "Ordem hierárquica/de exibição", type: "number", required: true },
+      { key: "active", label: "Disponível para atribuição", type: "checkbox" },
     ],
   },
   comunicados: {
