@@ -57,3 +57,28 @@ test("exporta as novas rotas dos portais", async () => {
     assert.match(await response.text(), expected);
   }
 });
+
+test("publica o Centro de Apoio ao Motoboy sem autenticação", async () => {
+  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
+  workerUrl.searchParams.set("support-center-test", `${process.pid}-${Date.now()}`);
+  const { default: worker } = await import(workerUrl.href);
+  const direct = await worker.fetch(
+    new Request("http://localhost/centrodeapoioaomotoboy", { headers: { accept: "text/html" } }),
+    { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
+    { waitUntil() {}, passThroughOnException() {} },
+  );
+  assert.equal(direct.status, 308);
+  assert.match(direct.headers.get("location") || "", /centrodeapoioaomotoboy\/$/);
+  const response = await worker.fetch(
+    new Request("http://localhost/centrodeapoioaomotoboy/", { headers: { accept: "text/html" } }),
+    { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
+    { waitUntil() {}, passThroughOnException() {} },
+  );
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /Centro de Apoio/);
+  assert.match(html, /Projeto em fase de capta/);
+  assert.match(html, /Quero apoiar o projeto/);
+  assert.match(html, /canonical/);
+  assert.doesNotMatch(html, /Verificando acesso seguro/);
+});

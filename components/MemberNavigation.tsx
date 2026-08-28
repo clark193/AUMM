@@ -18,7 +18,7 @@ const links = [
   ["/associado/beneficios", "Benefícios", Gift],
   ["/associado/eventos", "Eventos", CalendarDays],
   ["/associado/documentos", "Documentos", FileText],
-  ["/associado/transparencia", "Transparência", BarChart3],
+  ["/associado/transparencia", "Transparência financeira", BarChart3],
   ["/associado/configuracoes", "Configurações", Settings],
 ] as const;
 

@@ -727,7 +727,9 @@ service cloud.firestore {
       allow delete: if superAdmin();
     }
     match /financialEntries/{id} {
-      allow read: if resource.data.visibility == 'public' || hasPermission('finance.read');
+      allow read: if (resource.data.status == 'published' && resource.data.visibility == 'public')
+        || (activeMember() && resource.data.status == 'published' && resource.data.visibility in ['public','members'])
+        || hasPermission('finance.read');
       allow write: if hasPermission('finance.write');
     }
     match /transparency/{id} {

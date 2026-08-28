@@ -2,6 +2,7 @@ import { collection, doc, getDocs, query, runTransaction, serverTimestamp, Times
 import { getFirebaseServices } from "./firebase";
 import type { Assembly, AssemblyAgenda } from "./assemblyTypes";
 import type { InstitutionalDocument } from "./documentTypes";
+import { validExternalDocumentUrl } from "./documentUrl";
 import type { AssemblyActor } from "./assemblyService";
 
 export type DocumentDraft = Omit<InstitutionalDocument,"id"|"documentDate"|"createdAt"|"updatedAt"|"publishedAt"> & { documentDate: Date };
@@ -19,7 +20,7 @@ export async function publishInstitutionalDocument(item:InstitutionalDocument,ac
   batch.set(doc(collection(db,"documentAuditLogs")),audit(setCurrent?"STATUTE_SET_CURRENT":"DOCUMENT_PUBLISHED",actor,item.id)); await batch.commit();
 }
 export async function archiveInstitutionalDocument(item:InstitutionalDocument,actor:AssemblyActor) { const {db}=getFirebaseServices(); const batch=writeBatch(db); batch.update(doc(db,"documents",item.id),{status:"archived",published:false,isCurrent:false,updatedAt:serverTimestamp(),updatedBy:actor.uid}); batch.set(doc(collection(db,"documentAuditLogs")),audit("DOCUMENT_ARCHIVED",actor,item.id)); await batch.commit(); }
-export async function updateSignedDocument(item:InstitutionalDocument,url:string,actor:AssemblyActor) { const {db}=getFirebaseServices(); const batch=writeBatch(db); batch.update(doc(db,"documents",item.id),{signedDocumentUrl:url.trim(),updatedAt:serverTimestamp(),updatedBy:actor.uid}); batch.set(doc(collection(db,"documentAuditLogs")),audit("SIGNED_DOCUMENT_LINKED",actor,item.id)); await batch.commit(); }
+export async function updateSignedDocument(item:InstitutionalDocument,url:string,actor:AssemblyActor) { const safeUrl=validExternalDocumentUrl(url);if(!safeUrl)throw new Error("Informe uma URL completa iniciada por https:// para o documento assinado.");const {db}=getFirebaseServices(); const batch=writeBatch(db); batch.update(doc(db,"documents",item.id),{signedDocumentUrl:safeUrl,updatedAt:serverTimestamp(),updatedBy:actor.uid}); batch.set(doc(collection(db,"documentAuditLogs")),audit("SIGNED_DOCUMENT_LINKED",actor,item.id)); await batch.commit(); }
 export async function publishAssemblyMinutesDocument(assembly:Assembly,agendas:AssemblyAgenda[],visibility:"public"|"members"|"admin",number:string,actor:AssemblyActor) {
   const {db}=getFirebaseServices(); const assemblyRef=doc(db,"assemblies",assembly.id); const documentRef=doc(collection(db,"documents"));
   await runTransaction(db,async tx=>{ const current=await tx.get(assemblyRef); if(current.data()?.minutesStatus!=="finalized") throw new Error("Finalize a ata antes de publicar em Documentos."); if(current.data()?.publishedDocumentId) throw new Error("Esta ata já foi publicada no Portal de Documentos.");

@@ -19,7 +19,6 @@ import {
   LockKeyhole,
   MessageSquareText,
   Newspaper,
-  ReceiptText,
   LogOut,
   ScrollText,
   Settings,
@@ -61,8 +60,7 @@ const navGroups: { label: string; links: AdminLink[] }[] = [
     { href: "/admin/solicitacoes", label: "Solicitações", icon: MessageSquareText, levels: [1, 2, 3] },
     { href: "/admin/recuperacao-senha", label: "Recuperar senhas", icon: LockKeyhole, levels: [1, 3] },
     { href: "/admin/assembleias", label: "Assembleias", icon: Vote, levels: [1] },
-    { href: "/admin/transparencia", label: "Transparência", icon: BarChart3, levels: [1, 2] },
-    { href: "/admin/financeiro", label: "Financeiro", icon: ReceiptText, levels: [1, 2] },
+    { href: "/admin/transparencia", label: "Transparência financeira", icon: BarChart3, levels: [1, 2] },
     { href: "/admin/documentos", label: "Documentos", icon: FileText, levels: [1, 2, 3] },
   ] },
   { label: "Sistema", links: [

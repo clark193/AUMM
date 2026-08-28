@@ -32,7 +32,7 @@ const modules: Record<string, Module> = {
   realizacoes: { title: "O que já fizemos", description: "Ações, conquistas e projetos realizados pela associação.", headers: ["Título", "Texto", "Data", "Status"] },
   solicitacoes: { title: "Solicitações", description: "Protocolos abertos pelos associados.", headers: ["Protocolo", "Associado", "Assunto", "Atualização", "Status"] },
   "recuperacao-senha": { title: "Recuperação de senha", description: "Pedidos recebidos para atendimento pelo WhatsApp.", headers: [] },
-  transparencia: { title: "Transparência", description: "Publicações, documentos e prestações de contas.", headers: ["Publicação", "Categoria", "Competência", "Status"] },
+  transparencia: { title: "Transparência financeira", description: "Receitas e despesas publicadas para prestação de contas.", headers: ["Data", "Descrição", "Categoria", "Valor"] },
   financeiro: { title: "Financeiro", description: "Receitas e despesas da associação.", headers: ["Data", "Descrição", "Categoria", "Valor"] },
   documentos: { title: "Documentos", description: "Biblioteca de documentos institucionais.", headers: ["Documento", "Tipo", "Acesso", "Atualização"] },
   administradores: { title: "Administradores", description: "Matriz dos níveis de acesso.", headers: ["Perfil", "Nível", "Permissão"], rows: [["Presidência", "Nível 1", "Acesso completo"], ["Diretoria", "Nível 2", "Gestão ampla"], ["Coordenação", "Nível 3", "Associados, solicitações e documentos"], ["Comunicação", "Nível 4", "Notícias, comunicados, eventos e benefícios"], ["Recrutador", "Nível 5", "Dashboard visual e cadastro de novos associados"]] },
