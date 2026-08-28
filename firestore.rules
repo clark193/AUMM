@@ -687,8 +687,8 @@ service cloud.firestore {
       allow write: if collectionName in ['partners','benefits','events','accomplishments'] && hasPermission('content.manage');
     }
     match /documents/{id} {
-      allow read: if (resource.data.published == true && resource.data.status != 'archived' && resource.data.visibility == 'public')
-        || (activeMember() && resource.data.published == true && resource.data.status != 'archived' && resource.data.visibility in ['public','members'])
+      allow read: if (resource.data.published == true && resource.data.visibility == 'public')
+        || (activeMember() && resource.data.published == true && resource.data.visibility in ['public','members'])
         || documentStaff() || hasPermission('documents.read');
       allow create: if documentPermission('canManageDocuments')
         && request.resource.data.status == 'draft' && request.resource.data.published == false
