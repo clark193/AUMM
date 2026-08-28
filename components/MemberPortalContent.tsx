@@ -15,6 +15,7 @@ import { getFirebaseServices } from "@/lib/firebase";
 import { MemberCommunications } from "./MemberCommunications";
 import { MemberPhotoUpload } from "./MemberPhotoUpload";
 import { MemberBenefits } from "./MemberBenefits";
+import { MemberDashboardCalendar } from "./MemberDashboardCalendar";
 import { MemberSidebar, MemberTopbar } from "./MemberNavigation";
 
 type Member = {
@@ -70,6 +71,7 @@ export function MemberPortalContent() {
             </span>
           </div>
           {(!member?.photoURL || !member?.cardIssuedAt || cardExpired || (cardDaysLeft !== null && cardDaysLeft <= 30)) && <section className={`credential-dashboard-alert ${cardExpired ? "danger" : ""}`}><CalendarDays /><div><strong>{!member?.photoURL ? "Sua carteirinha precisa de uma foto" : !member?.cardIssuedAt ? "Emita sua carteirinha anual" : cardExpired ? "Sua carteirinha está vencida" : `Sua carteirinha vence em ${cardDaysLeft} dia(s)`}</strong><p>{!member?.photoURL ? "Adicione uma foto nas configurações para liberar a emissão." : cardExpired ? "Emita uma nova credencial para voltar a usar o QR Code." : "A carteirinha tem validade de um ano e pode ser renovada após o vencimento."}</p></div><Link className="button button-sm" href={!member?.photoURL ? "/associado/configuracoes" : "/associado/carteirinha"}>{!member?.photoURL ? "Adicionar foto" : "Abrir carteirinha"}</Link></section>}
+          <MemberDashboardCalendar />
           <section className="member-hero">
             <div>
               <h2>Sua carteirinha digital</h2>
