@@ -1,5 +1,3 @@
-:HL["/_next/static/chunks/3c_xc0a3t-1oe.css","style"]
-:HL["/_next/static/chunks/1z9w-s8y_hj32.css","style"]
-:HL["/_next/static/media/75affa71d1e2f6a7-s.p.17-aodiw50953.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
-:HL["/_next/static/media/9a800f173b8d9e8f-s.p.3nglv5iys3s0a.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
-0:{"tree":{"name":"","param":null,"prefetchHints":4176,"slots":{"children":{"name":"slug","param":{"type":"d","key":"termos","siblings":["admin","associado","associe-se","centrodeapoioaomotoboy","estatuto","noticias","transparencia","verificar"]},"prefetchHints":4192,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":4256,"slots":null}}}}},"staleTime":300,"buildId":"e2CNTs9Te-a1e1Y8rn_NM"}
+:HL["/_next/static/css/313cddab8733ba8f.css","style"]
+:HL["/_next/static/css/2c850fd12acf5581.css","style"]
+0:{"tree":{"name":"","param":null,"prefetchHints":4176,"slots":{"children":{"name":"slug","param":{"type":"d","key":"termos","siblings":["_not-found","_global-error","admin","associado","associe-se","centrodeapoioaomotoboy","estatuto","noticias","robots.txt","sitemap.xml","transparencia","verificar"]},"prefetchHints":4192,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":4256,"slots":null}}}}},"staleTime":300,"buildId":"lkz0kkvbRmBEvP1eKGbLj"}
