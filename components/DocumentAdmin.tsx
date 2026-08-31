@@ -41,6 +41,12 @@ const statusLabel: Record<string, string> = {
   archived: "Arquivado",
 };
 
+const visibilityLabel: Record<InstitutionalDocument["visibility"], string> = {
+  public: "Todos (acesso público)",
+  members: "Somente associados",
+  admin: "Somente administração",
+};
+
 export function DocumentAdmin() {
   const [actor, setActor] = useState<AssemblyActor | null>(null);
   const [rows, setRows] = useState<InstitutionalDocument[]>([]);
@@ -73,12 +79,11 @@ export function DocumentAdmin() {
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [creating, busy]);
 
-  const adminDocuments = useMemo(() => rows.filter((item) => item.visibility === "admin"), [rows]);
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return adminDocuments;
-    return adminDocuments.filter((item) => `${item.title} ${item.documentNumber || ""} ${item.year} ${DOCUMENT_CATEGORY_NAMES[item.category] || item.category}`.toLowerCase().includes(term));
-  }, [adminDocuments, search]);
+    if (!term) return rows;
+    return rows.filter((item) => `${item.title} ${item.documentNumber || ""} ${item.year} ${DOCUMENT_CATEGORY_NAMES[item.category] || item.category} ${visibilityLabel[item.visibility] || item.visibility}`.toLowerCase().includes(term));
+  }, [rows, search]);
 
   function openForm() {
     setForm(initial);
@@ -107,7 +112,7 @@ export function DocumentAdmin() {
         internalUrl: form.sourceType === "internal" ? url : "",
         externalUrl: form.sourceType === "external" ? url : "",
         sourceId: "",
-        visibility: "admin",
+        visibility: form.visibility as DocumentDraft["visibility"],
         status: "draft",
         published: false,
         isCurrent: false,
@@ -117,7 +122,7 @@ export function DocumentAdmin() {
       await createInstitutionalDocument(input, actor);
       setForm(initial);
       setCreating(false);
-      setMessage("Documento administrativo salvo como rascunho.");
+      setMessage(`Documento salvo como rascunho com acesso: ${visibilityLabel[input.visibility]}.`);
     } catch (error) {
       setFormMessage(firebaseErrorMessage(error, "Falha ao salvar o documento."));
     } finally {
@@ -130,14 +135,14 @@ export function DocumentAdmin() {
     try {
       setMessage("");
       await publishInstitutionalDocument(item, actor, false);
-      setMessage("Documento publicado somente para a administração.");
+      setMessage(`Documento publicado para: ${visibilityLabel[item.visibility]}.`);
     } catch (error) {
       setMessage(firebaseErrorMessage(error, "Não foi possível publicar o documento."));
     }
   }
 
   async function archive(item: InstitutionalDocument) {
-    if (!actor || !window.confirm("Arquivar este documento administrativo?")) return;
+    if (!actor || !window.confirm("Arquivar este documento?")) return;
     try {
       setMessage("");
       await archiveInstitutionalDocument(item, actor);
@@ -163,22 +168,22 @@ export function DocumentAdmin() {
   return <div className="document-admin admin-document-library">
     <section className="panel">
       <div className="panel-head admin-document-heading">
-        <div><h3><FileText size={18} /> Biblioteca da administração</h3><p>Área reservada: somente documentos marcados para a administração aparecem aqui.</p></div>
+        <div><h3><FileText size={18} /> Gestão de documentos</h3><p>Cadastre documentos públicos, exclusivos para associados ou restritos à administração.</p></div>
         <button className="button button-sm" type="button" onClick={openForm}><Plus size={16} /> Adicionar documento</button>
       </div>
       <div className="admin-document-toolbar">
         <label className="admin-search"><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por título, número, ano ou categoria" /></label>
-        <span className="admin-document-count">{adminDocuments.length} documento(s) interno(s)</span>
+        <span className="admin-document-count">{rows.length} documento(s)</span>
       </div>
       {message && <div className="form-message">{message}</div>}
       <div className="document-admin-list">
-        {filtered.length === 0 ? <div className="empty-state admin-document-empty"><FileText size={30} /><strong>Nenhum documento administrativo encontrado.</strong><span>Use “Adicionar documento” para criar o primeiro registro interno.</span></div> : filtered.map((item) => {
+        {filtered.length === 0 ? <div className="empty-state admin-document-empty"><FileText size={30} /><strong>Nenhum documento encontrado.</strong><span>Use “Adicionar documento” para criar o primeiro registro.</span></div> : filtered.map((item) => {
           const primaryUrl = item.sourceType === "internal" ? validInternalDocumentPath(item.internalUrl) : validExternalDocumentUrl(item.externalUrl);
           const signedUrl = validExternalDocumentUrl(item.signedDocumentUrl);
           return <article className="document-card admin-document-card" key={item.id}>
             <div>
               <div className="admin-document-meta"><span>{DOCUMENT_CATEGORY_NAMES[item.category] || item.category}</span><b className={`status ${item.status === "published" ? "active" : item.status === "archived" ? "archived" : "pending"}`}>{statusLabel[item.status] || item.status}</b></div>
-              <h3>{item.title}</h3><p>{item.description}</p><small>{item.documentNumber || item.year} · Somente administração</small>
+              <h3>{item.title}</h3><p>{item.description}</p><small>{item.documentNumber || item.year} · {visibilityLabel[item.visibility] || item.visibility}</small>
             </div>
             <div className="assembly-actions">
               {primaryUrl && <a className="button button-sm button-dark" href={primaryUrl} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Abrir</a>}
@@ -195,12 +200,12 @@ export function DocumentAdmin() {
     {creating && <div className="document-modal admin-document-modal" role="dialog" aria-modal="true" aria-labelledby="new-admin-document-title" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setCreating(false); }}>
       <article>
         <button className="modal-close" type="button" aria-label="Fechar" onClick={() => setCreating(false)} disabled={busy}><X /></button>
-        <span>Biblioteca interna</span><h1 id="new-admin-document-title">Adicionar documento</h1>
-        <p className="admin-document-modal-intro">Este registro ficará visível somente para usuários autorizados do painel administrativo.</p>
+        <span>Biblioteca de documentos</span><h1 id="new-admin-document-title">Adicionar documento</h1>
+        <p className="admin-document-modal-intro">Escolha quem poderá visualizar o documento depois que ele for publicado.</p>
         <form onSubmit={submit}>
           <div className="form-grid">
             <label className="field"><span>Categoria</span><select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}>{DOCUMENT_CATEGORIES.map((item) => <option key={item} value={item}>{DOCUMENT_CATEGORY_NAMES[item]}</option>)}</select></label>
-            <label className="field"><span>Acesso</span><input value="Somente administração" disabled /></label>
+            <label className="field"><span>Acesso</span><select value={form.visibility} onChange={(event) => setForm({ ...form, visibility: event.target.value })}><option value="public">Todos (inclusive não associados)</option><option value="members">Somente associados</option><option value="admin">Somente administração</option></select></label>
             <label className="field full"><span>Título</span><input required autoFocus value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Nome do documento" /></label>
             <label className="field full"><span>Descrição/assuntos</span><textarea required value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Descreva o conteúdo e a finalidade do documento" /></label>
             <label className="field"><span>Data</span><input type="date" required value={form.documentDate} onChange={(event) => setForm({ ...form, documentDate: event.target.value })} /></label>
