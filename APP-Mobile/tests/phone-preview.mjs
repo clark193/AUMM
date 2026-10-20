@@ -1,0 +1,14 @@
+import { chromium } from '@playwright/test';
+import { fileURLToPath } from 'node:url';
+const browser=await chromium.launch({executablePath:process.env.AUMM_BROWSER,headless:true});
+const page=await browser.newPage({viewport:{width:1000,height:1100},deviceScaleFactor:1});
+await page.goto('http://127.0.0.1:5174/preview-celular.html');
+const app=page.frameLocator('iframe');
+await app.getByRole('heading',{name:/Salve, motoboy/}).waitFor();
+await page.evaluate(async()=>{await document.fonts.ready;await document.querySelector('iframe').contentDocument.fonts.ready;});
+await page.screenshot({path:fileURLToPath(new URL('../artifacts/08-celular-inicio.png',import.meta.url))});
+await page.getByRole('button',{name:'Apoio',exact:true}).click();
+await app.getByRole('heading',{name:'Centro de Apoio',exact:true}).waitFor();
+await page.screenshot({path:fileURLToPath(new URL('../artifacts/09-celular-apoio.png',import.meta.url))});
+await browser.close();
+console.log('Prévia interativa em moldura de celular validada e capturada.');

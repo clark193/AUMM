@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env.local
+android/.gradle/
+android/local.properties
+android/**/build/
+*.jks
+*.keystore
+playwright-report/
+test-results/
+.emulator/
+backend/lib/
+android/app/google-services.json
+artifacts/*.apk
+artifacts/*.aab
+
+*.log

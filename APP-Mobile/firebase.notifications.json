@@ -1,0 +1,17 @@
+{
+    "functions":  [
+                      {
+                          "source":  "backend",
+                          "codebase":  "aumm-mobile",
+                          "ignore":  [
+                                         "node_modules",
+                                         ".git",
+                                         "*-debug.log",
+                                         "*.local"
+                                     ],
+                          "predeploy":  [
+                                            "npm --prefix backend run build"
+                                        ]
+                      }
+                  ]
+}

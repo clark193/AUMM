@@ -12,7 +12,7 @@ import { withBasePath } from "@/lib/paths";
 
 const ADMIN_LOGIN_EMAIL = "admin.final@aummteste.com.br";
 
-export function LoginForm() {
+export function LoginForm({ mobile = false, beforeLogin }: { mobile?: boolean; beforeLogin?: () => Promise<void> } = {}) {
   const router = useRouter();
   const params = useSearchParams();
   const admin = params.get("destino") === "admin";
@@ -36,6 +36,7 @@ export function LoginForm() {
       if (!firebaseEnabled)
         throw new Error("Serviço de acesso não configurado.");
       const { auth, db } = getFirebaseServices();
+      await beforeLogin?.();
       const normalized = identifier.trim().toLowerCase();
       const email =
         admin && normalized === "admin" ? ADMIN_LOGIN_EMAIL : normalized;
@@ -159,7 +160,7 @@ export function LoginForm() {
             </div>
           )}
           <div className="auth-links">
-            <Link href="/">← Voltar ao site</Link>
+            <Link href="/">← Voltar {mobile ? "ao aplicativo" : "ao site"}</Link>
             <Link
               href={
                 admin ? "/associado/login" : "/associado/login?destino=admin"

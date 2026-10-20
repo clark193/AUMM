@@ -17,7 +17,7 @@ function Highlight({ text, term }: { text: string; term: string }) {
   return <>{parts.map((part, index) => part.toLocaleLowerCase("pt-BR") === query.toLocaleLowerCase("pt-BR") ? <mark key={index}>{part}</mark> : <Fragment key={index}>{part}</Fragment>)}</>;
 }
 
-export function StatutePage() {
+export function StatutePage({ mobile = false }: { mobile?: boolean } = {}) {
   const [search, setSearch] = useState("");
   const [indexOpen, setIndexOpen] = useState(false);
   const [copied, setCopied] = useState("");
@@ -34,7 +34,7 @@ export function StatutePage() {
     window.setTimeout(() => setCopied(""), 1600);
   }
 
-  const chapterIndex = <nav aria-label="Índice do Estatuto">{statute2021.chapters.map((chapter) => <a key={chapter.id} href={`#${chapter.id}`} onClick={() => setIndexOpen(false)}><strong>Capítulo {chapter.roman}</strong><span>{chapter.title}</span></a>)}</nav>;
+  const chapterIndex = <nav aria-label="Índice do Estatuto">{statute2021.chapters.map((chapter) => <a key={chapter.id} href={`#${chapter.id}`} onClick={(event) => { setIndexOpen(false); if (mobile) { event.preventDefault(); document.getElementById(chapter.id)?.scrollIntoView({ behavior: "smooth" }); } }}><strong>Capítulo {chapter.roman}</strong><span>{chapter.title}</span></a>)}</nav>;
 
   return <div className="statute-page">
     <header className="statute-hero statute-print-content">
@@ -64,7 +64,7 @@ export function StatutePage() {
           })}
         </section>)}
         <section className="statute-original"><span className="eyebrow">Documento original</span><h2>Signatários</h2><div>{statute2021.signatories.map(([name, role]) => <p key={name}><strong>{name}</strong><span>{role}</span></p>)}</div><small>Transcrição do documento registrado. Assinaturas manuscritas não são reproduzidas nesta página.</small></section>
-        <div className="statute-bottom statute-no-print"><Link className="button" href="/associe-se">Solicitar filiação</Link><Link className="button button-dark" href="/documentos">Outros documentos</Link></div>
+        <div className="statute-bottom statute-no-print"><Link className="button" href="/associe-se">Solicitar filiação</Link>{!mobile && <Link className="button button-dark" href="/documentos">Outros documentos</Link>}</div>
       </main>
     </div>
     {indexOpen && <div className="statute-drawer statute-no-print" role="dialog" aria-modal="true" aria-label="Índice do Estatuto"><div><button type="button" onClick={() => setIndexOpen(false)} aria-label="Fechar índice"><X /></button><h2>Índice do Estatuto</h2>{chapterIndex}</div></div>}

@@ -1,0 +1,44 @@
+{
+  "name": "aumm-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5174",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 5174",
+    "android:sync": "npm run build && cap sync android",
+    "android:open": "cap open android",
+    "android:build": "npm run android:sync && node scripts/build-android.mjs",
+    "test:ui": "node tests/ui.mjs",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "test:rules": "node scripts/prepare-emulator.mjs && firebase emulators:exec --config firebase.test.json --project demo-aumm-mobile --only firestore \"node --test tests/security.rules.mjs\""
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/app-launcher": "^8.0.1",
+    "@capacitor/browser": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/geolocation": "^8.0.0",
+    "@capacitor/push-notifications": "^8.1.3",
+    "@capacitor/share": "^8.0.0",
+    "firebase": "^12.0.0",
+    "lucide-react": "^0.468.0",
+    "maplibre-gl": "^5.24.0",
+    "qrcode.react": "^4.2.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.0",
+    "@firebase/rules-unit-testing": "^5.0.0",
+    "@playwright/test": "^1.56.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "firebase-tools": "^15.0.0",
+    "typescript": "^5.9.0",
+    "vite": "^6.4.0"
+  }
+}

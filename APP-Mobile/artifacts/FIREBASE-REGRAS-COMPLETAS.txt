@@ -1,0 +1,942 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function adminProfile() {
+      return get(/databases/$(database)/documents/adminRoles/$(request.auth.uid));
+    }
+    function superAdmin() {
+      return signedIn() && adminProfile().data.active == true
+        && (adminProfile().data.superAdmin == true
+          || adminProfile().data.level == 1
+          || adminProfile().data.level == '1');
+    }
+    function levelAllows(permission) {
+      return signedIn() && adminProfile().data.active == true && (
+        adminProfile().data.level in [1, '1']
+        || (adminProfile().data.level in [2, '2'] && permission in [
+          'applications.read','applications.review','users.read','users.update','members.read','members.write',
+          'roles.manage','board.manage','news.read','news.create','news.edit','news.delete','communications.read',
+          'communications.write','content.manage','requests.read','requests.write','finance.read','finance.write',
+          'transparency.write','documents.read','documents.write','notifications.write','settings.read',
+          'dashboard.read'
+        ])
+        || (adminProfile().data.level in [3, '3'] && permission in [
+          'applications.read','applications.review','users.read','users.update','members.read','members.write',
+          'requests.read','requests.write','documents.read','notifications.write',
+          'passwordResets.read','passwordResets.manage','dashboard.read'
+        ])
+        || (adminProfile().data.level in [4, '4'] && permission in [
+          'news.read','news.create','news.edit','communications.read','communications.write','content.manage','documents.read','dashboard.read'
+        ])
+        || (adminProfile().data.level in [5, '5'] && permission in [
+          'dashboard.read','members.create'
+        ])
+      );
+    }
+    function hasPermission(permission) {
+      return superAdmin() || levelAllows(permission)
+        || (signedIn() && adminProfile().data.active == true && adminProfile().data.permissions is map && adminProfile().data.permissions[permission] == true);
+    }
+    function levelOneAdmin() {
+      return signedIn() && adminProfile().data.active == true && adminProfile().data.level in [1, '1'];
+    }
+    function own(uid) { return signedIn() && request.auth.uid == uid; }
+    function activeMember() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/associados/$(request.auth.uid))
+        && get(/databases/$(database)/documents/associados/$(request.auth.uid)).data.status == 'active';
+    }
+    function hasAssemblyPermission(permission) {
+      return superAdmin() || (signedIn() && adminProfile().data.active == true
+        && adminProfile().data.permissions is map
+        && adminProfile().data.permissions[permission] == true);
+    }
+    function assemblyStaff() {
+      return hasAssemblyPermission('canManageAssemblies')
+        || hasAssemblyPermission('canPublishAssembly')
+        || hasAssemblyPermission('canPresideAssembly')
+        || hasAssemblyPermission('canModerateAssembly')
+        || hasAssemblyPermission('canCertifyResults')
+        || hasAssemblyPermission('canFinalizeMinutes');
+    }
+    function documentPermission(permission) {
+      return superAdmin() || hasPermission('documents.write')
+        || (signedIn() && adminProfile().data.active == true && adminProfile().data.permissions is map && adminProfile().data.permissions[permission] == true);
+    }
+    function documentStaff() {
+      return documentPermission('canManageDocuments') || documentPermission('canPublishDocuments') || documentPermission('canArchiveDocuments');
+    }
+    function membershipStaff() {
+      return superAdmin() || (signedIn() && adminProfile().data.active == true
+        && adminProfile().data.permissions is map
+        && adminProfile().data.permissions.canManageMembershipRequests == true);
+    }
+    function assemblyData(assemblyId) {
+      return get(/databases/$(database)/documents/assemblies/$(assemblyId)).data;
+    }
+    function agendaData(assemblyId, agendaId) {
+      return get(/databases/$(database)/documents/assemblies/$(assemblyId)/agenda/$(agendaId)).data;
+    }
+    function agendaAfterData(assemblyId, agendaId) {
+      return getAfter(/databases/$(database)/documents/assemblies/$(assemblyId)/agenda/$(agendaId)).data;
+    }
+    function minutesData(assemblyId, minutesId) {
+      return get(/databases/$(database)/documents/assemblies/$(assemblyId)/minutes/$(minutesId)).data;
+    }
+    function eligibleVoter(assemblyId) {
+      return activeMember()
+        && exists(/databases/$(database)/documents/assemblies/$(assemblyId)/eligibleVoters/$(request.auth.uid))
+        && get(/databases/$(database)/documents/assemblies/$(assemblyId)/eligibleVoters/$(request.auth.uid)).data.eligible == true;
+    }
+    function presentAtAssembly(assemblyId) {
+      return eligibleVoter(assemblyId)
+        && exists(/databases/$(database)/documents/assemblies/$(assemblyId)/presence/$(request.auth.uid));
+    }
+    function visibleAssemblyStatus(status) {
+      return status in ['published','first_call','waiting_second_call','second_call','waiting_third_call','third_call','in_session','closed'];
+    }
+    function protectedAssemblyFieldsUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'type','title','description','orderOfDay','additionalInfo','format',
+        'firstCallAt','secondCallAt','thirdCallAt','minimumNoticeDays',
+        'eligibleVoterCount','minutesApproverUids','createdAt','createdBy','createdByName','publishedAt'
+      ]);
+    }
+    function validAssemblyTransition() {
+      return request.resource.data.status == resource.data.status
+        || (resource.data.status == 'published' && request.resource.data.status == 'first_call')
+        || (resource.data.status == 'first_call' && request.resource.data.status in ['waiting_second_call','in_session'])
+        || (resource.data.status == 'waiting_second_call' && request.resource.data.status == 'second_call')
+        || (resource.data.status == 'second_call' && request.resource.data.status in ['waiting_third_call','in_session'])
+        || (resource.data.status == 'waiting_third_call' && request.resource.data.status == 'third_call')
+        || (resource.data.status == 'third_call' && request.resource.data.status == 'in_session')
+        || (resource.data.status == 'in_session' && request.resource.data.status == 'closed');
+    }
+    function validAgendaTransition() {
+      return request.resource.data.status == resource.data.status
+        || (resource.data.status == 'pending' && request.resource.data.status == 'open')
+        || (resource.data.status == 'open' && request.resource.data.status in ['discussion','voting','closed'])
+        || (resource.data.status == 'discussion' && request.resource.data.status in ['open','voting'])
+        || (resource.data.status == 'voting' && request.resource.data.status == 'voting_closed')
+        || (resource.data.status == 'voting_closed' && request.resource.data.status in ['result','closed'])
+        || (resource.data.status == 'result' && request.resource.data.status == 'closed');
+    }
+    function validApplication(id) {
+      return signedIn()
+        && request.resource.data.keys().hasOnly([
+          'applicationId','fullName','email','phone','city','consent','consentVersion','consentAt',
+          'applicantUid','authAccountCreated','status','createdAt'
+        ])
+        && request.resource.data.applicationId == id
+        && request.resource.data.applicantUid == request.auth.uid
+        && request.resource.data.authAccountCreated == true
+        && request.auth.token.firebase.sign_in_provider == 'password'
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.status == 'pending'
+        && request.resource.data.consent == true
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.consentAt == request.time
+        && request.resource.data.fullName is string && request.resource.data.fullName.size() >= 3 && request.resource.data.fullName.size() <= 160
+        && request.resource.data.email is string && request.resource.data.email.size() <= 254
+        && request.resource.data.phone is string && request.resource.data.phone.size() >= 10 && request.resource.data.phone.size() <= 30
+        && request.resource.data.city is string && request.resource.data.city.size() >= 2 && request.resource.data.city.size() <= 100;
+    }
+    function validMembershipRequest(id) {
+      return signedIn()
+        && request.resource.data.keys().hasOnly([
+          'requestId','ownerUid','fullName','birthDate','cpf','cpfNormalized','cpfHash',
+          'email','emailNormalized','emailHash','whatsapp','category','statuteAccepted',
+          'statuteVersion','statuteAcceptedAt','electronicAcceptanceType','status',
+          'statutoryDocumentVerified','submittedAt'
+        ])
+        && request.resource.data.requestId == id
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.fullName is string
+        && request.resource.data.fullName.size() >= 3
+        && request.resource.data.fullName.size() <= 160
+        && request.resource.data.birthDate is timestamp
+        && request.resource.data.cpf is string
+        && request.resource.data.cpf.size() == 11
+        && request.resource.data.cpfNormalized == request.resource.data.cpf
+        && request.resource.data.cpfHash is string
+        && request.resource.data.cpfHash.size() == 64
+        && request.resource.data.email is string
+        && request.resource.data.email.size() >= 5
+        && request.resource.data.email.size() <= 254
+        && request.resource.data.emailNormalized == request.resource.data.email
+        && request.resource.data.emailHash is string
+        && request.resource.data.emailHash.size() == 64
+        && request.resource.data.whatsapp is string
+        && request.resource.data.whatsapp.size() >= 14
+        && request.resource.data.whatsapp.size() <= 15
+        && request.resource.data.category in ['Motoboy','Ciclista']
+        && request.resource.data.statuteAccepted == true
+        && request.resource.data.statuteVersion == '2021'
+        && request.resource.data.statuteAcceptedAt == request.time
+        && request.resource.data.electronicAcceptanceType == 'Aceite eletrônico da solicitação de filiação'
+        && request.resource.data.status == 'pending'
+        && request.resource.data.statutoryDocumentVerified == false
+        && request.resource.data.submittedAt == request.time
+        && existsAfter(/databases/$(database)/documents/membershipRequestCpfIndex/$(request.resource.data.cpfHash))
+        && existsAfter(/databases/$(database)/documents/membershipRequestEmailIndex/$(request.resource.data.emailHash))
+        && existsAfter(/databases/$(database)/documents/membershipRequestOwners/$(request.auth.uid));
+    }
+    function validMembershipUpdate(id) {
+      return membershipStaff()
+        && resource.data.status in ['pending','under_review']
+        && request.resource.data.status in ['pending','under_review','approved','rejected']
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status','reviewedAt','reviewedBy','statutoryDocumentVerified',
+          'statutoryDocumentVerifiedAt','statutoryDocumentVerifiedBy','decisionAt',
+          'decisionDate','decisionBy','decisionNotes','meetingReference','minutesReference',
+          'memberUid','memberNumber'
+        ])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
+          || getAfter(/databases/$(database)/documents/membershipRequestOwners/$(resource.data.ownerUid)).data.status == request.resource.data.status)
+        && (request.resource.data.status != 'under_review'
+          || resource.data.status == 'under_review'
+          || (request.resource.data.reviewedAt == request.time && request.resource.data.reviewedBy == request.auth.uid))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['statutoryDocumentVerified'])
+          || (request.resource.data.statutoryDocumentVerified == true
+            && request.resource.data.statutoryDocumentVerifiedAt == request.time
+            && request.resource.data.statutoryDocumentVerifiedBy == request.auth.uid))
+        && (!(request.resource.data.status in ['approved','rejected'])
+          || (request.resource.data.decisionAt == request.time
+            && request.resource.data.decisionDate is timestamp
+            && request.resource.data.decisionBy == request.auth.uid))
+        && (request.resource.data.status != 'approved'
+          || request.resource.data.category != 'Motoboy'
+          || request.resource.data.statutoryDocumentVerified == true)
+        && (request.resource.data.status != 'approved'
+          || (request.resource.data.memberUid is string
+            && request.resource.data.memberNumber is string
+            && existsAfter(/databases/$(database)/documents/associados/$(request.resource.data.memberUid))
+            && getAfter(/databases/$(database)/documents/associados/$(request.resource.data.memberUid)).data.membershipRequestId == id
+            && existsAfter(/databases/$(database)/documents/publicMembers/$(request.resource.data.memberNumber))
+            && getAfter(/databases/$(database)/documents/publicMembers/$(request.resource.data.memberNumber)).data.uid == request.resource.data.memberUid));
+    }
+    function validPasswordResetRequest() {
+      return request.resource.data.keys().hasOnly(['email','phone','status','createdAt'])
+        && request.resource.data.email is string
+        && request.resource.data.email.size() >= 5
+        && request.resource.data.email.size() <= 254
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() >= 10
+        && request.resource.data.phone.size() <= 30
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time;
+    }
+    match /membershipRequests/{id} {
+      allow create: if validMembershipRequest(id);
+      allow get: if (signedIn() && resource.data.ownerUid == request.auth.uid) || membershipStaff();
+      allow list: if membershipStaff();
+      allow update: if validMembershipUpdate(id);
+      allow delete: if superAdmin();
+    }
+    match /membershipRequestCpfIndex/{hash} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['requestId','ownerUid','cpfHash','createdAt'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.cpfHash == hash
+        && request.resource.data.createdAt == request.time
+        && existsAfter(/databases/$(database)/documents/membershipRequests/$(request.resource.data.requestId))
+        && getAfter(/databases/$(database)/documents/membershipRequests/$(request.resource.data.requestId)).data.ownerUid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/membershipRequests/$(request.resource.data.requestId)).data.cpfHash == hash;
+      allow read, update: if false;
+      allow delete: if superAdmin();
+    }
+    match /membershipRequestEmailIndex/{hash} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['requestId','ownerUid','emailHash','createdAt'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.emailHash == hash
+        && request.resource.data.createdAt == request.time
+        && existsAfter(/databases/$(database)/documents/membershipRequests/$(request.resource.data.requestId))
+        && getAfter(/databases/$(database)/documents/membershipRequests/$(request.resource.data.requestId)).data.ownerUid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/membershipRequests/$(request.resource.data.requestId)).data.emailHash == hash;
+      allow read, update: if false;
+      allow delete: if superAdmin();
+    }
+    match /membershipRequestOwners/{uid} {
+      allow create: if signedIn() && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['requestId','ownerUid','status','updatedAt'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.updatedAt == request.time
+        && existsAfter(/databases/$(database)/documents/membershipRequests/$(request.resource.data.requestId));
+      allow get: if own(uid) || membershipStaff();
+      allow list: if membershipStaff();
+      allow update: if membershipStaff()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','memberNumber','updatedAt'])
+        && request.resource.data.status in ['under_review','approved','rejected']
+        && request.resource.data.status == getAfter(/databases/$(database)/documents/membershipRequests/$(resource.data.requestId)).data.status;
+      allow delete: if superAdmin();
+    }
+    match /membershipAuditLogs/{id} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['action','requestId','actorUid','actorNameSnapshot','timestamp'])
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.timestamp == request.time
+        && ((request.resource.data.action == 'MEMBERSHIP_REQUEST_CREATED'
+          && existsAfter(/databases/$(database)/documents/membershipRequests/$(request.resource.data.requestId))
+          && getAfter(/databases/$(database)/documents/membershipRequests/$(request.resource.data.requestId)).data.ownerUid == request.auth.uid)
+          || (membershipStaff() && request.resource.data.action in [
+            'MEMBERSHIP_REQUEST_REVIEW_STARTED','MEMBERSHIP_DOCUMENT_VERIFIED',
+            'MEMBERSHIP_REQUEST_APPROVED','MEMBERSHIP_REQUEST_REJECTED'
+          ]));
+      allow read: if membershipStaff();
+      allow update, delete: if false;
+    }
+    match /associationApplications/{id} {
+      allow create: if validApplication(id);
+      allow read: if (signedIn() && resource.data.applicantUid == request.auth.uid) || hasPermission('applications.read');
+      allow update: if hasPermission('applications.review');
+      allow delete: if superAdmin();
+    }
+    match /applicationSummaries/{id} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['applicationId','fullName','status','createdAt'])
+        && request.resource.data.applicationId == id
+        && request.resource.data.fullName is string
+        && request.resource.data.fullName.size() >= 3
+        && request.resource.data.fullName.size() <= 160
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time
+        && existsAfter(/databases/$(database)/documents/associationApplications/$(id))
+        && getAfter(/databases/$(database)/documents/associationApplications/$(id)).data.applicantUid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/associationApplications/$(id)).data.fullName == request.resource.data.fullName
+        && getAfter(/databases/$(database)/documents/associationApplications/$(id)).data.status == request.resource.data.status
+        && getAfter(/databases/$(database)/documents/associationApplications/$(id)).data.createdAt == request.resource.data.createdAt;
+      allow read: if hasPermission('dashboard.read');
+      allow update: if hasPermission('applications.review');
+      allow delete: if superAdmin();
+    }
+    match /passwordResetRequests/{id} {
+      allow create: if validPasswordResetRequest();
+      allow read: if hasPermission('passwordResets.read')
+        && !(adminProfile().data.level in [2, '2']);
+      allow update: if hasPermission('passwordResets.manage')
+        && !(adminProfile().data.level in [2, '2'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','contactedAt','resolvedAt','updatedBy']);
+      allow delete: if superAdmin();
+    }
+    match /users/{uid} {
+      allow read: if own(uid) || hasPermission('users.read');
+      allow create: if own(uid) && request.resource.data.adminRole == null;
+      allow update: if (own(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['phone','whatsapp','address','photoURL','updatedAt'])) || hasPermission('users.update');
+      allow delete: if superAdmin();
+    }
+    match /associados/{id} {
+      allow read: if (signedIn() && resource.data.uid == request.auth.uid) || hasPermission('members.read');
+      allow create: if hasPermission('members.create') || hasPermission('members.write') || membershipStaff();
+      allow update: if hasPermission('members.write')
+        || (signedIn() && resource.data.uid == request.auth.uid
+          && request.resource.data.updatedAt == request.time
+          && (
+            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword','updatedAt'])
+              && resource.data.mustChangePassword == true
+              && request.resource.data.mustChangePassword == false)
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['phone','whatsapp','updatedAt'])
+            || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cardIssuedAt','cardValidUntil','updatedAt'])
+              && exists(/databases/$(database)/documents/memberPhotos/$(request.auth.uid))
+              && request.resource.data.cardIssuedAt == request.time
+              && request.resource.data.cardValidUntil >= request.time + duration.value(364, 'd')
+              && request.resource.data.cardValidUntil <= request.time + duration.value(366, 'd')
+              && (!('cardValidUntil' in resource.data) || resource.data.cardValidUntil <= request.time))
+            || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','authorized','eligibleToVote','disassociatedAt','disassociationSource','updatedAt'])
+              && request.resource.data.status == 'inactive'
+              && request.resource.data.authorized == false
+              && request.resource.data.eligibleToVote == false
+              && request.resource.data.disassociatedAt == request.time
+              && request.resource.data.disassociationSource == 'self_service')
+          ));
+      allow delete: if levelOneAdmin();
+    }
+    match /memberPhotos/{uid} {
+      allow read: if own(uid) || hasPermission('members.read');
+      allow create, update: if own(uid)
+        && request.resource.data.keys().hasOnly(['uid','dataUrl','contentType','updatedAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.dataUrl is string
+        && request.resource.data.dataUrl.size() <= 500000
+        && request.resource.data.contentType in ['image/jpeg','image/webp']
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if own(uid) || hasPermission('members.write');
+    }
+    match /adminPhotos/{uid} {
+      allow read: if own(uid);
+      allow create, update: if own(uid)
+        && request.resource.data.keys().hasOnly(['uid','dataUrl','contentType','updatedAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.dataUrl is string
+        && request.resource.data.dataUrl.size() <= 500000
+        && request.resource.data.contentType in ['image/jpeg','image/webp']
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if own(uid);
+    }
+    match /publicMembers/{token} {
+      allow read: if true;
+      allow create: if hasPermission('members.create') || hasPermission('members.write') || membershipStaff()
+        || (signedIn() && adminProfile().data.active == true
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.credentialType == 'admin'
+          && request.resource.data.memberNumber == token
+          && existsAfter(/databases/$(database)/documents/adminCards/$(request.auth.uid))
+          && getAfter(/databases/$(database)/documents/adminCards/$(request.auth.uid)).data.cardNumber == token
+          && request.resource.data.cardValidUntil == getAfter(/databases/$(database)/documents/adminCards/$(request.auth.uid)).data.validUntil);
+      allow update: if hasPermission('members.write') || (
+        signedIn() && resource.data.uid == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && (
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoDataUrl','updatedAt'])
+            && (!('photoDataUrl' in request.resource.data) || (request.resource.data.photoDataUrl is string && request.resource.data.photoDataUrl.size() <= 500000)))
+          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt'])
+            && request.resource.data.status == 'inactive')
+          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['credentialType','photoDataUrl','cardIssuedAt','cardValidUntil','updatedAt'])
+            && request.resource.data.credentialType == 'member'
+            && exists(/databases/$(database)/documents/memberPhotos/$(request.auth.uid))
+            && request.resource.data.photoDataUrl == get(/databases/$(database)/documents/memberPhotos/$(request.auth.uid)).data.dataUrl
+            && request.resource.data.cardIssuedAt == request.time
+            && request.resource.data.cardValidUntil >= request.time + duration.value(364, 'd')
+            && request.resource.data.cardValidUntil <= request.time + duration.value(366, 'd')
+            && getAfter(/databases/$(database)/documents/associados/$(request.auth.uid)).data.cardValidUntil == request.resource.data.cardValidUntil)
+        )
+      ) || (signedIn() && adminProfile().data.active == true
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.credentialType == 'admin'
+        && request.resource.data.memberNumber == token
+        && existsAfter(/databases/$(database)/documents/adminCards/$(request.auth.uid))
+        && getAfter(/databases/$(database)/documents/adminCards/$(request.auth.uid)).data.cardNumber == token
+        && request.resource.data.cardValidUntil == getAfter(/databases/$(database)/documents/adminCards/$(request.auth.uid)).data.validUntil);
+      allow delete: if hasPermission('members.write');
+    }
+    match /adminCards/{uid} {
+      allow read: if own(uid) || superAdmin();
+      allow create: if own(uid)
+        && adminProfile().data.active == true
+        && exists(/databases/$(database)/documents/adminPhotos/$(uid))
+        && request.resource.data.keys().hasOnly(['uid','cardNumber','fullName','role','level','status','issuedAt','validUntil','updatedAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.role == adminProfile().data.role
+        && request.resource.data.status == 'active'
+        && request.resource.data.issuedAt == request.time
+        && request.resource.data.validUntil >= request.time + duration.value(364, 'd')
+        && request.resource.data.validUntil <= request.time + duration.value(366, 'd');
+      allow update: if own(uid)
+        && adminProfile().data.active == true
+        && exists(/databases/$(database)/documents/adminPhotos/$(uid))
+        && resource.data.validUntil <= request.time
+        && request.resource.data.cardNumber == resource.data.cardNumber
+        && request.resource.data.role == adminProfile().data.role
+        && request.resource.data.status == 'active'
+        && request.resource.data.issuedAt == request.time
+        && request.resource.data.validUntil >= request.time + duration.value(364, 'd')
+        && request.resource.data.validUntil <= request.time + duration.value(366, 'd');
+      allow delete: if superAdmin();
+    }
+    match /membershipCancellations/{uid} {
+      allow create: if own(uid)
+        && request.resource.data.keys().hasOnly(['uid','memberNumber','fullName','requestedAt','source','status'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.requestedAt == request.time
+        && request.resource.data.source == 'self_service'
+        && request.resource.data.status == 'completed';
+      allow read: if own(uid) || hasPermission('members.read');
+      allow update, delete: if false;
+    }
+    match /assemblies/{assemblyId} {
+      allow create: if hasAssemblyPermission('canManageAssemblies')
+        && request.resource.data.status == 'draft'
+        && request.resource.data.minimumNoticeDays >= 15
+        && request.resource.data.eligibleVoterCount == 0
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+      allow read: if assemblyStaff()
+        || (activeMember() && visibleAssemblyStatus(resource.data.status));
+      allow update: if (
+          hasAssemblyPermission('canManageAssemblies')
+          && resource.data.status == 'draft'
+          && request.resource.data.status == 'draft'
+        ) || (
+          hasAssemblyPermission('canPublishAssembly')
+          && resource.data.status == 'draft'
+          && request.resource.data.status == 'published'
+          && request.resource.data.publishedAt == request.time
+          && request.resource.data.firstCallAt >= request.time + duration.value(resource.data.minimumNoticeDays, 'd')
+          && request.resource.data.eligibleVoterCount > 0
+        ) || (
+          hasAssemblyPermission('canPresideAssembly')
+          && protectedAssemblyFieldsUnchanged()
+          && validAssemblyTransition()
+          && resource.data.status != 'closed'
+          && request.resource.data.status != 'cancelled'
+          && (request.resource.data.status != 'first_call' || request.time >= resource.data.firstCallAt)
+          && (request.resource.data.status != 'waiting_second_call' || request.time >= resource.data.secondCallAt)
+          && (request.resource.data.status != 'second_call' || request.time >= resource.data.secondCallAt)
+          && (request.resource.data.status != 'waiting_third_call' || request.time >= resource.data.thirdCallAt)
+          && (request.resource.data.status != 'third_call' || request.time >= resource.data.thirdCallAt)
+        ) || (
+          hasAssemblyPermission('canManageAssemblies')
+          && resource.data.status in ['draft','published']
+          && request.resource.data.status == 'cancelled'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','cancellationReason','cancelledAt','cancelledBy','updatedAt'])
+          && request.resource.data.cancellationReason is string
+          && request.resource.data.cancellationReason.size() >= 10
+          && request.resource.data.cancelledAt == request.time
+          && request.resource.data.cancelledBy == request.auth.uid
+        ) || (
+          hasAssemblyPermission('canFinalizeMinutes')
+          && resource.data.status == 'closed'
+          && request.resource.data.status == 'closed'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['minutesStatus','minutesHash','updatedAt'])
+        ) || (
+          documentPermission('canPublishDocuments')
+          && resource.data.status == 'closed'
+          && resource.data.minutesStatus == 'finalized'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['publishedDocumentId','updatedAt'])
+        ) || (
+          eligibleVoter(assemblyId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acknowledgementCount'])
+          && request.resource.data.acknowledgementCount == resource.data.acknowledgementCount + 1
+          && existsAfter(/databases/$(database)/documents/assemblies/$(assemblyId)/acknowledgements/$(request.auth.uid))
+          && !exists(/databases/$(database)/documents/assemblies/$(assemblyId)/acknowledgements/$(request.auth.uid))
+        ) || (
+          eligibleVoter(assemblyId)
+          && resource.data.presenceOpen == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['presenceCount'])
+          && request.resource.data.presenceCount == resource.data.presenceCount + 1
+          && existsAfter(/databases/$(database)/documents/assemblies/$(assemblyId)/presence/$(request.auth.uid))
+          && !exists(/databases/$(database)/documents/assemblies/$(assemblyId)/presence/$(request.auth.uid))
+        );
+      allow delete: if false;
+
+      match /eligibleVoters/{uid} {
+        allow create: if hasAssemblyPermission('canPublishAssembly')
+          && uid == request.resource.data.uid
+          && request.resource.data.eligible == true
+          && request.resource.data.snapshotCreatedAt == request.time;
+        allow read: if hasAssemblyPermission('canManageAssemblies') || hasAssemblyPermission('canPublishAssembly') || hasAssemblyPermission('canPresideAssembly') || (signedIn() && uid == request.auth.uid);
+        allow update, delete: if false;
+      }
+      match /acknowledgements/{uid} {
+        allow create: if uid == request.auth.uid && eligibleVoter(assemblyId)
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.assemblyId == assemblyId
+          && request.resource.data.acknowledgedAt == request.time;
+        allow read: if hasAssemblyPermission('canManageAssemblies') || hasAssemblyPermission('canPublishAssembly') || (signedIn() && uid == request.auth.uid);
+        allow update, delete: if false;
+      }
+      match /presence/{uid} {
+        allow create: if uid == request.auth.uid && eligibleVoter(assemblyId)
+          && assemblyData(assemblyId).presenceOpen == true
+          && assemblyData(assemblyId).currentCall in [1,2,3]
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.assemblyId == assemblyId
+          && request.resource.data.callNumber == assemblyData(assemblyId).currentCall
+          && request.resource.data.registeredAt == request.time;
+        allow read: if hasAssemblyPermission('canManageAssemblies') || hasAssemblyPermission('canPresideAssembly') || (signedIn() && uid == request.auth.uid);
+        allow update, delete: if false;
+      }
+      match /agenda/{agendaId} {
+        allow create: if hasAssemblyPermission('canManageAssemblies')
+          && assemblyData(assemblyId).status == 'draft'
+          && request.resource.data.status == 'pending';
+        allow read: if assemblyStaff()
+          || (activeMember() && visibleAssemblyStatus(assemblyData(assemblyId).status));
+        allow update: if hasAssemblyPermission('canPresideAssembly')
+          && assemblyData(assemblyId).status == 'in_session'
+          && resource.data.status != 'closed'
+          && validAgendaTransition()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status','openedAt','closedAt','commentsOpen','votingOpen','votingStartsAt',
+            'votingEndsAt','votingClosedAt','resultPublished','resultPublishedAt'
+          ]) || (
+            hasAssemblyPermission('canPresideAssembly')
+            && assemblyData(assemblyId).status in ['published','in_session']
+            && resource.data.status == 'pending'
+            && request.resource.data.status == 'closed'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','commentsOpen','votingOpen','closedAt','skippedBy','skippedReason'])
+            && request.resource.data.closedAt == request.time
+            && request.resource.data.skippedBy == request.auth.uid
+            && request.resource.data.skippedReason is string
+            && request.resource.data.skippedReason.size() >= 5
+          );
+        allow delete: if hasAssemblyPermission('canManageAssemblies')
+          && assemblyData(assemblyId).status == 'draft';
+
+        match /comments/{commentId} {
+          allow create: if request.resource.data.createdAt == request.time
+            && request.resource.data.content is string
+            && request.resource.data.content.size() >= 1
+            && request.resource.data.content.size() <= 2000
+            && request.resource.data.authorUid == request.auth.uid
+            && request.resource.data.hidden == false
+            && (
+              (request.resource.data.type in ['manifestation','question']
+                && presentAtAssembly(assemblyId)
+                && assemblyData(assemblyId).status == 'in_session'
+                && agendaData(assemblyId, agendaId).allowComments == true
+                && agendaData(assemblyId, agendaId).commentsOpen == true)
+              || (request.resource.data.type == 'admin_response' && hasAssemblyPermission('canModerateAssembly'))
+            );
+          allow read: if hasAssemblyPermission('canModerateAssembly')
+            || (activeMember() && visibleAssemblyStatus(assemblyData(assemblyId).status));
+          allow update: if hasAssemblyPermission('canModerateAssembly')
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hidden','moderationReason','moderatedAt','moderatedBy'])
+            && request.resource.data.hidden == true
+            && request.resource.data.moderatedAt == request.time
+            && request.resource.data.moderatedBy == request.auth.uid;
+          allow delete: if false;
+        }
+        match /votes/{uid} {
+          allow create: if uid == request.auth.uid
+            && presentAtAssembly(assemblyId)
+            && assemblyData(assemblyId).status == 'in_session'
+            && agendaData(assemblyId, agendaId).allowVoting == true
+            && agendaData(assemblyId, agendaId).votingOpen == true
+            && request.time >= agendaData(assemblyId, agendaId).votingStartsAt
+            && request.time <= agendaData(assemblyId, agendaId).votingEndsAt
+            && request.resource.data.voterUid == request.auth.uid
+            && request.resource.data.assemblyId == assemblyId
+            && request.resource.data.agendaId == agendaId
+            && request.resource.data.choice in agendaData(assemblyId, agendaId).options
+            && request.resource.data.createdAt == request.time;
+          allow read: if (signedIn() && uid == request.auth.uid)
+            || hasAssemblyPermission('canCertifyResults');
+          allow update, delete: if false;
+        }
+        match /results/{resultId} {
+          allow create: if hasAssemblyPermission('canCertifyResults')
+            && assemblyData(assemblyId).status == 'in_session'
+            && agendaAfterData(assemblyId, agendaId).votingOpen == false;
+          allow read: if hasAssemblyPermission('canCertifyResults')
+            || (activeMember()
+              && visibleAssemblyStatus(assemblyData(assemblyId).status)
+              && agendaData(assemblyId, agendaId).resultPublished == true);
+          allow update, delete: if false;
+        }
+      }
+      match /auditLogs/{logId} {
+        allow create: if signedIn()
+          && request.resource.data.actorUid == request.auth.uid
+          && request.resource.data.assemblyId == assemblyId
+          && request.resource.data.timestamp == request.time
+          && (eligibleVoter(assemblyId) || assemblyStaff());
+        allow read: if assemblyStaff() || eligibleVoter(assemblyId);
+        allow update, delete: if false;
+      }
+      match /minutes/{minutesId} {
+        allow create: if hasAssemblyPermission('canFinalizeMinutes')
+          && assemblyData(assemblyId).status == 'closed';
+        allow update: if hasAssemblyPermission('canFinalizeMinutes')
+          && assemblyData(assemblyId).status == 'closed'
+          && resource.data.status != 'finalized';
+        allow read: if hasAssemblyPermission('canFinalizeMinutes')
+          || (activeMember()
+            && visibleAssemblyStatus(assemblyData(assemblyId).status)
+            && resource.data.status == 'finalized');
+        allow delete: if false;
+      }
+      match /minutes/{minutesId}/approvals/{uid} {
+        allow create: if uid == request.auth.uid && eligibleVoter(assemblyId)
+          && minutesData(assemblyId, minutesId).status == 'finalized'
+          && assemblyData(assemblyId).minutesApproverUids.hasAny([request.auth.uid])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.minutesHash == minutesData(assemblyId, minutesId).hash
+          && request.resource.data.timestamp == request.time;
+        allow read: if hasAssemblyPermission('canFinalizeMinutes') || (signedIn() && uid == request.auth.uid);
+        allow update, delete: if false;
+      }
+    }
+    match /boardMembers/{id} {
+      allow read: if true;
+      allow write: if hasPermission('board.manage');
+    }
+    match /roles/{id} {
+      allow read: if resource.data.active == true || signedIn();
+      allow write: if hasPermission('roles.manage');
+    }
+    match /adminRoles/{id} {
+      allow read: if own(id) || hasPermission('admins.read');
+      allow write: if levelOneAdmin();
+    }
+    match /news/{id} {
+      allow read: if resource.data.status == 'published' || hasPermission('news.read');
+      allow create: if hasPermission('news.create');
+      allow update: if hasPermission('news.edit');
+      allow delete: if hasPermission('news.delete');
+    }
+    match /communications/{id} {
+      allow read: if hasPermission('communications.read')
+        || (activeMember() && resource.data.status == 'published' && resource.data.audience in ['all','members']);
+      allow write: if hasPermission('communications.write');
+    }
+    match /sponsors/{id} {
+      allow read: if (resource.data.status == 'active' && resource.data.type in ['sponsor','support'])
+        || (resource.data.status == 'active' && resource.data.type == 'partner' && activeMember())
+        || hasPermission('content.manage');
+      allow create, update: if hasPermission('content.manage')
+        && request.resource.data.logoDataUrl is string
+        && request.resource.data.logoDataUrl.size() <= 500000
+        && request.resource.data.type in ['sponsor','support','partner']
+        && request.resource.data.status in ['active','archived'];
+      allow delete: if hasPermission('content.manage');
+    }
+    match /{collectionName}/{id} {
+      allow read: if (collectionName in ['events','accomplishments'] && resource.data.status == 'active')
+        || (collectionName in ['partners','benefits'] && activeMember() && resource.data.status == 'active')
+        || (collectionName in ['partners','benefits','events','accomplishments'] && hasPermission('content.manage'));
+      allow write: if collectionName in ['partners','benefits','events','accomplishments'] && hasPermission('content.manage');
+    }
+    match /documents/{id} {
+      allow read: if (resource.data.published == true && resource.data.visibility == 'public')
+        || (activeMember() && resource.data.published == true && resource.data.visibility in ['public','members'])
+        || documentStaff() || hasPermission('documents.read');
+      allow create: if documentPermission('canManageDocuments')
+        && request.resource.data.status == 'draft' && request.resource.data.published == false
+        && request.resource.data.createdBy == request.auth.uid && request.resource.data.createdAt == request.time
+        || documentPermission('canPublishDocuments')
+        && request.resource.data.sourceType in ['assembly_minutes','assembly_notice']
+        && request.resource.data.status == 'published' && request.resource.data.published == true
+        && request.resource.data.createdBy == request.auth.uid && request.resource.data.createdAt == request.time;
+      allow update: if (
+          documentPermission('canManageDocuments') && resource.data.status == 'draft' && request.resource.data.status == 'draft'
+        ) || (
+          documentPermission('canPublishDocuments') && resource.data.status == 'draft'
+          && request.resource.data.published == true && request.resource.data.status in ['published','current']
+          && request.resource.data.publishedAt == request.time && request.resource.data.publishedBy == request.auth.uid
+        ) || (
+          documentPermission('canArchiveDocuments') && resource.data.published == true
+          && request.resource.data.status == 'archived' && request.resource.data.published == false
+        ) || (
+          documentPermission('canManageDocuments')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['signedDocumentUrl','updatedAt','updatedBy'])
+        ) || (
+          documentPermission('canPublishDocuments') && resource.data.category == 'statute'
+          && request.resource.data.status == 'replaced' && request.resource.data.isCurrent == false
+        );
+      allow delete: if documentPermission('canManageDocuments') && resource.data.status == 'draft' && resource.data.published == false;
+    }
+    match /documentAuditLogs/{id} {
+      allow read: if documentStaff();
+      allow create: if documentStaff() && request.resource.data.actorUid == request.auth.uid && request.resource.data.timestamp == request.time;
+      allow update, delete: if false;
+    }
+    match /requests/{id} {
+      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow read: if signedIn() && resource.data.ownerUid == request.auth.uid || hasPermission('requests.read');
+      allow update: if signedIn() && resource.data.ownerUid == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberReply','updatedAt']) || hasPermission('requests.write');
+      allow delete: if superAdmin();
+    }
+    match /financialEntries/{id} {
+      allow read: if (resource.data.status == 'published' && resource.data.visibility == 'public')
+        || (activeMember() && resource.data.status == 'published' && resource.data.visibility in ['public','members'])
+        || hasPermission('finance.read');
+      allow write: if hasPermission('finance.write');
+    }
+    match /transparency/{id} {
+      allow read: if (activeMember() && resource.data.status == 'published') || hasPermission('transparency.write');
+      allow write: if hasPermission('transparency.write');
+    }
+    match /settings/{id} {
+      allow read: if id in ['public','cardPublic'] || hasPermission('settings.read');
+      allow write: if hasPermission('settings.write');
+    }
+    match /notifications/{id} {
+      allow read, update: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if hasPermission('notifications.write');
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+    match /notificationReads/{uid} {
+      allow read: if own(uid);
+      allow create, update: if own(uid)
+        && request.resource.data.keys().hasOnly(['uid','lastReadAt','updatedAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.lastReadAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if own(uid);
+    }
+    match /userPreferences/{uid} {
+      allow read: if own(uid);
+      allow create, update: if own(uid)
+        && request.resource.data.keys().hasOnly(['uid','notificationBadge','showPhotoOnVerification','updatedAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.notificationBadge is bool
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if own(uid);
+    }
+    match /auditLogs/{id} {
+      allow read: if hasPermission('audit.read');
+      allow create: if signedIn()
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.timestamp == request.time
+        && request.resource.data.keys().hasOnly(['action','resource','resourceId','description','metadata','actorUid','actorName','actorEmail','actorRole','actorLevel','timestamp']);
+      allow update, delete: if false;
+    }
+    match /dashboardActivity/{id} {
+      allow read: if hasPermission('dashboard.read');
+      allow write: if superAdmin();
+    }
+    // Preferências e tokens são privados; apenas o servidor cria a caixa de avisos.
+    match /mobileSubscriptions/{uid} {
+      allow read, delete: if own(uid);
+      allow create, update: if own(uid)
+        && request.resource.data.keys().hasOnly(['uid','news','nearbyHelp','requestUpdates','communications','city','cityKey','updatedAt'])
+        && request.resource.data.uid == uid
+        && request.resource.data.news is bool && request.resource.data.nearbyHelp is bool
+        && request.resource.data.requestUpdates is bool && request.resource.data.communications is bool
+        && request.resource.data.city is string && request.resource.data.city.size() >= 2 && request.resource.data.city.size() <= 60
+        && request.resource.data.cityKey is string && request.resource.data.cityKey.size() >= 2 && request.resource.data.cityKey.size() <= 80
+        && request.resource.data.updatedAt == request.time;
+    }
+    match /mobilePushDevices/{uid}/devices/{deviceId} {
+      allow read, delete: if own(uid);
+      allow create, update: if own(uid)
+        && request.resource.data.keys().hasOnly(['uid','token','platform','enabled','updatedAt'])
+        && request.resource.data.uid == uid && request.resource.data.platform == 'android'
+        && request.resource.data.token is string && request.resource.data.token.size() >= 20 && request.resource.data.token.size() <= 4096
+        && request.resource.data.enabled is bool && request.resource.data.updatedAt == request.time;
+    }
+    match /mobileInbox/{uid}/items/{id} {
+      allow read, delete: if own(uid);
+      allow create: if false;
+      allow update: if own(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
+        && request.resource.data.read == true;
+    }
+    // Aplicativo móvel: o mural contém apenas categoria, cidade e região.
+    // Coordenadas e observações ficam em um documento separado, protegido.
+    function supportMember() {
+      return activeMember() && get(/databases/$(database)/documents/associados/$(request.auth.uid)).data.get('mustChangePassword', false) == false;
+    }
+    function supportParticipant(data) {
+      return signedIn() && (data.ownerUid == request.auth.uid
+        || (data.status in ['awaiting_confirmation','accepted'] && data.helperUid == request.auth.uid && supportMember()));
+    }
+    function validSupportRequest(data,id) {
+      return data.keys().hasOnly(['ownerUid','helperUid','category','city','region','status','chatId','createdAt','updatedAt','expiresAt'])
+        && data.ownerUid == id && data.helperUid == '' && data.status == 'open'
+        && data.chatId is string && data.chatId.size() >= 20 && data.chatId.size() <= 64
+        && data.category in ['gasolina','pneu','pane','apoio']
+        && data.city is string && data.city.size() >= 2 && data.city.size() <= 60
+        && data.region is string && data.region.size() >= 2 && data.region.size() <= 60
+        && data.createdAt == request.time && data.updatedAt == request.time
+        && data.expiresAt > request.time && data.expiresAt <= request.time + duration.value(25,'h');
+    }
+    match /supportRequests/{id} {
+      allow get: if own(id) || (signedIn() && resource.data.helperUid == request.auth.uid && supportMember())
+        || (supportMember() && resource.data.status == 'open');
+      allow list: if supportMember() && (resource.data.status == 'open' || resource.data.helperUid == request.auth.uid);
+      allow create: if own(id) && validSupportRequest(request.resource.data,id)
+        && existsAfter(/databases/$(database)/documents/supportRequests/$(id)/private/location);
+      allow update: if (
+        (own(id) && resource.data.status in ['resolved','cancelled'] && validSupportRequest(request.resource.data,id)
+          && request.resource.data.chatId != resource.data.chatId
+          && existsAfter(/databases/$(database)/documents/supportRequests/$(id)/private/location))
+        || (supportMember() && resource.data.status == 'open' && resource.data.ownerUid != request.auth.uid && resource.data.expiresAt > request.time
+          && request.resource.data.status == 'awaiting_confirmation' && request.resource.data.helperUid == request.auth.uid
+          && request.resource.data.acceptedAt == request.time && request.resource.data.updatedAt == request.time
+          && existsAfter(/databases/$(database)/documents/supportRequests/$(id)/private/helperProfile)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','helperUid','acceptedAt','updatedAt']))
+        || (own(id) && resource.data.status == 'awaiting_confirmation' && resource.data.expiresAt > request.time
+          && resource.data.acceptedAt + duration.value(5,'m') > request.time
+          && request.resource.data.status == 'accepted' && request.resource.data.confirmedAt == request.time && request.resource.data.updatedAt == request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','confirmedAt','updatedAt']))
+        || (supportParticipant(resource.data) && resource.data.status in ['open','awaiting_confirmation','accepted']
+          && ((request.resource.data.status == 'resolved' && resource.data.status in ['open','accepted'])
+            || (request.resource.data.status == 'cancelled' && (own(id)
+              || (resource.data.status == 'awaiting_confirmation' && (resource.data.acceptedAt + duration.value(5,'m') <= request.time || resource.data.expiresAt <= request.time)))))
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt'])
+          && !existsAfter(/databases/$(database)/documents/supportRequests/$(id)/private/location)
+          && !existsAfter(/databases/$(database)/documents/supportRequests/$(id)/private/helperPosition)
+          && !existsAfter(/databases/$(database)/documents/supportRequests/$(id)/private/requesterPosition)
+          && !existsAfter(/databases/$(database)/documents/supportRequests/$(id)/private/helperProfile))
+      );
+      allow delete: if false;
+      match /private/{privateId} {
+        function parent(){return get(/databases/$(database)/documents/supportRequests/$(id)).data;}
+        function parentAfter(){return getAfter(/databases/$(database)/documents/supportRequests/$(id)).data;}
+        allow get: if privateId in ['location','helperPosition','requesterPosition','helperProfile'] && supportParticipant(parent())
+          && parent().status in ['open','awaiting_confirmation','accepted'] && parent().expiresAt > request.time
+          && (own(id) || privateId == 'helperProfile' || parent().status == 'accepted');
+        allow list: if false;
+        allow create,update: if privateId == 'location' && own(id) && parentAfter().status == 'open' && parentAfter().createdAt == request.time
+          && request.resource.data.keys().hasOnly(['lat','lng','accuracy','details','plate'])
+          && request.resource.data.plate is string && request.resource.data.plate.matches('^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$')
+          && request.resource.data.lat is number && request.resource.data.lat >= -90 && request.resource.data.lat <= 90
+          && request.resource.data.lng is number && request.resource.data.lng >= -180 && request.resource.data.lng <= 180
+          && request.resource.data.accuracy is number && request.resource.data.accuracy >= 0
+          && request.resource.data.details is string && request.resource.data.details.size() <= 400;
+        allow create: if privateId == 'helperProfile' && supportMember() && parent().status == 'open'
+          && parentAfter().status == 'awaiting_confirmation' && parentAfter().helperUid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['uid','fullName','memberNumber','acceptedAt'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.fullName == get(/databases/$(database)/documents/associados/$(request.auth.uid)).data.get('fullName','Associado AUMM')
+          && request.resource.data.memberNumber == get(/databases/$(database)/documents/associados/$(request.auth.uid)).data.get('memberNumber','')
+          && request.resource.data.acceptedAt == request.time;
+        allow create,update: if privateId == 'requesterPosition' && own(id) && parent().status == 'accepted' && parentAfter().status == 'accepted'
+          && parent().expiresAt > request.time
+          && request.resource.data.keys().hasOnly(['ownerUid','sessionId','lat','lng','accuracy','updatedAt']) && request.resource.data.ownerUid == request.auth.uid
+          && validPosition(request.resource.data);
+        allow create,update: if privateId == 'helperPosition' && supportMember() && parent().status == 'accepted'
+          && parent().helperUid == request.auth.uid && parent().expiresAt > request.time && parentAfter().status == 'accepted'
+          && request.resource.data.keys().hasOnly(['helperUid','sessionId','lat','lng','accuracy','updatedAt']) && request.resource.data.helperUid == request.auth.uid
+          && validPosition(request.resource.data);
+        function validPosition(data){
+          return data.sessionId is string && data.sessionId.size() >= 16 && data.sessionId.size() <= 64
+            && data.lat is number && data.lat >= -90 && data.lat <= 90 && data.lng is number && data.lng >= -180 && data.lng <= 180
+            && data.accuracy is number && data.accuracy >= 0 && data.updatedAt == request.time;
+        }
+        allow delete: if privateId in ['location','helperPosition','requesterPosition','helperProfile'] && supportParticipant(parent())
+          && (parentAfter().status in ['resolved','cancelled']
+            || (privateId == 'requesterPosition' && own(id))
+            || (privateId == 'helperPosition' && parent().status == 'accepted' && parent().helperUid == request.auth.uid && supportMember()));
+      }
+      match /chats/{chatId}/messages/{messageId} {
+        function chatParent(){return get(/databases/$(database)/documents/supportRequests/$(id)).data;}
+        function canChat(){return chatParent().status == 'accepted' && chatParent().expiresAt > request.time
+          && chatParent().chatId == chatId && supportParticipant(chatParent());}
+        allow get: if canChat();
+        allow list: if canChat() && request.query.limit <= 100;
+        allow create: if canChat() && request.resource.data.keys().hasOnly(['senderUid','text','createdAt','expiresAt'])
+          && request.resource.data.senderUid == request.auth.uid && request.resource.data.text is string
+          && request.resource.data.text.size() >= 1 && request.resource.data.text.size() <= 1000
+          && request.resource.data.createdAt == request.time && request.resource.data.expiresAt is timestamp
+          && request.resource.data.expiresAt > request.time + duration.value(6,'d') && request.resource.data.expiresAt < request.time + duration.value(8,'d');
+        allow update,delete: if false;
+      }
+    }
+    // Links temporários: sem listagem pública, histórico ou dados do cadastro.
+    match /locationShareOwners/{shareId} {
+      allow get, delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow list, update: if false;
+      allow create: if signedIn() && shareId.matches('^[a-f0-9]{32}$')
+        && request.resource.data.keys().hasOnly(['ownerUid','createdAt','expiresAt'])
+        && request.resource.data.ownerUid == request.auth.uid && request.resource.data.createdAt == request.time
+        && request.resource.data.expiresAt is timestamp && request.resource.data.expiresAt > request.time
+        && request.resource.data.expiresAt <= request.time + duration.value(1,'h');
+    }
+    match /liveLocations/{shareId} {
+      function shareOwner() { return get(/databases/$(database)/documents/locationShareOwners/$(shareId)).data; }
+      function shareOwnerAfter() { return getAfter(/databases/$(database)/documents/locationShareOwners/$(shareId)).data; }
+      allow get: if resource.data.expiresAt > request.time;
+      allow list: if false;
+      allow create, update: if signedIn() && shareOwnerAfter().ownerUid == request.auth.uid
+        && shareOwnerAfter().expiresAt > request.time
+        && request.resource.data.keys().hasOnly(['lat','lng','accuracy','updatedAt','sampledAt','expiresAt'])
+        && request.resource.data.expiresAt == shareOwnerAfter().expiresAt
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.sampledAt is timestamp
+        && request.resource.data.sampledAt > request.time - duration.value(2,'m')
+        && request.resource.data.sampledAt < request.time + duration.value(1,'m')
+        && request.resource.data.lat is number && request.resource.data.lat >= -90 && request.resource.data.lat <= 90
+        && request.resource.data.lng is number && request.resource.data.lng >= -180 && request.resource.data.lng <= 180
+        && request.resource.data.accuracy is number && request.resource.data.accuracy >= 0;
+      allow delete: if signedIn() && shareOwner().ownerUid == request.auth.uid;
+    }
+    match /counters/{id} { allow read, write: if false; }
+    match /applicationKeys/{id} { allow read, write: if false; }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

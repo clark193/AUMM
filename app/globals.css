@@ -1165,3 +1165,10 @@ td { padding:13px 10px; border-bottom:1px solid #eee; white-space:nowrap; }
   .admin-credential-page { max-width:none; }
   .admin-id-card,.id-card { filter:none!important; opacity:1!important; box-shadow:none!important; }
 }
+
+.member-account-admin { margin-top:24px; padding-top:22px; border-top:1px solid var(--line); }
+.member-account-admin h2 { display:flex; gap:8px; align-items:center; font-size:16px; }
+.member-account-admin p { color:var(--muted); font-size:13px; line-height:1.7; }
+.member-account-form { display:grid; gap:14px; padding:18px; margin-top:14px; background:#fff6f6; border:1px solid #f3d4d4; border-radius:14px; }
+
+.live-location-page{max-width:900px;margin:0 auto;padding:50px 20px;font-family:var(--font-body),Arial,sans-serif}.live-location-page header{margin-bottom:24px}.live-location-page h1{font-size:clamp(26px,5vw,40px);margin:12px 0}.live-location-page p{line-height:1.7;color:var(--muted)}.live-location-card{border:1px solid var(--line);border-radius:20px;overflow:hidden;background:#fff;box-shadow:0 12px 45px #1616160a}.live-location-state{display:grid;gap:6px;padding:20px;background:#fff1f2;color:#a90d14}.live-location-state small{font-size:12px}.live-location-state.paused{color:#57575d;background:#f4f4f5}.live-location-map{height:min(60dvh,520px);min-height:300px}.live-location-info{padding:20px}.live-location-info p+p{margin-top:6px}.live-location-footnote{font-size:12px;margin-top:18px}

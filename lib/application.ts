@@ -1,5 +1,5 @@
 import { FirebaseError } from "firebase/app";
-import { onAuthStateChanged, signInAnonymously, type User } from "firebase/auth";
+import { signInAnonymously, type User } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, Timestamp, writeBatch } from "firebase/firestore";
 import { getFirebaseServices } from "./firebase";
 import { maskWhatsapp, onlyDigits, parseBrazilianDate, validCpf } from "./membershipValidation";
@@ -22,12 +22,16 @@ function friendlyError(error: unknown) {
   }
   return error instanceof Error ? error : new Error("Não foi possível enviar a solicitação.");
 }
-export async function ensureApplicantSession(): Promise<User> {
+let applicantSession: Promise<User> | null = null;
+export function ensureApplicantSession(): Promise<User> {
+  if (applicantSession) return applicantSession;
   const { auth } = getFirebaseServices();
-  if (auth.currentUser) return auth.currentUser;
-  await new Promise<void>((resolve) => { const stop = onAuthStateChanged(auth, () => { stop(); resolve(); }); });
-  if (auth.currentUser) return auth.currentUser;
-  return (await signInAnonymously(auth)).user;
+  applicantSession = (async () => {
+    await auth.authStateReady();
+    if (auth.currentUser) return auth.currentUser;
+    return (await signInAnonymously(auth)).user;
+  })().finally(() => { applicantSession = null; });
+  return applicantSession;
 }
 export async function loadOwnMembershipRequest(): Promise<MembershipRequestStatus | null> {
   const user = await ensureApplicantSession();

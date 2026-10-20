@@ -46,7 +46,7 @@ test("nível 1 grava todos os módulos operacionais e administra acessos", async
     ["settings", "public", { associationName: "Associação União Maior Motoboys" }],
     ["adminRoles", "new-admin", { active: true, level: 3, role: "Coordenação", permissions: {} }],
   ];
-  for (const [collectionName, id, data] of writes) await assertSucceeds(setDoc(doc(db, collectionName, id, data)));
+  for (const [collectionName, id, data] of writes) await assertSucceeds(setDoc(doc(db, collectionName, id), data));
   await assertSucceeds(updateDoc(doc(db, "requests", "request-1"), { status: "resolved", updatedAt: serverTimestamp() }));
   await assertSucceeds(addDoc(collection(db, "auditLogs"), { action: "TEST", resource: "settings", resourceId: "public", actorUid: "master", timestamp: serverTimestamp() }));
   await assertSucceeds(getDocs(collection(db, "adminRoles")));

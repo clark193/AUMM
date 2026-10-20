@@ -7,6 +7,7 @@ import {
   deleteUser,
   inMemoryPersistence,
   initializeAuth,
+  onAuthStateChanged,
   signOut,
   type Auth,
   type User,
@@ -31,6 +32,7 @@ import {
   Save,
   Search,
   ShieldCheck,
+  Trash2,
   UserPlus,
   MessageCircle,
 } from "lucide-react";
@@ -43,9 +45,11 @@ import { withBasePath } from "@/lib/paths";
 import { BulkMemberImport } from "./BulkMemberImport";
 import { maskBirthDate, maskCpf, maskWhatsapp, onlyDigits, parseBrazilianDate, validCpf } from "@/lib/membershipValidation";
 import { writeAdminAudit } from "@/lib/audit";
+import { manageMemberAccount } from "@/lib/memberAccount";
 
 type MemberRow = {
   id: string;
+  uid?: string | null;
   fullName: string;
   email: string;
   phone: string;
@@ -113,6 +117,53 @@ export function MemberAdmin({ registrationOnly = false }: MemberAdminProps) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [selected, setSelected] = useState<MemberRow | null>(null);
+  const [levelOne, setLevelOne] = useState(false);
+  const [accountAction, setAccountAction] = useState<"password" | "delete" | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [repeatPassword, setRepeatPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [accountBusy, setAccountBusy] = useState(false);
+  const [accountMessage, setAccountMessage] = useState("");
+
+  useEffect(() => {
+    if (!firebaseEnabled || registrationOnly) return;
+    const { auth, db } = getFirebaseServices();
+    let stopRole = () => {};
+    const stopAuth = onAuthStateChanged(auth, (user) => {
+      stopRole();
+      setLevelOne(false);
+      if (user) stopRole = onSnapshot(doc(db, "adminRoles", user.uid), (snap) => {
+        setLevelOne(snap.data()?.active === true && [1, "1"].includes(snap.data()?.level));
+      }, () => setLevelOne(false));
+    });
+    return () => { stopAuth(); stopRole(); };
+  }, [registrationOnly]);
+
+  useEffect(() => {
+    setAccountAction(null); setNewPassword(""); setRepeatPassword(""); setConfirmation(""); setAccountMessage("");
+  }, [selected?.id]);
+
+  async function submitAccountAction(event: FormEvent) {
+    event.preventDefault();
+    if (!selected || !accountAction || !levelOne || accountBusy) return;
+    if (accountAction === "password" && newPassword !== repeatPassword) {
+      setAccountMessage("As senhas não coincidem."); return;
+    }
+    setAccountBusy(true); setAccountMessage("");
+    try {
+      await manageMemberAccount({ memberId: selected.id, action: accountAction,
+        ...(accountAction === "password" ? { password: newPassword } : { confirmation }) });
+      setMessage({ type: "success", text: accountAction === "delete"
+        ? "Perfil e conta de acesso excluídos. O histórico institucional foi preservado."
+        : "Senha temporária alterada. O associado deverá criar uma nova senha no próximo acesso." });
+      setSelected(null); setNewPassword(""); setRepeatPassword("");
+    } catch (error) {
+      const code = (error as { code?: string }).code;
+      setAccountMessage(code === "functions/not-found" || code === "functions/unavailable" || code === "functions/internal"
+        ? "O serviço administrativo não respondeu. Confira se a função manageMemberAccount foi publicada no Firebase e tente novamente."
+        : error instanceof Error ? error.message : "Não foi possível concluir a operação.");
+    } finally { setAccountBusy(false); }
+  }
 
   useEffect(() => {
     if (!firebaseEnabled || registrationOnly) return;
@@ -423,6 +474,7 @@ export function MemberAdmin({ registrationOnly = false }: MemberAdminProps) {
             </div>
             <span className="demo-badge">{members.length} registros</span>
           </div>
+          {message && <div className={`form-message ${message.type}`} role="status">{message.text}</div>}
           <label className="admin-search">
             <Search size={17} />
             <input
@@ -489,7 +541,7 @@ export function MemberAdmin({ registrationOnly = false }: MemberAdminProps) {
           )}
         </section>
       )}
-      {selected && <div className="document-modal member-detail-modal" role="dialog" aria-modal="true" aria-labelledby="member-detail-title"><article><button className="modal-close" type="button" onClick={() => setSelected(null)}>×</button><span className="eyebrow">Cadastro completo</span><h1 id="member-detail-title">{selected.fullName}</h1><div className="member-detail-status"><span className={`status ${selected.status}`}>{statusName(selected.status)}</span><span>{selected.memberNumber || "Sem número"}</span></div><dl className="membership-details"><div><dt>Nome completo</dt><dd>{selected.fullName}</dd></div><div><dt>Data de nascimento</dt><dd>{birthDate(selected.birthDate)}</dd></div><div><dt>CPF</dt><dd>{selected.cpf ? maskCpf(selected.cpf) : "—"}</dd></div><div><dt>WhatsApp</dt><dd>{selected.whatsapp || selected.phone || "—"}</dd></div><div><dt>E-mail</dt><dd>{selected.email || "—"}</dd></div><div><dt>Categoria</dt><dd>{selected.category || "—"}</dd></div><div><dt>Direito a voto</dt><dd>{selected.eligibleToVote !== false ? "Habilitado" : "Desabilitado"}</dd></div><div><dt>Cadastrado em</dt><dd>{selected.createdAt?.toDate().toLocaleString("pt-BR") || "—"}</dd></div></dl><div className="member-detail-actions">{(selected.whatsapp || selected.phone) && <a className="button" href={`https://wa.me/55${(selected.whatsapp || selected.phone || "").replace(/\D/g, "").replace(/^55/, "")}`} target="_blank" rel="noreferrer"><MessageCircle /> Abrir WhatsApp</a>}<button className="button button-dark" type="button" onClick={() => toggleVotingEligibility(selected)} disabled={selected.status !== "active"}>{selected.eligibleToVote !== false ? "Desabilitar voto" : "Habilitar voto"}</button>{selected.status === "active" ? <button className="table-action-danger" type="button" onClick={() => changeStatus(selected, "inactive")}>Deixar inativo</button> : !selected.id.startsWith("pending-") && <button className="button" type="button" onClick={() => changeStatus(selected, "active")}>Ativar cadastro</button>}</div>{selected.id.startsWith("pending-") && <div className="form-message info">Este registro ainda não possui conta de acesso. Faça um novo cadastro autorizado para criar o login.</div>}</article></div>}
+      {selected && <div className="document-modal member-detail-modal" role="dialog" aria-modal="true" aria-labelledby="member-detail-title"><article><button className="modal-close" type="button" disabled={accountBusy} onClick={() => setSelected(null)}>×</button><span className="eyebrow">Cadastro completo</span><h1 id="member-detail-title">{selected.fullName}</h1><div className="member-detail-status"><span className={`status ${selected.status}`}>{statusName(selected.status)}</span><span>{selected.memberNumber || "Sem número"}</span></div><dl className="membership-details"><div><dt>Nome completo</dt><dd>{selected.fullName}</dd></div><div><dt>Data de nascimento</dt><dd>{birthDate(selected.birthDate)}</dd></div><div><dt>CPF</dt><dd>{selected.cpf ? maskCpf(selected.cpf) : "—"}</dd></div><div><dt>WhatsApp</dt><dd>{selected.whatsapp || selected.phone || "—"}</dd></div><div><dt>E-mail</dt><dd>{selected.email || "—"}</dd></div><div><dt>Categoria</dt><dd>{selected.category || "—"}</dd></div><div><dt>Direito a voto</dt><dd>{selected.eligibleToVote !== false ? "Habilitado" : "Desabilitado"}</dd></div><div><dt>Cadastrado em</dt><dd>{selected.createdAt?.toDate().toLocaleString("pt-BR") || "—"}</dd></div></dl><div className="member-detail-actions">{(selected.whatsapp || selected.phone) && <a className="button" href={`https://wa.me/55${(selected.whatsapp || selected.phone || "").replace(/\D/g, "").replace(/^55/, "")}`} target="_blank" rel="noreferrer"><MessageCircle /> Abrir WhatsApp</a>}<button className="button button-dark" type="button" onClick={() => toggleVotingEligibility(selected)} disabled={selected.status !== "active"}>{selected.eligibleToVote !== false ? "Desabilitar voto" : "Habilitar voto"}</button>{selected.status === "active" ? <button className="table-action-danger" type="button" onClick={() => changeStatus(selected, "inactive")}>Deixar inativo</button> : !selected.id.startsWith("pending-") && <button className="button" type="button" onClick={() => changeStatus(selected, "active")}>Ativar cadastro</button>}</div>{levelOne && <section className="member-account-admin"><h2><ShieldCheck size={18} /> Administração da conta · nível 1</h2><p>Alterações de acesso são verificadas no servidor e registradas na auditoria.</p><div className="member-detail-actions"><button className="button button-dark" type="button" disabled={accountBusy || !selected.uid} onClick={() => { setAccountAction("password"); setAccountMessage(""); }}><KeyRound size={16} /> Trocar senha</button><button className="table-action-danger" type="button" disabled={accountBusy} onClick={() => { setAccountAction("delete"); setAccountMessage(""); }}><Trash2 size={16} /> Excluir perfil</button></div>{accountAction && <form className="member-account-form" onSubmit={submitAccountAction}>{accountAction === "password" ? <><p>A senha será temporária. O associado precisará trocá-la ao entrar novamente.</p><label className="field"><span>Nova senha temporária</span><input type="password" autoComplete="new-password" minLength={8} maxLength={128} required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={accountBusy} /></label><label className="field"><span>Confirme a senha temporária</span><input type="password" autoComplete="new-password" minLength={8} maxLength={128} required value={repeatPassword} onChange={(e) => setRepeatPassword(e.target.value)} disabled={accountBusy} /></label></> : <><p>Esta ação remove o perfil, a conta de login e as credenciais públicas. Atendimentos ativos serão cancelados. Registros institucionais e de auditoria são preservados. A exclusão não pode ser desfeita.</p><label className="field"><span>Digite o nome completo para confirmar: <strong>{selected.fullName}</strong></span><input autoComplete="off" required value={confirmation} onChange={(e) => setConfirmation(e.target.value)} disabled={accountBusy} /></label></>}{accountMessage && <div className="form-message error" role="alert">{accountMessage}</div>}<div className="member-detail-actions"><button className="button" disabled={accountBusy || (accountAction === "delete" && confirmation !== selected.fullName)}>{accountBusy ? "Processando…" : accountAction === "delete" ? "Confirmar exclusão definitiva" : "Salvar senha temporária"}</button><button className="button button-dark" type="button" disabled={accountBusy} onClick={() => { setAccountAction(null); setNewPassword(""); setRepeatPassword(""); setConfirmation(""); setAccountMessage(""); }}>Cancelar</button></div></form>}</section>}{selected.id.startsWith("pending-") && <div className="form-message info">Este registro ainda não possui conta de acesso. Faça um novo cadastro autorizado para criar o login.</div>}</article></div>}
     </>
   );
 }

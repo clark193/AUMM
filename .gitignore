@@ -23,6 +23,7 @@
 *.pem
 
 # debug
+*.log
 npm-debug.log*
 firebase-debug.log*
 firestore-debug.log*

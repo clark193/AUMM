@@ -7,6 +7,8 @@ import { createHash, randomUUID } from "node:crypto";
 initializeApp();
 const db = getFirestore();
 
+export { manageMemberAccount } from "./memberAccounts.js";
+
 function requirePermission(
   auth: Parameters<Parameters<typeof onCall>[0]>[0]["auth"],
   permission: string,

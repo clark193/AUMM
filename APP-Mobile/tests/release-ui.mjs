@@ -1,0 +1,30 @@
+import { chromium, expect } from "@playwright/test";
+import { fileURLToPath } from "node:url";
+const browser = await chromium.launch({ headless: true, executablePath: process.env.AUMM_BROWSER, args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
+const context = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+const page = await context.newPage(), errors = [], writes = [];
+page.setDefaultTimeout(60000);
+page.on("pageerror", (error) => errors.push(error.message));
+page.on("request", (request) => { if (request.url().includes("Firestore/Write/")) writes.push(request.url()); });
+try {
+  await page.goto("http://127.0.0.1:5174/preview-celular.html", { waitUntil: "domcontentloaded" });
+  const phone = page.frameLocator("iframe");
+  await phone.getByRole("button", { name: "Fazer login", exact: true }).waitFor();
+  const color = await phone.locator(".hero").evaluate((element) => getComputedStyle(element).backgroundColor);
+  const rgb = color.match(/\d+/g).map(Number); expect(rgb[0]).toBeGreaterThan(rgb[1] * 2);
+  await page.screenshot({ path: fileURLToPath(new URL("../artifacts/29-app-vermelho-e-branco.png", import.meta.url)) });
+  await phone.getByRole("navigation", { name: "Navegação principal" }).getByRole("button", { name: "Meu perfil", exact: true }).click();
+  await phone.getByRole("button", { name: /Acesso administrativo/ }).click();
+  await phone.getByRole("heading", { name: "Administração", exact: true }).waitFor();
+  await page.screenshot({ path: fileURLToPath(new URL("../artifacts/30-login-admin-no-celular.png", import.meta.url)) });
+  expect(writes).toEqual([]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("http://127.0.0.1:3000/acompanhar/", { waitUntil: "domcontentloaded" });
+  await page.getByText("Link de acompanhamento inválido ou indisponível.", { exact: true }).waitFor();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.goto("http://127.0.0.1:3000/associado/login/?destino=admin", { waitUntil: "domcontentloaded" });
+  await page.getByRole("heading", { name: "Administração", exact: true }).waitFor();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect(errors).toEqual([]);
+  console.log("Prévia do tema vermelho/branco e login admin interno, site compilado e rota pública de acompanhamento sem link: aprovados. Sem escritas remotas.");
+} finally { await browser.close(); }

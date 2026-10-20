@@ -18,6 +18,7 @@ const eslintConfig = defineConfig([
     ".deploy-gh-pages/**",
     "functions/lib/**",
     "functions/node_modules/**",
+    "APP-Mobile/**",
     "next-env.d.ts",
   ]),
 ]);
