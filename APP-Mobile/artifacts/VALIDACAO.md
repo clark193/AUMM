@@ -37,3 +37,8 @@ Atualização de cadastro/administração/compartilhamento:
 - Prévia do tema vermelho/branco e login admin interno, página pública sem link e login do site compilado aprovados, sem erros JavaScript ou escrita remota.
 - Capturas atuais: 26-cadastro-no-aplicativo.png, 27-admin-app-trocar-senha.png, 28-compartilhar-localizacao-ao-vivo.png, 29-app-vermelho-e-branco.png e 30-login-admin-no-celular.png.
 - APK e AAB recompilados com portal.html dentro do pacote. Teste em aparelho físico continua necessário para permissões, GPS e seletor de aplicativos.
+Estado da publicação em 19/10/2026:
+- Site publicado no GitHub Pages, domínio https://aumm.com.br/, branch gh-pages, commit 97d4a057617c2aa763d9c90c26f6e67cd8e9f17b.
+- Publicação confirmada pelo GitHub com status built e pelo arquivo público /versao.json apontando para o fonte aa71209e3ae67bdc9fe0b3bd340cba79ff4bed70. /acompanhar/ respondeu HTTP 200.
+- Integridade SHA-256 do APK e AAB confirmada. APK contém portal.html e o novo bundle do aplicativo.
+- Firebase: função administrativa e regras novas ainda não publicadas; aguardando login Google do usuário. O frontend publicado não substitui essa etapa. As afirmações anteriores de ausência de deploy referem-se à etapa anterior à publicação no GitHub; o Firebase permanece pendente.
