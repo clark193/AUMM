@@ -1,10 +1,11 @@
 {
-    "sourceCommit":  "5c040194e432ff5a8f23011fa23e213073e00483",
+    "sourceCommit":  "324cffce6299341517e83edcb42a07f92b3284af",
     "features":  [
                      "administracao-gratuita-nivel-1",
                      "alertas-de-emergencia",
+                     "notificacoes-administradores",
                      "cadastro-no-app",
                      "acompanhamento-ao-vivo"
                  ],
-    "builtAt":  "2026-10-20T03:48:38.0282567Z"
+    "builtAt":  "2026-10-20T04:08:24.0804724Z"
 }
