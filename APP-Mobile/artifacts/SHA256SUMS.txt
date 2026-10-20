@@ -1,2 +1,2 @@
-2f25529a2dd065e9a9c9afa9652b91affd2a29ddba37934421f3a37fba6e4478  aumm-1.0.0-debug.apk
-8bcbf05d8e88c13361efdc55ffec59c90f7460cf195ae37a2f5bea6dee51c7fc  aumm-1.0.0-release-unsigned.aab
+e534550f7eebd929afb593dd7ebaa6d1feac4198fa3f9b6e56732c46bb48aa3e  aumm-1.0.0-debug.apk
+cce4609c2b256050e55892c32eb2553491f776a512f0f545214babd159fc7085  aumm-1.0.0-release-unsigned.aab

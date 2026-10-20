@@ -52,3 +52,5 @@ Estado da publicação em 19/10/2026:
 - Build estática do site aprovada com TypeScript. Paralelismo limitado a dois processos para evitar esgotamento de memória na exportação.
 - Capturas: 27-admin-app-recuperar-senha.png, 31-emergencia-contato.png, 32-emergencia-em-andamento.png e 33-emergencia-painel-aumm.png.
 - Pendente de teste em aparelho físico: abrir o SMS, envio pela operadora e permissões de GPS do Android. APK de teste; AAB sem assinatura não publicado na Play Store.
+
+Publicação confirmada em 20/10/2026: site em https://aumm.com.br, fonte 5c040194e432ff5a8f23011fa23e213073e00483 e GitHub Pages b31aa4e5b213dc24492957013d4edb79eb2707eb com status built. /admin/solicitacoes/ responde HTTP 200; o JavaScript público de emergência tem SHA-256 idêntico à build local. APK final com assinatura Android Debug válida, portal e emergência incluídos; hashes do APK/AAB conferidos. Não foi solicitada permissão SEND_SMS.
