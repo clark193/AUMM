@@ -168,7 +168,7 @@ export function AdminShell({
             <header className="dash-top">
               <div className="dash-title"><button className="admin-menu-toggle" aria-label="Abrir menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}><Menu /></button><h1>{title}</h1></div>
               <div className="dash-profile">
-                <NotificationBell audience="admin" />
+                <NotificationBell audience="admin" canAttend={[1, 2, 3].includes(level)} />
                 <span>{role}</span>
                 <Link className="avatar" href="/admin/configuracoes" aria-label="Abrir configurações do perfil">{photoURL ? <Image src={photoURL} width={32} height={32} unoptimized alt="" /> : `N${level}`}</Link>
               </div>

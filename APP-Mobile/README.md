@@ -167,3 +167,9 @@ Após o registro, o Android abre o aplicativo de SMS com destinatário e texto p
 No site e no painel dentro do app, administradores com permissão de atendimento veem a fila em Solicitações e um aviso nas demais telas. Podem ligar, marcar acompanhamento e encerrar. O associado acompanha as mudanças enquanto conectado e pode cancelar um acionamento por engano. A fila exige internet e não garante leitura imediata, plantão ou atendimento de socorro. Não há push de emergência para administradores com o app fechado.
 
 `emergencyContacts/{uid}` é privado do próprio associado. `emergencyAlerts/{uid}` guarda o último incidente e só pode ser lido pelo proprietário e pela equipe autorizada de atendimento. Não há histórico público nem envio de localização a outros associados. Um novo incidente substitui o anterior encerrado, com intervalo mínimo de um minuto entre acionamentos.
+
+### Avisos para administradores conectados
+
+O sino do painel e um destaque visual avisam todos os administradores ativos, de qualquer nível, sobre um novo incidente enquanto o painel estiver aberto. Níveis 1, 2 e 3 podem abrir o atendimento. Os demais recebem somente o aviso geral: nome, telefone e coordenadas não são incluídos em emergencyAdminSignals. As permissões dos detalhes de emergencyAlerts permanecem as mesmas.
+
+O app registra o incidente e seu aviso geral na mesma transação; cancelamento e atendimento atualizam ambos. As regras exigem consistência entre os dois documentos. Instale o APK atualizado e publique as regras completas para usar este fluxo. O aviso não depende do SMS nem de Cloud Functions. A leitura fica registrada por administrador; o mesmo incidente não abre novamente o destaque ao trocar de tela ou atualizar o status. Um novo incidente gera um novo aviso. Sem push de sistema com o app fechado.

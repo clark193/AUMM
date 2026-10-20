@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { collection, doc, limit, onSnapshot, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
+import { collection, doc, limit, onSnapshot, query, runTransaction, serverTimestamp, where } from "firebase/firestore";
 import { Siren } from "lucide-react";
 import { firebaseEnabled, getFirebaseServices } from "@/lib/firebase";
 
@@ -21,7 +21,13 @@ export function EmergencyAdmin({ compact = false }: { compact?: boolean }) {
     setBusy(item.id); setError("");
     try {
       const { db, auth } = getFirebaseServices();
-      await updateDoc(doc(db, "emergencyAlerts", item.id), { status, handledBy: auth.currentUser!.uid, updatedAt: serverTimestamp() });
+      await runTransaction(db, async tx => {
+        const ref = doc(db, "emergencyAlerts", item.id), current = await tx.get(ref);
+        if (!current.exists()) throw new Error("Alerta não encontrado.");
+        const updatedAt = serverTimestamp();
+        tx.update(ref, { status, handledBy: auth.currentUser!.uid, updatedAt });
+        tx.set(doc(db, "emergencyAdminSignals", item.id), { incidentId: current.data().incidentId, status, createdAt: current.data().createdAt, updatedAt });
+      });
     } catch { setError("O alerta mudou ou a atualização falhou. Confira a lista e tente novamente."); }
     finally { setBusy(""); }
   }

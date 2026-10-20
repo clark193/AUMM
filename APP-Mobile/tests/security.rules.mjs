@@ -861,6 +861,19 @@ test("exclusão direta de associado exige nível 1 ativo, mesmo com flag superAd
   await assertSucceeds(deleteDoc(doc(user("level1"), "associados", "member1")));
 });
 
+async function setEmergency(ref, data) {
+  const batch = writeBatch(ref.firestore);
+  batch.set(ref, data);
+  batch.set(doc(ref.firestore, "emergencyAdminSignals", ref.id), { incidentId: data.incidentId, status: data.status, createdAt: data.createdAt, updatedAt: data.updatedAt });
+  return batch.commit();
+}
+async function updateEmergency(ref, changes) {
+  const current = await getDoc(ref), data = { ...current.data(), ...changes };
+  const batch = writeBatch(ref.firestore);
+  batch.update(ref, changes);
+  batch.set(doc(ref.firestore, "emergencyAdminSignals", ref.id), { incidentId: data.incidentId, status: data.status, createdAt: data.createdAt, updatedAt: data.updatedAt });
+  return batch.commit();
+}
 async function seedEmergencyContact(uid = "member1") {
   await env.withSecurityRulesDisabled(async c => setDoc(doc(c.firestore(), "emergencyContacts", uid), { uid, name: "Pessoa de confian?a", contactPhone: "+5547999991234", phone: "+5547999994321", updatedAt: Timestamp.now() }));
 }
@@ -882,35 +895,35 @@ test("contato de emergência privado, validado e exclusivo de associado ativo", 
 test("alerta aceita GPS ou ausência explícita e recusa falsificação de identidade", async () => {
   await seedEmergencyContact();
   const ref = doc(user("member1"), "emergencyAlerts", "member1");
-  await assertFails(setDoc(ref, { ...emergencyAlert(), fullName: "Outra pessoa" }));
-  await assertFails(setDoc(ref, { ...emergencyAlert(), contactPhone: "+5547999990000" }));
-  await assertFails(setDoc(ref, emergencyAlert("member1", { lat: 91, lng: -49, accuracy: 10 })));
-  await assertSucceeds(setDoc(ref, emergencyAlert()));
-  await assertFails(setDoc(ref, emergencyAlert()));
-  await assertFails(updateDoc(ref, { status: "resolved", updatedAt: serverTimestamp() }));
+  await assertFails(setEmergency(ref, { ...emergencyAlert(), fullName: "Outra pessoa" }));
+  await assertFails(setEmergency(ref, { ...emergencyAlert(), contactPhone: "+5547999990000" }));
+  await assertFails(setEmergency(ref, emergencyAlert("member1", { lat: 91, lng: -49, accuracy: 10 })));
+  await assertSucceeds(setEmergency(ref, emergencyAlert()));
+  await assertFails(setEmergency(ref, emergencyAlert()));
+  await assertFails(updateEmergency(ref, { status: "resolved", updatedAt: serverTimestamp() }));
 });
 test("alerta não é público e somente equipe de atendimento acompanha e encerra", async () => {
   await seedEmergencyContact(); await emergencyStaff();
-  await setDoc(doc(user("member1"), "emergencyAlerts", "member1"), emergencyAlert("member1", { lat: -26.9, lng: -49.1, accuracy: 12 }));
+  await setEmergency(doc(user("member1"), "emergencyAlerts", "member1"), emergencyAlert("member1", { lat: -26.9, lng: -49.1, accuracy: 12 }));
   await assertFails(getDoc(doc(user("member2"), "emergencyAlerts", "member1")));
   await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), "emergencyAlerts", "member1")));
   await assertFails(getDocs(collection(user("comms"), "emergencyAlerts")));
   await assertSucceeds(getDocs(query(collection(user("staff"), "emergencyAlerts"), where("status", "in", ["open", "contacting"]), limit(100))));
   const ref = doc(user("staff"), "emergencyAlerts", "member1");
-  await assertFails(updateDoc(ref, { status: "contacting", handledBy: "outro", updatedAt: serverTimestamp() }));
-  await assertFails(updateDoc(ref, { status: "contacting", handledBy: "staff", phone: "+5547999990000", updatedAt: serverTimestamp() }));
-  await assertSucceeds(updateDoc(ref, { status: "contacting", handledBy: "staff", updatedAt: serverTimestamp() }));
-  await assertSucceeds(updateDoc(ref, { status: "resolved", handledBy: "staff", updatedAt: serverTimestamp() }));
-  await assertFails(updateDoc(ref, { status: "open", updatedAt: serverTimestamp() }));
+  await assertFails(updateEmergency(ref, { status: "contacting", handledBy: "outro", updatedAt: serverTimestamp() }));
+  await assertFails(updateEmergency(ref, { status: "contacting", handledBy: "staff", phone: "+5547999990000", updatedAt: serverTimestamp() }));
+  await assertSucceeds(updateEmergency(ref, { status: "contacting", handledBy: "staff", updatedAt: serverTimestamp() }));
+  await assertSucceeds(updateEmergency(ref, { status: "resolved", handledBy: "staff", updatedAt: serverTimestamp() }));
+  await assertFails(updateEmergency(ref, { status: "open", updatedAt: serverTimestamp() }));
 });
 test("associado pode cancelar alerta e novo incidente respeita intervalo mínimo", async () => {
   await seedEmergencyContact();
   const ref = doc(user("member1"), "emergencyAlerts", "member1");
-  await setDoc(ref, emergencyAlert());
-  await assertSucceeds(updateDoc(ref, { status: "cancelled", updatedAt: serverTimestamp() }));
-  await assertFails(setDoc(ref, { ...emergencyAlert(), incidentId: "abcdefab-1234-1234-1234-123456789abc" }));
+  await setEmergency(ref, emergencyAlert());
+  await assertSucceeds(updateEmergency(ref, { status: "cancelled", updatedAt: serverTimestamp() }));
+  await assertFails(setEmergency(ref, { ...emergencyAlert(), incidentId: "abcdefab-1234-1234-1234-123456789abc" }));
   await env.withSecurityRulesDisabled(async c => updateDoc(doc(c.firestore(), "emergencyAlerts", "member1"), { createdAt: Timestamp.fromMillis(Date.now() - 65000) }));
-  await assertSucceeds(setDoc(ref, { ...emergencyAlert(), incidentId: "abcdefab-1234-1234-1234-123456789abc" }));
+  await assertSucceeds(setEmergency(ref, { ...emergencyAlert(), incidentId: "abcdefab-1234-1234-1234-123456789abc" }));
 });
 test("nível 1 encerra apoio sem ler coordenadas privadas; nível 2 não usa esse privilégio", async () => {
   await emergencyStaff(); await create();
@@ -932,4 +945,26 @@ test("remoção de associado não permite apagar outro administrador ou o própr
   });
   await assertFails(deleteDoc(doc(user("chief"), "associados", "chief")));
   await assertFails(deleteDoc(doc(user("chief"), "associados", "deputy")));
+});
+
+test("todos os admins ativos recebem sinal sem acesso adicional aos dados do acidente", async () => {
+  await seedEmergencyContact(); await emergencyStaff();
+  await env.withSecurityRulesDisabled(async c => {
+    await setDoc(doc(c.firestore(), "adminRoles", "recruiter"), { level: 5, active: true });
+    await setDoc(doc(c.firestore(), "adminRoles", "disabled"), { level: 1, active: false });
+  });
+  const ref = doc(user("member1"), "emergencyAlerts", "member1");
+  await assertFails(setDoc(ref, emergencyAlert())); // o aviso é obrigatório e atômico
+  await assertSucceeds(setEmergency(ref, emergencyAlert()));
+  for (const uid of ["chief", "deputy", "staff", "comms", "recruiter"]) {
+    const signals = await assertSucceeds(getDocs(query(collection(user(uid), "emergencyAdminSignals"), where("status", "in", ["open", "contacting"]), limit(100))));
+    if (Object.keys(signals.docs[0].data()).sort().join(',') !== 'createdAt,incidentId,status,updatedAt') throw new Error("Dados privados vazaram para o aviso.");
+  }
+  for (const uid of ["comms", "recruiter"]) await assertFails(getDoc(doc(user(uid), "emergencyAlerts", "member1")));
+  for (const uid of ["member2", "disabled"]) await assertFails(getDocs(collection(user(uid), "emergencyAdminSignals")));
+  await assertFails(getDocs(collection(env.unauthenticatedContext().firestore(), "emergencyAdminSignals")));
+  await assertFails(setDoc(doc(user("member2"), "emergencyAdminSignals", "member1"), { ...emergencyAlert() }));
+  await assertFails(updateDoc(doc(user("member1"), "emergencyAdminSignals", "member1"), { status: "resolved" }));
+  await assertFails(updateDoc(doc(user("member1"), "emergencyAlerts", "member1"), { status: "cancelled", updatedAt: serverTimestamp() }));
+  await assertSucceeds(updateEmergency(ref, { status: "cancelled", updatedAt: serverTimestamp() }));
 });

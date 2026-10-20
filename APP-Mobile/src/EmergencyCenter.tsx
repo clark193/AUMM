@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { doc, onSnapshot, runTransaction, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { doc, onSnapshot, runTransaction, serverTimestamp, setDoc } from "firebase/firestore";
 import { Siren, Phone, MapPin } from "lucide-react";
 import { friendly, services } from "./firebase";
 import { locate, composeEmergencySms } from "./platform";
@@ -62,6 +62,7 @@ export default function EmergencyCenter({ uid }: { uid: string }) {
           contactName: contact.data().name, contactPhone: contact.data().contactPhone, incidentId: crypto.randomUUID(),
           location, status: "open", createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
         tx.set(ref, data);
+        tx.set(doc(db, "emergencyAdminSignals", uid), { incidentId: data.incidentId, status: data.status, createdAt: data.createdAt, updatedAt: data.updatedAt });
         return data;
       });
       setConfirm(false);
@@ -74,7 +75,16 @@ export default function EmergencyCenter({ uid }: { uid: string }) {
     setBusy(true); setError("");
     try {
       if (isPreview) setAlert(null);
-      else await updateDoc(doc(services().db, "emergencyAlerts", uid), { status: "cancelled", updatedAt: serverTimestamp() });
+      else {
+        const { db } = services();
+        await runTransaction(db, async tx => {
+          const ref = doc(db, "emergencyAlerts", uid), current = await tx.get(ref);
+          if (!current.exists()) throw new Error("Alerta não encontrado.");
+          const updatedAt = serverTimestamp();
+          tx.update(ref, { status: "cancelled", updatedAt });
+          tx.set(doc(db, "emergencyAdminSignals", uid), { incidentId: current.data().incidentId, status: "cancelled", createdAt: current.data().createdAt, updatedAt });
+        });
+      }
     } catch (e) { setError(friendly(e)); }
     finally { setBusy(false); }
   }

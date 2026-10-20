@@ -1177,3 +1177,8 @@ td { padding:13px 10px; border-bottom:1px solid #eee; white-space:nowrap; }
 .emergency-admin { margin-bottom:24px; }
 .emergency-admin-card { margin-top:16px; padding:20px; border:1px solid #f6bac3; border-radius:14px; background:#fffafa; overflow-wrap:anywhere; }
 .emergency-admin-card p { margin:12px 0; }
+.notification-list .emergency-notice { background:#fff1f2; border-left:3px solid var(--red); }
+.notification-list .emergency-notice a { display:inline-block; margin-top:10px; font-size:12px; font-weight:700; color:var(--red-dark); }
+.admin-emergency-toast { position:fixed; z-index:4500; right:22px; bottom:22px; display:flex; align-items:flex-start; gap:12px; width:min(390px,calc(100vw - 28px)); padding:19px; border:1px solid #efa9b5; border-radius:18px; background:#fff7f8; color:#8e1026; box-shadow:0 16px 55px #68122530; }
+.admin-emergency-toast>svg { flex-shrink:0; }.admin-emergency-toast>div { flex:1; min-width:0; }.admin-emergency-toast strong { font-size:14px; }.admin-emergency-toast p { margin:8px 0; font-size:13px; line-height:1.6; }.admin-emergency-toast a,.admin-emergency-toast div button { display:inline-block; margin-top:7px; padding:9px 13px; border:0; border-radius:9px; background:#b5102d; color:#fff; font-size:12px; font-weight:700; text-decoration:none; }.admin-emergency-toast>button { display:grid; padding:3px; border:0; background:transparent; color:inherit; cursor:pointer; }
+@media(max-width:700px){.admin-emergency-toast{right:14px;bottom:max(14px,env(safe-area-inset-bottom));}}

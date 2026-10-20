@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => {
   },
   css: { postcss: { plugins: [tailwindcss()] } },
   base: "./",
-  server: { fs: { allow: [root] }, watch: { ignored: ["**/android/**", "**/artifacts/**", "**/.emulator/**", "**/.next/**", "**/out/**"] } },
+  server: { fs: { allow: [root] }, watch: { ignored: ["**/android/**", "**/artifacts/**", "**/dist/**", "**/.emulator/**", "**/.next/**", "**/out/**"] } },
   optimizeDeps: { include: ["maplibre-gl", "@capacitor/push-notifications"] },
   build: {
     rollupOptions: {

@@ -957,6 +957,11 @@ service cloud.firestore {
       allow delete: if own(uid);
     }
     match /emergencyAlerts/{uid} {
+      function matchingSignal() {
+        let signal = getAfter(/databases/$(database)/documents/emergencyAdminSignals/$(uid)).data;
+        return signal.incidentId == request.resource.data.incidentId && signal.status == request.resource.data.status
+          && signal.createdAt == request.resource.data.createdAt && signal.updatedAt == request.resource.data.updatedAt;
+      }
       function validEmergency() {
         let data = request.resource.data;
         let member = get(/databases/$(database)/documents/associados/$(uid)).data;
@@ -975,8 +980,8 @@ service cloud.firestore {
       }
       allow get: if own(uid) || hasPermission('requests.read');
       allow list: if hasPermission('requests.read');
-      allow create: if validEmergency();
-      allow update: if (resource.data.status in ['resolved','cancelled']
+      allow create: if validEmergency() && matchingSignal();
+      allow update: if matchingSignal() && ((resource.data.status in ['resolved','cancelled']
           && resource.data.createdAt + duration.value(1,'m') <= request.time
           && validEmergency() && request.resource.data.incidentId != resource.data.incidentId)
         || (own(uid) && resource.data.status in ['open','contacting']
@@ -985,7 +990,20 @@ service cloud.firestore {
         || (hasPermission('requests.write') && resource.data.status in ['open','contacting']
           && ((resource.data.status == 'open' && request.resource.data.status == 'contacting') || request.resource.data.status == 'resolved')
           && request.resource.data.handledBy == request.auth.uid && request.resource.data.updatedAt == request.time
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','handledBy','updatedAt']));
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','handledBy','updatedAt'])));
+      allow delete: if false;
+    }
+    // Aviso para todos os admins ativos, sem nome, telefone ou coordenadas.
+    match /emergencyAdminSignals/{uid} {
+      function validSignal() {
+        let alert = getAfter(/databases/$(database)/documents/emergencyAlerts/$(uid)).data;
+        let data = request.resource.data;
+        return data.keys().hasOnly(['incidentId','status','createdAt','updatedAt'])
+          && data.incidentId == alert.incidentId && data.status == alert.status
+          && data.createdAt == alert.createdAt && data.updatedAt == alert.updatedAt;
+      }
+      allow read: if signedIn() && adminProfile().data.active == true;
+      allow create, update: if (own(uid) || hasPermission('requests.write')) && validSignal();
       allow delete: if false;
     }
     match /counters/{id} { allow read, write: if false; }

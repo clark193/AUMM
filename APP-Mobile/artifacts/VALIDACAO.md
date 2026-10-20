@@ -54,3 +54,10 @@ Estado da publicação em 19/10/2026:
 - Pendente de teste em aparelho físico: abrir o SMS, envio pela operadora e permissões de GPS do Android. APK de teste; AAB sem assinatura não publicado na Play Store.
 
 Publicação confirmada em 20/10/2026: site em https://aumm.com.br, fonte 5c040194e432ff5a8f23011fa23e213073e00483 e GitHub Pages b31aa4e5b213dc24492957013d4edb79eb2707eb com status built. /admin/solicitacoes/ responde HTTP 200; o JavaScript público de emergência tem SHA-256 idêntico à build local. APK final com assinatura Android Debug válida, portal e emergência incluídos; hashes do APK/AAB conferidos. Não foi solicitada permissão SEND_SMS.
+
+
+### Avisos de emergência para todos os administradores — 20/10/2026
+
+Sino com contador e destaque visual no painel conectado, com leitura individual por administrador. O mesmo incidente não repete o destaque ao navegar ou atualizar o status; um novo incidente avisa novamente. Todos os níveis ativos recebem apenas o sinal geral (incidentId, status e horários). Telefone, nome e GPS continuam restritos à equipe autorizada. Incidente e sinal são gravados/atualizados atomicamente, e as regras recusam sinal falso, dados privados no sinal e alteração sem sincronização.
+
+Verificação: 31 testes de regras aprovados, incluindo administradores de níveis 1 a 5, inativo e visitantes. Integração real com Auth/Firestore locais em 390px: administradores de níveis 3 e 5 conectados antes do acidente receberam sino e destaque; nível 5 não recebeu nome/telefone/link de atendimento; atualização de status não repetiu o aviso; novo incidente avisou e cancelamento limpou o destaque. Build móvel com TypeScript e APK/AAB gerados. Sem envio real de SMS ou push de sistema.
