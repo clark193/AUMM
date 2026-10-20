@@ -1,4 +1,5 @@
 "use client";
+import { EmergencyAdmin } from "./EmergencyAdmin";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -173,6 +174,7 @@ export function AdminShell({
               </div>
             </header>
             <div className="dash-content">
+              {[1, 2, 3].includes(level) && <EmergencyAdmin compact />}
               {allowedLevels.includes(level) || requiredPermissions.some((permission) => permissions[permission] === true) ? (
                 children
               ) : (

@@ -42,3 +42,13 @@ Estado da publicação em 19/10/2026:
 - Publicação confirmada pelo GitHub com status built e pelo arquivo público /versao.json apontando para o fonte aa71209e3ae67bdc9fe0b3bd340cba79ff4bed70. /acompanhar/ respondeu HTTP 200.
 - Integridade SHA-256 do APK e AAB confirmada. APK contém portal.html e o novo bundle do aplicativo.
 - Firebase: função administrativa e regras novas ainda não publicadas; aguardando login Google do usuário. O frontend publicado não substitui essa etapa. As afirmações anteriores de ausência de deploy referem-se à etapa anterior à publicação no GitHub; o Firebase permanece pendente.
+
+## Atualização gratuita e emergência — 20/10/2026
+
+- Recuperação de senha por e-mail e remoção do cadastro pelo nível 1 ativo, sem Cloud Functions. O Authentication permanece; os acessos de associado deixam de existir após remover o cadastro. Apoios, posições privadas, links ao vivo, foto e credenciais públicas vinculados são encerrados/removidos atomicamente. Perfis administrativos e a própria conta são protegidos.
+- Contato de emergência privado, alerta de acidente com confirmação e GPS opcional, SMS preenchido no celular e fila em Solicitações no painel do site e do aplicativo. Status em tempo real entre associado e atendente. O SMS exige confirmação de envio no app de mensagens; sem envio automático nem confirmação de entrega. O painel exige um administrador conectado; sem push com app fechado ou garantia de plantão.
+- Regras de produção publicadas com sucesso em aumm-21dda em 20/10/2026 (somente firestore:rules). Plano gratuito preservado. Cópia completa sincronizada em FIREBASE-REGRAS-COMPLETAS.txt.
+- Testes: 30 de regras móveis/privacidade, 15 de lógica, 9 de regras administrativas e 3 de filiação aprovados. Integrações em navegador de 390px com Auth/Firestore locais: cadastro no app, recuperação real por e-mail no emulador, remoção com limpeza e login preservado; emergência com e sem GPS, cancelamento e atendimento administrativo em tempo real. A navegação externa de SMS foi substituída somente no teste para não abrir um aplicativo real; destinatário e conteúdo foram conferidos.
+- Build estática do site aprovada com TypeScript. Paralelismo limitado a dois processos para evitar esgotamento de memória na exportação.
+- Capturas: 27-admin-app-recuperar-senha.png, 31-emergencia-contato.png, 32-emergencia-em-andamento.png e 33-emergencia-painel-aumm.png.
+- Pendente de teste em aparelho físico: abrir o SMS, envio pela operadora e permissões de GPS do Android. APK de teste; AAB sem assinatura não publicado na Play Store.

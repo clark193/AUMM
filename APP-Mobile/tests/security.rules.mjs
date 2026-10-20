@@ -860,3 +860,76 @@ test("exclusão direta de associado exige nível 1 ativo, mesmo com flag superAd
   await assertFails(updateDoc(doc(user("level2"), "adminRoles", "level2"), { level: 1 }));
   await assertSucceeds(deleteDoc(doc(user("level1"), "associados", "member1")));
 });
+
+async function seedEmergencyContact(uid = "member1") {
+  await env.withSecurityRulesDisabled(async c => setDoc(doc(c.firestore(), "emergencyContacts", uid), { uid, name: "Pessoa de confian?a", contactPhone: "+5547999991234", phone: "+5547999994321", updatedAt: Timestamp.now() }));
+}
+function emergencyAlert(uid = "member1", location = null) {
+  return { ownerUid: uid, fullName: "Associado AUMM", memberNumber: "", phone: "+5547999994321", contactName: "Pessoa de confian?a", contactPhone: "+5547999991234", incidentId: "12345678-1234-1234-1234-123456789abc", location, status: "open", createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+}
+async function emergencyStaff() {
+  await env.withSecurityRulesDisabled(async c => {
+    for (const [uid, level] of [["staff", 3], ["comms", 4], ["chief", 1], ["deputy", 2]]) await setDoc(doc(c.firestore(), "adminRoles", uid), { active: true, level });
+  });
+}
+test("contato de emergência privado, validado e exclusivo de associado ativo", async () => {
+  const data = { uid: "member1", name: "Contato", contactPhone: "+5547999991234", phone: "+5547999994321", updatedAt: serverTimestamp() };
+  await assertSucceeds(setDoc(doc(user("member1"), "emergencyContacts", "member1"), data));
+  await assertFails(getDoc(doc(user("member2"), "emergencyContacts", "member1")));
+  await assertFails(setDoc(doc(user("inactive"), "emergencyContacts", "inactive"), { ...data, uid: "inactive" }));
+  await assertFails(setDoc(doc(user("member1"), "emergencyContacts", "member1"), { ...data, contactPhone: "192" }));
+});
+test("alerta aceita GPS ou ausência explícita e recusa falsificação de identidade", async () => {
+  await seedEmergencyContact();
+  const ref = doc(user("member1"), "emergencyAlerts", "member1");
+  await assertFails(setDoc(ref, { ...emergencyAlert(), fullName: "Outra pessoa" }));
+  await assertFails(setDoc(ref, { ...emergencyAlert(), contactPhone: "+5547999990000" }));
+  await assertFails(setDoc(ref, emergencyAlert("member1", { lat: 91, lng: -49, accuracy: 10 })));
+  await assertSucceeds(setDoc(ref, emergencyAlert()));
+  await assertFails(setDoc(ref, emergencyAlert()));
+  await assertFails(updateDoc(ref, { status: "resolved", updatedAt: serverTimestamp() }));
+});
+test("alerta não é público e somente equipe de atendimento acompanha e encerra", async () => {
+  await seedEmergencyContact(); await emergencyStaff();
+  await setDoc(doc(user("member1"), "emergencyAlerts", "member1"), emergencyAlert("member1", { lat: -26.9, lng: -49.1, accuracy: 12 }));
+  await assertFails(getDoc(doc(user("member2"), "emergencyAlerts", "member1")));
+  await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), "emergencyAlerts", "member1")));
+  await assertFails(getDocs(collection(user("comms"), "emergencyAlerts")));
+  await assertSucceeds(getDocs(query(collection(user("staff"), "emergencyAlerts"), where("status", "in", ["open", "contacting"]), limit(100))));
+  const ref = doc(user("staff"), "emergencyAlerts", "member1");
+  await assertFails(updateDoc(ref, { status: "contacting", handledBy: "outro", updatedAt: serverTimestamp() }));
+  await assertFails(updateDoc(ref, { status: "contacting", handledBy: "staff", phone: "+5547999990000", updatedAt: serverTimestamp() }));
+  await assertSucceeds(updateDoc(ref, { status: "contacting", handledBy: "staff", updatedAt: serverTimestamp() }));
+  await assertSucceeds(updateDoc(ref, { status: "resolved", handledBy: "staff", updatedAt: serverTimestamp() }));
+  await assertFails(updateDoc(ref, { status: "open", updatedAt: serverTimestamp() }));
+});
+test("associado pode cancelar alerta e novo incidente respeita intervalo mínimo", async () => {
+  await seedEmergencyContact();
+  const ref = doc(user("member1"), "emergencyAlerts", "member1");
+  await setDoc(ref, emergencyAlert());
+  await assertSucceeds(updateDoc(ref, { status: "cancelled", updatedAt: serverTimestamp() }));
+  await assertFails(setDoc(ref, { ...emergencyAlert(), incidentId: "abcdefab-1234-1234-1234-123456789abc" }));
+  await env.withSecurityRulesDisabled(async c => updateDoc(doc(c.firestore(), "emergencyAlerts", "member1"), { createdAt: Timestamp.fromMillis(Date.now() - 65000) }));
+  await assertSucceeds(setDoc(ref, { ...emergencyAlert(), incidentId: "abcdefab-1234-1234-1234-123456789abc" }));
+});
+test("nível 1 encerra apoio sem ler coordenadas privadas; nível 2 não usa esse privilégio", async () => {
+  await emergencyStaff(); await create();
+  const chief = user("chief"), deputy = user("deputy");
+  await assertSucceeds(getDoc(doc(chief, "supportRequests", "guest")));
+  await assertFails(getDoc(doc(chief, "supportRequests", "guest", "private", "location")));
+  await assertFails(updateDoc(doc(deputy, "supportRequests", "guest"), { status: "cancelled", updatedAt: serverTimestamp() }));
+  await assertFails(updateDoc(doc(chief, "supportRequests", "guest"), { status: "cancelled", updatedAt: serverTimestamp() }));
+  const batch = writeBatch(chief);
+  batch.update(doc(chief, "supportRequests", "guest"), { status: "cancelled", updatedAt: serverTimestamp() });
+  for (const id of ["location", "helperProfile", "helperPosition", "requesterPosition"]) batch.delete(doc(chief, "supportRequests", "guest", "private", id));
+  await assertSucceeds(batch.commit());
+});
+test("remoção de associado não permite apagar outro administrador ou o próprio cadastro", async () => {
+  await emergencyStaff();
+  await env.withSecurityRulesDisabled(async c => {
+    await setDoc(doc(c.firestore(), "associados", "chief"), { uid: "chief", status: "active" });
+    await setDoc(doc(c.firestore(), "associados", "deputy"), { uid: "deputy", status: "active" });
+  });
+  await assertFails(deleteDoc(doc(user("chief"), "associados", "chief")));
+  await assertFails(deleteDoc(doc(user("chief"), "associados", "deputy")));
+});

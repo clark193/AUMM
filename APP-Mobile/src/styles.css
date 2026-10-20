@@ -3841,3 +3841,18 @@ body {
 .live-share-status{display:grid;gap:6px;background:#fff0f1;color:#a90d14;border:1px solid #f5d3d5;border-radius:12px;padding:16px}.live-share .muted>svg{vertical-align:middle}.live-share input[readonly]{width:100%;font-size:12px}.live-share .consent{display:flex;align-items:flex-start;gap:10px}.live-share .consent input{width:18px;height:18px;flex-shrink:0}
 
 .list-row{width:100%;display:flex;gap:14px;align-items:center;text-align:left;background:#fff;border:1px solid var(--line);padding:17px;border-radius:14px;margin-bottom:10px;color:var(--red)}.list-row>span{flex:1;font-weight:650;color:#292326;font-size:13px}.list-row small{display:block;font-size:10px;font-weight:400;color:var(--muted);margin-top:4px}
+.emergency-home { display:flex; align-items:center; gap:12px; width:100%; padding:17px; margin:14px 0; color:#a10e22; background:#fff1f2; border:1px solid #f6bac3; border-radius:18px; text-align:left; }
+.emergency-home span:nth-child(2) { flex:1; }
+.emergency-home strong,.emergency-home small { display:block; }
+.emergency-home small { margin-top:5px; font-size:11px; line-height:1.5; }
+.emergency-center { padding-bottom:20px; }
+.emergency-intro { padding:20px; border-radius:20px; background:#fff1f2; color:#9f1239; text-align:center; }
+.emergency-center p { font-size:13px; line-height:1.65; }
+.emergency-contact-form { display:grid; gap:13px; margin:20px 0; }
+.emergency-contact-form label { display:grid; gap:7px; font-size:13px; font-weight:600; }
+.emergency-contact-form input { width:100%; min-height:46px; padding:12px; border:1px solid #ddd; border-radius:12px; background:#fff; color:#222; font:inherit; }
+.emergency-trigger { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; min-height:58px; border:0; border-radius:16px; background:#c1122f; color:white; padding:14px; font-size:14px; font-weight:700; }
+.emergency-trigger:disabled { opacity:.5; }
+.emergency-confirm,.emergency-progress { display:grid; gap:14px; margin-top:20px; padding:16px; border:1px solid #f6bac3; border-radius:18px; }
+.emergency-confirm label { display:flex; align-items:center; gap:9px; font-size:13px; }
+.emergency-progress a { text-decoration:none; }

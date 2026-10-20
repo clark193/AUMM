@@ -145,7 +145,7 @@ Referências técnicas: [seletor de intents Android](https://developer.android.c
 - O app usa vermelho e branco e inclui `portal.html`, empacotado no próprio APK. O portal reutiliza os módulos de administração do site, com a mesma conta e as mesmas regras. Não depende de abrir o site para gerenciar a associação.
 - Em Meu perfil → Acesso administrativo, entre com a conta administrativa. O menu exibe os módulos do nível autorizado.
 - Cadastro/filiação, estatuto e consulta do pedido funcionam dentro do app. A aprovação continua seguindo o processo administrativo da associação. O formulário é preservado ao consultar o estatuto.
-- Na lista de associados, Abrir cadastro → Administração da conta disponibiliza troca de senha temporária e exclusão somente ao nível 1 ativo. A função `manageMemberAccount` consulta `adminRoles` a cada chamada, protege contas administrativas e registra auditoria sem senhas. A exclusão cancela apoios, revoga links ao vivo, remove login e perfil, mantendo registros institucionais.
+- Na lista de associados, Abrir cadastro → Administração do cadastro oferece recuperação de senha por e-mail e remoção do cadastro somente ao nível 1 ativo. A remoção encerra apoios e links de localização, remove foto e credenciais públicas e registra auditoria. A conta de login permanece no Firebase Authentication; sem o cadastro ativo ela perde o acesso aos recursos de associado. Contas com perfil administrativo são protegidas.
 - Em Utilidades ou Meu perfil → Compartilhar localização ao vivo, o usuário aceita o compartilhamento e envia um link de até 55 minutos. A posição pública não inclui nome, UID, placa, CPF ou histórico. Somente quem tem o link pode consultar uma posição; listagens são bloqueadas. O link é revogado ao encerrar/fechar a tela. O envio pausa ao bloquear a tela ou colocar o app em segundo plano; o destinatário vê o último sinal e sua idade. Isso não é rastreamento em segundo plano.
 - A página pública do site fica em `/acompanhar/#TOKEN`. O token fica no fragmento da URL. A posição exige amostra recente, e o mapa sinaliza falta de sinal após 45 segundos.
 
@@ -155,6 +155,15 @@ Instale também as dependências da raiz (`npm install`) antes das dependências
 
 O site de produção usa GitHub Pages (`clark193/AUMM`, branch `gh-pages`, domínio `aumm.com.br`). `npm run build:firebase` continua sendo o nome do comando de exportação estática; o resultado em `out/` pode ser servido pelo GitHub Pages. `npm run preview:network`, na raiz, expõe esse resultado na porta 3000 da rede local.
 
-A função administrativa e as regras são uma publicação separada no Firebase `aumm-21dda`. Após autenticar o CLI, compile `functions` e publique apenas `functions:manageMemberAccount,firestore:rules`. Não publique Hosting do Firebase para esta atualização. A publicação de funções depende das condições e permissões do projeto Firebase; não habilitamos faturamento automaticamente. O push Android continua exigindo a configuração descrita em NOTIFICACOES.md.
+Esta versão mantém o Firebase no plano gratuito e não chama Cloud Functions. Publique somente `firestore:rules` no projeto `aumm-21dda`; não publique Firebase Hosting, pois o site usa GitHub Pages. O código opcional de `functions/` não é necessário para a administração gratuita. O push Android continua exigindo a configuração descrita em NOTIFICACOES.md e não está ativo automaticamente.
 
 As regras completas atualizadas para copiar estão em `artifacts/FIREBASE-REGRAS-COMPLETAS.txt`.
+### Emergência após acidente
+
+Associados ativos com senha inicial já trocada podem salvar um contato de emergência e um telefone de retorno. O botão na tela inicial abre uma confirmação antes de registrar o alerta. A localização é opcional: se o GPS falhar, é possível registrar sem coordenadas. O app só confirma o registro após a gravação no servidor.
+
+Após o registro, o Android abre o aplicativo de SMS com destinatário e texto preenchidos. O usuário precisa tocar em Enviar. O app não confirma entrega, e a operadora pode cobrar pelo SMS. Não há envio automático por servidor, permissão SEND_SMS ou custo de serviço externo nesta implementação.
+
+No site e no painel dentro do app, administradores com permissão de atendimento veem a fila em Solicitações e um aviso nas demais telas. Podem ligar, marcar acompanhamento e encerrar. O associado acompanha as mudanças enquanto conectado e pode cancelar um acionamento por engano. A fila exige internet e não garante leitura imediata, plantão ou atendimento de socorro. Não há push de emergência para administradores com o app fechado.
+
+`emergencyContacts/{uid}` é privado do próprio associado. `emergencyAlerts/{uid}` guarda o último incidente e só pode ser lido pelo proprietário e pela equipe autorizada de atendimento. Não há histórico público nem envio de localização a outros associados. Um novo incidente substitui o anterior encerrado, com intervalo mínimo de um minuto entre acionamentos.

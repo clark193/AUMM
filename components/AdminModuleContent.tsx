@@ -1,4 +1,5 @@
 "use client";
+import { EmergencyAdmin } from "./EmergencyAdmin";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/AdminShell";
 import { ApplicationReviewAdmin } from "@/components/ApplicationReviewAdmin";
@@ -63,7 +64,7 @@ export function AdminModuleContent({ module }: { module: string }) {
   if (module === "documentos") return <AdminShell title={item.title} allowedLevels={allowedLevels} requiredPermissions={["canManageDocuments","canPublishDocuments","canArchiveDocuments"]}><div className="dash-welcome"><div><h2>Documentos</h2><p>Publique arquivos para todos, somente associados ou somente a equipe administrativa.</p></div></div><DocumentAdmin /></AdminShell>;
   if (module === "patrocinadores") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Apoio, patrocínio e parceiros</h2><p>Cadastre marcas clicáveis e escolha onde cada uma será exibida.</p></div></div><SponsorAdmin /></AdminShell>;
   if (module === "carteirinha") return <AdminShell title={item.title} allowedLevels={allowedLevels}><AdminCardContent /></AdminShell>;
-  if (module in operationalModules) return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>{item.title}</h2><p>{item.description}</p></div></div><OperationalAdmin module={module} /></AdminShell>;
+  if (module in operationalModules) return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>{item.title}</h2><p>{item.description}</p></div></div>{module === "solicitacoes" && <EmergencyAdmin />}<OperationalAdmin module={module} /></AdminShell>;
   if (module === "administradores") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Administradores</h2><p>Crie contas, defina níveis e revogue acessos administrativos.</p></div></div><AdminManagement /></AdminShell>;
   if (module === "logs") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Logs de auditoria</h2><p>Consulte as alterações realizadas no painel.</p></div></div><AuditLogAdmin /></AdminShell>;
   if (module === "configuracoes") return <AdminShell title={item.title} allowedLevels={allowedLevels}><AdminSettingsPage /></AdminShell>;

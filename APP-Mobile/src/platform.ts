@@ -6,6 +6,14 @@ import { routeUrl } from "./domain.mjs";
 const NavigationChooser = registerPlugin<{
   open(options: { latitude: number; longitude: number }): Promise<void>;
 }>("NavigationChooser");
+const EmergencyMessenger = registerPlugin<{
+  compose(options: { phone: string; message: string }): Promise<void>;
+}>("EmergencyMessenger");
+export async function composeEmergencySms(phone: string, message: string) {
+  if (!/^\+55[1-9]{2}[0-9]{8,9}$/.test(phone)) throw new Error("Contato inválido.");
+  if (Capacitor.getPlatform() === "android") await EmergencyMessenger.compose({ phone, message });
+  else window.location.href = `sms:${phone}?body=${encodeURIComponent(message)}`;
+}
 export async function openNavigation(lat: number, lng: number) {
   if (
     !Number.isFinite(lat) ||

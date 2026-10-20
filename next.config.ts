@@ -7,6 +7,8 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH?.trim() || "";
 
 const nextConfig: NextConfig = {
   agentRules: false,
+  // Limita a memória da exportação estática em computadores de desenvolvimento.
+  experimental: { cpus: 2 },
   output: "export",
   trailingSlash: true,
   images: { unoptimized: true },
