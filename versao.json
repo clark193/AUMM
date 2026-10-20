@@ -1,9 +1,10 @@
 {
-    "sourceCommit":  "aa71209e3ae67bdc9fe0b3bd340cba79ff4bed70",
+    "sourceCommit":  "5c040194e432ff5a8f23011fa23e213073e00483",
     "features":  [
-                     "admin-member-accounts",
-                     "mobile-registration",
-                     "live-location-links"
+                     "administracao-gratuita-nivel-1",
+                     "alertas-de-emergencia",
+                     "cadastro-no-app",
+                     "acompanhamento-ao-vivo"
                  ],
-    "builtAt":  "2026-10-20T00:40:18.2114551Z"
+    "builtAt":  "2026-10-20T03:48:38.0282567Z"
 }
