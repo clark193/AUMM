@@ -90,6 +90,8 @@ import { OngoingSupportCard } from "./SupportActivity";
 import SupportDetail from "./SupportDetail";
 import SupportDock from "./SupportDock";
 import LiveShare from "./LiveShare";
+import LiveShareIndicator from "./LiveShareIndicator";
+import { stopBackgroundShareBeforeAuthChange } from "./backgroundLocation";
 import EmergencyCenter, { EmergencyHome } from "./EmergencyCenter";
 import AdminEmergencyPreview from "./AdminEmergencyPreview";
 import { isActiveSupport } from "../shared/support";
@@ -288,6 +290,10 @@ function App() {
         return;
       }
       setModal(null);
+      if (notice.target === "admin") {
+        window.location.assign("./portal.html#/admin");
+        return;
+      }
       if (notice.target === "support") {
         if (notice.kind === "support_nearby") setTab("support");
         else openSupport(notice.itemId);
@@ -1107,6 +1113,7 @@ function App() {
             </>
           )}
         </main>
+        <LiveShareIndicator open={() => setModal("liveShare")} />
         <footer className="app-footer">
           <ShieldCheck size={14} /> Associação União Maior Motoboys
           <span>Juntos, vamos mais longe.</span>
@@ -1428,6 +1435,7 @@ function App() {
                           "Conclua ou cancele seu pedido na aba Apoio antes de sair.",
                         );
                     }
+                    await stopBackgroundShareBeforeAuthChange();
                     await detachPushDevice();
                     await signOut(services().auth);
                     [
@@ -1494,6 +1502,7 @@ function Login({
             "Conclua ou cancele seu pedido na aba Apoio antes de entrar como associado.",
           );
       }
+      await stopBackgroundShareBeforeAuthChange();
       await detachPushDevice();
       await signInWithEmailAndPassword(
         auth,

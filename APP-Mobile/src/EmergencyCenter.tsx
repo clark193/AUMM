@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { wakeExternalNotifications } from "../../lib/externalNotifications";
 import { doc, onSnapshot, runTransaction, serverTimestamp, setDoc } from "firebase/firestore";
 import { Siren, Phone, MapPin } from "lucide-react";
 import { friendly, services } from "./firebase";
@@ -66,6 +67,7 @@ export default function EmergencyCenter({ uid }: { uid: string }) {
         return data;
       });
       setConfirm(false);
+      wakeExternalNotifications(services());
       try { await composeEmergencySms(registered.contactPhone, emergencyMessage(registered.fullName, registered.location)); }
       catch { setError("O alerta foi registrado na AUMM, mas o SMS não abriu. Use o botão abaixo para tentar novamente ou ligue para seu contato."); }
     } catch (e) { if (alive.current) setError((e instanceof Error ? e.message : friendly(e)) + (useGps ? " Se necessário, desmarque o GPS e envie sem localização." : "")); }

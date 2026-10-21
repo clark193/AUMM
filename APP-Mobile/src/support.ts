@@ -7,6 +7,7 @@ import {
 } from "firebase/firestore";
 import { signInAnonymously } from "firebase/auth";
 import { services } from "./firebase";
+import { wakeExternalNotifications } from "../../lib/externalNotifications";
 import { validCoordinates } from "./domain.mjs";
 import {
   isActiveSupport,
@@ -70,6 +71,7 @@ function committed(
   before: Record<string, unknown>,
   after: Record<string, unknown>,
 ) {
+  wakeExternalNotifications(services());
   window.dispatchEvent(
     new CustomEvent("aumm:support-updated", { detail: { id, before, after } }),
   );

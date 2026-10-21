@@ -1,5 +1,6 @@
 "use client";
 
+import { wakeExternalNotifications } from "../lib/externalNotifications";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   collection,
@@ -135,6 +136,7 @@ export function NewsAdmin() {
         ...(!editingId ? { createdAt: serverTimestamp(), createdBy: auth.currentUser?.uid || "" } : {}),
       }, { merge: true });
       const action = form.status === "published" && previous?.status !== "published" ? "NEWS_PUBLISHED" : editingId ? "NEWS_UPDATED" : "NEWS_CREATED";
+      wakeExternalNotifications({ auth, db });
       await writeAdminAudit({ action, resource: "news", resourceId: reference.id, description: `${action === "NEWS_PUBLISHED" ? "Publicou" : editingId ? "Editou" : "Criou"} a notícia “${form.title.trim()}”.` }).catch(() => undefined);
       setMessage({ type: "success", text: form.status === "published" ? "Notícia publicada com sucesso." : "Rascunho salvo com sucesso." });
       reset();

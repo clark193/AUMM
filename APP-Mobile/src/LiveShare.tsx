@@ -3,11 +3,13 @@ import { Geolocation } from "@capacitor/geolocation";
 import { App as NativeApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { Share } from "@capacitor/share";
+import { PushNotifications } from "@capacitor/push-notifications";
 import { signInAnonymously } from "firebase/auth";
 import { doc, serverTimestamp, Timestamp, writeBatch, updateDoc } from "firebase/firestore";
 import { MapPin, Share2, ShieldCheck, Square } from "lucide-react";
 import { friendly, services } from "./firebase";
 import { isPreview } from "./preview";
+import { backgroundLocation, hasBackgroundLocation } from "./backgroundLocation";
 
 export default function LiveShare({ notify }: { notify: (text: string) => void }) {
   const [link, setLink] = useState("");
@@ -16,6 +18,7 @@ export default function LiveShare({ notify }: { notify: (text: string) => void }
   const [paused, setPaused] = useState(false);
   const [updated, setUpdated] = useState("");
   const [expires, setExpires] = useState(0);
+  const [closing, setClosing] = useState(false);
   const shareId = useRef("");
   const watch = useRef<string | null>(null);
   const heartbeat = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -31,6 +34,11 @@ export default function LiveShare({ notify }: { notify: (text: string) => void }
     if (current) await Geolocation.clearWatch({ id: current });
   }
   async function endShare() {
+    if (hasBackgroundLocation) {
+      await backgroundLocation.stop();
+      setClosing(true);
+      return;
+    }
     await stopWatch();
     const id = shareId.current;
     if (!id) return;
@@ -43,6 +51,7 @@ export default function LiveShare({ notify }: { notify: (text: string) => void }
     setLink(""); setPaused(false);
   }
   async function startWatch() {
+    if (hasBackgroundLocation) return;
     await stopWatch();
     const activeGeneration = generation.current;
     const id = shareId.current;
@@ -71,6 +80,23 @@ export default function LiveShare({ notify }: { notify: (text: string) => void }
     }
   }
   useEffect(() => {
+    if (hasBackgroundLocation) {
+      let mounted = true;
+      async function sync() {
+        try {
+          const state = await backgroundLocation.status();
+          if (!mounted) return;
+          shareId.current = state.shareId;
+          setExpires(state.expiresAt); setClosing(state.closing);
+          setPaused(Boolean(state.error));
+          if (state.updatedAt) setUpdated(new Date(state.updatedAt).toLocaleTimeString("pt-BR"));
+          setLink(state.active ? shareUrl(state.shareId) : "");
+        } catch { /* A tela não controla o ciclo de vida do serviço nativo. */ }
+      }
+      void sync();
+      const timer = setInterval(() => void sync(), 2000);
+      return () => { mounted = false; clearInterval(timer); };
+    }
     function pause() { if (document.hidden && shareId.current) { void stopWatch(); setPaused(true); } }
     document.addEventListener("visibilitychange", pause);
     const listener = Capacitor.isNativePlatform() ? NativeApp.addListener("appStateChange", ({ isActive }) => {
@@ -83,7 +109,7 @@ export default function LiveShare({ notify }: { notify: (text: string) => void }
     };
   }, []);
   useEffect(() => {
-    if (!expires || !link) return;
+    if (hasBackgroundLocation || !expires || !link) return;
     const timer = setTimeout(() => { void endShare().catch((caught) => notify(friendly(caught))); }, Math.max(0, expires - Date.now()));
     return () => clearTimeout(timer);
   }, [expires, link]);
@@ -97,6 +123,11 @@ export default function LiveShare({ notify }: { notify: (text: string) => void }
       if (Capacitor.isNativePlatform()) {
         const permission = await Geolocation.requestPermissions();
         if (permission.location === "denied" && permission.coarseLocation === "denied") throw new Error("Permita o acesso à localização nas configurações do celular.");
+        if (hasBackgroundLocation) {
+          let notifications = await PushNotifications.checkPermissions();
+          if (notifications.receive === "prompt" || notifications.receive === "prompt-with-rationale") notifications = await PushNotifications.requestPermissions();
+          if (notifications.receive !== "granted") throw new Error("Permita as notificações do Android para manter o aviso e o botão de encerrar o GPS visíveis.");
+        }
       }
       const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 });
       const id = crypto.randomUUID().replaceAll("-", "");
@@ -106,9 +137,18 @@ export default function LiveShare({ notify }: { notify: (text: string) => void }
       batch.set(doc(db, "liveLocations", id), { lat: position.coords.latitude, lng: position.coords.longitude, accuracy: Math.max(0, position.coords.accuracy), updatedAt: serverTimestamp(), sampledAt: Timestamp.fromMillis(position.timestamp), expiresAt });
       await batch.commit();
       shareId.current = id;
-      const url = new URL("/acompanhar/", import.meta.env.VITE_SITE_URL || "https://aumm.com.br");
-      url.hash = id;
-      setLink(url.href); setExpires(expiresAt.toMillis()); setUpdated(new Date().toLocaleTimeString("pt-BR"));
+      if (hasBackgroundLocation) {
+        try {
+          // O token renovado dura mais que os 55 minutos da sessão; nunca é salvo em disco.
+          await backgroundLocation.start({ projectId: db.app.options.projectId!, shareId: id, idToken: await auth.currentUser!.getIdToken(true), expiresAt: expiresAt.toMillis() });
+        } catch (caught) {
+          const cleanup = writeBatch(db);
+          cleanup.delete(doc(db, "liveLocations", id)); cleanup.delete(doc(db, "locationShareOwners", id));
+          await cleanup.commit(); shareId.current = "";
+          throw caught;
+        }
+      }
+      setLink(shareUrl(id)); setExpires(expiresAt.toMillis()); setUpdated(new Date().toLocaleTimeString("pt-BR"));
       await startWatch();
     } catch (caught) { notify(friendly(caught)); }
     finally { setBusy(false); }
@@ -120,5 +160,11 @@ export default function LiveShare({ notify }: { notify: (text: string) => void }
       else { await navigator.clipboard.writeText(link); notify("Link copiado. Envie para uma pessoa de confiança."); }
     } catch (caught) { if ((caught as { name?: string }).name !== "AbortError") notify(friendly(caught)); }
   }
-  return <div className="form live-share"><div className="login-mark"><MapPin /><p>Uma pessoa de confiança pode acompanhar você pelo navegador, sem instalar o app.</p></div><p className="muted"><ShieldCheck size={16} /> Qualquer pessoa com o link consegue ver sua posição. O link dura até 55 minutos e pode ser encerrado a qualquer momento. Sua placa, seus dados e seu histórico não são compartilhados.</p><p className="form-note">Mantenha esta tela aberta e o aplicativo ativo. Ao bloquear a tela ou abrir outro aplicativo, o envio pausa. Ao fechar esta tela, o link é encerrado.</p>{link ? <><div className="live-share-status" role="status"><strong>{paused ? "Compartilhamento pausado" : "Localização compartilhada"}</strong><small>Último envio: {updated} · válido até {new Date(expires).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</small></div><input aria-label="Link de acompanhamento" readOnly value={link} onFocus={(e) => e.currentTarget.select()} /><button className="btn" onClick={() => void share()}><Share2 size={18} /> Compartilhar link</button>{paused && <button className="btn secondary" onClick={() => void startWatch().catch((caught) => notify(friendly(caught)))}>Retomar envio da localização</button>}<button className="btn secondary" onClick={() => void endShare().catch((caught) => notify(friendly(caught)))}><Square size={16} /> Encerrar compartilhamento</button></> : <><label className="consent"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} /> Autorizo compartilhar minha localização por um link temporário.</label><button className="btn" disabled={!consent || busy} onClick={() => void start()}>{busy ? "Preparando o GPS…" : "Iniciar compartilhamento ao vivo"}</button></>}</div>;
+  return <div className="form live-share"><div className="login-mark"><MapPin /><p>Uma pessoa de confiança pode acompanhar você pelo navegador, sem instalar o app nem fazer login.</p></div><p className="muted"><ShieldCheck size={16} /> Qualquer pessoa com o link consegue ver sua posição. O link dura até 55 minutos e pode ser encerrado a qualquer momento. Sua placa, seus dados e seu histórico não são compartilhados.</p><p className="form-note">{hasBackgroundLocation ? "Ao iniciar, o GPS continua com a tela bloqueada ou usando outro aplicativo. O Android mantém um aviso com o botão Encerrar. Fechar esta janela mantém o compartilhamento; use Encerrar para parar. Forçar a parada do app ou desligar o aparelho interrompe o envio." : "No navegador, mantenha esta tela aberta e o aplicativo ativo. Ao bloquear a tela ou abrir outro aplicativo, o envio pausa. Ao fechar esta tela, o link é encerrado."}</p>{link ? <><div className="live-share-status" role="status"><strong>{closing ? "GPS desligado · encerrando o link…" : paused ? "Aguardando GPS ou conexão" : "Localização compartilhada"}</strong><small>Último envio: {updated || "aguardando GPS"} · válido até {new Date(expires).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</small>{closing && <small>É preciso conexão para revogar o link. Ele também expira automaticamente.</small>}</div><input aria-label="Link de acompanhamento" readOnly value={link} onFocus={(e) => e.currentTarget.select()} /><button className="btn" disabled={closing} onClick={() => void share()}><Share2 size={18} /> Compartilhar link</button>{paused && !hasBackgroundLocation && <button className="btn secondary" onClick={() => void startWatch().catch((caught) => notify(friendly(caught)))}>Retomar envio da localização</button>}<button className="btn secondary" disabled={closing} onClick={() => void endShare().catch((caught) => notify(friendly(caught)))}><Square size={16} /> Encerrar compartilhamento</button></> : <><label className="consent"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} /> Autorizo compartilhar minha localização por um link temporário{hasBackgroundLocation ? ", inclusive com a tela bloqueada" : ""}.</label><button className="btn" disabled={!consent || busy} onClick={() => void start()}>{busy ? "Preparando o GPS…" : "Iniciar compartilhamento ao vivo"}</button></>}</div>;
+}
+
+function shareUrl(id: string) {
+  const url = new URL("/acompanhar/", import.meta.env.VITE_SITE_URL || "https://aumm.com.br");
+  url.hash = id;
+  return url.href;
 }

@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase-admin/app";
+import { cert, getApps, initializeApp } from "firebase-admin/app";
 import {
   FieldValue,
   Timestamp,
@@ -22,7 +22,9 @@ import {
   type NoticeEvent,
   type NoticePreferences,
 } from "../../shared/notifications.js";
-initializeApp();
+if (!getApps().length) initializeApp(process.env.FIREBASE_SERVICE_ACCOUNT
+  ? { credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)), projectId: process.env.GOOGLE_CLOUD_PROJECT }
+  : undefined);
 const db = getFirestore();
 const region = "southamerica-east1";
 const options = { region, retry: true, maxInstances: 5 } as const;
@@ -69,6 +71,9 @@ async function store(uid: string, event: NoticeEvent) {
       storedAt: FieldValue.serverTimestamp(),
     });
   });
+  if (process.env.AUMM_EXTERNAL_PUSH === "true") await mobileDeliverPush.run({
+    data: await ref.get(), params: { uid, id: event.id },
+  } as Parameters<typeof mobileDeliverPush.run>[0]);
 }
 async function eachProfile(
   query: Query,
@@ -184,6 +189,11 @@ export const mobileSupportChanged = onDocumentWritten(
   },
 );
 async function currentEvent(event: NoticeEvent, uid: string) {
+  if (event.kind === "emergency") {
+    const [admin, signal] = await Promise.all([db.doc(`adminRoles/${uid}`).get(), db.doc(`emergencyAdminSignals/${event.itemId}`).get()]);
+    return admin.data()?.active === true && signal.data()?.incidentId === event.id.slice("emergency_".length)
+      && ["open", "contacting"].includes(signal.data()?.status);
+  }
   if (
     !shouldReceive(event, uid, await activeMember(uid), await preferences(uid))
   )
@@ -261,7 +271,7 @@ export const mobileDeliverPush = onDocumentCreated(
       await snapshot.ref.update({ pushStatus: "skipped" });
       return;
     }
-    const urgent = notice.target === "support";
+    const urgent = notice.target === "support" || notice.target === "admin";
     let failure = false;
     for (let offset = 0; offset < tokens.length; offset += 500) {
       const batch = tokens.slice(offset, offset + 500);
@@ -281,7 +291,7 @@ export const mobileDeliverPush = onDocumentCreated(
             channelId: noticeChannel(notice.kind),
             tag: notice.id,
             icon: "ic_notification",
-            color: "#164C3A",
+            color: "#B91C1C",
             visibility: "private",
             ...(urgent ? { sound: "default" } : {}),
           },
@@ -318,6 +328,20 @@ export const mobileDeliverPush = onDocumentCreated(
       pushStatus: "sent",
       pushSentAt: FieldValue.serverTimestamp(),
     });
+  },
+);
+
+export const mobileAdminEmergency = onDocumentWritten(
+  { ...options, document: "emergencyAdminSignals/{id}" },
+  async (event) => {
+    const data = event.data?.after.data();
+    if (!data || !["open", "contacting"].includes(data.status) || typeof data.incidentId !== "string") return;
+    const createdAt = millis(data.createdAt);
+    if (createdAt + 24 * 3600000 <= Date.now()) return;
+    const notice: NoticeEvent = { id: `emergency_${data.incidentId}`, kind: "emergency", title: "Alerta de emergência na AUMM",
+      body: "Um associado solicitou apoio. Abra o painel para verificar o atendimento.", target: "admin", itemId: event.params.id,
+      createdAt, expiresAt: createdAt + 24 * 3600000 };
+    await eachProfile(db.collection("adminRoles").where("active", "==", true), async uid => { await store(uid, notice); });
   },
 );
 

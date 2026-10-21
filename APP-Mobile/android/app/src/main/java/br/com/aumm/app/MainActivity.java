@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(NavigationChooserPlugin.class);
         registerPlugin(EmergencyMessengerPlugin.class);
+        registerPlugin(BackgroundLocationPlugin.class);
         super.onCreate(savedInstanceState);
         if (getBridge() != null && getBridge().getWebView() != null) {
             getBridge().getWebView().setVerticalScrollBarEnabled(false);

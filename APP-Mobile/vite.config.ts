@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
+import { existsSync } from "node:fs";
 import tailwindcss from "@tailwindcss/postcss";
 const here = fileURLToPath(new URL(".", import.meta.url));
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -19,6 +20,7 @@ export default defineConfig(({ mode }) => {
     ],
   },
   define: {
+    "import.meta.env.VITE_PUSH_CONFIGURED": JSON.stringify(env.VITE_PUSH_CONFIGURED === "true" || (env.VITE_PUSH_CONFIGURED !== "false" && existsSync(here + "android/app/google-services.json")) ? "true" : "false"),
     ...Object.fromEntries(firebaseFields.map((key) => [`process.env.NEXT_PUBLIC_FIREBASE_${key}`, JSON.stringify(env[`VITE_FIREBASE_${key}`] || "")])),
     "process.env.NEXT_PUBLIC_BASE_PATH": JSON.stringify(""),
     "process.env.NEXT_PUBLIC_FIREBASE_APPCHECK_SITE_KEY": JSON.stringify(""),

@@ -45,6 +45,40 @@ async function inbox(name) {
     await database.collection(`mobileInbox/${uid(name)}/items`).get()
   ).docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 }
+
+test("emergência notifica somente administradores ativos, com texto genérico e sem repetir o incidente", async () => {
+  const { getMessaging } = require("firebase-admin/messaging");
+  const messaging = getMessaging();
+  const original = messaging.sendEachForMulticast;
+  const sent = [];
+  messaging.sendEachForMulticast = async payload => { sent.push(payload); return { responses: payload.tokens.map(() => ({ success: true })) }; };
+  try {
+    for (const [name, active] of [["admin1", true], ["admin5", true], ["admin-off", false]]) {
+      await database.doc(`adminRoles/${uid(name)}`).set({ active, level: name === "admin1" ? 1 : 5 });
+      await database.doc(`mobilePushDevices/${uid(name)}/devices/test`).set({ token: `token-${name}`, enabled: true });
+    }
+    const signal = database.doc(`emergencyAdminSignals/${uid("emergency-owner")}`);
+    const createdAt = Timestamp.now();
+    await trigger(backend.mobileAdminEmergency, signal, { status: "open", incidentId: `${prefix}-incident`, createdAt, updatedAt: createdAt });
+    for (const name of ["admin1", "admin5"]) {
+      const notice = (await inbox(name)).find(item => item.kind === "emergency");
+      assert.ok(notice);
+      const event = { params: { uid: uid(name), id: notice.id }, data: await database.doc(`mobileInbox/${uid(name)}/items/${notice.id}`).get() };
+      await backend.mobileDeliverPush.run(event);
+      await backend.mobileDeliverPush.run(event);
+    }
+    assert.equal((await inbox("admin-off")).length, 0);
+    assert.equal(sent.length, 2);
+    for (const payload of sent) {
+      assert.equal(payload.android.notification.channelId, "aumm-emergencies");
+      assert.equal(payload.android.notification.visibility, "private");
+      assert.equal(payload.data.target, "admin");
+      assert.doesNotMatch(JSON.stringify(payload.notification), /emergency-owner|cpf|latitude|telefone/i);
+    }
+    await trigger(backend.mobileAdminEmergency, signal, { status: "contacting", incidentId: `${prefix}-incident`, createdAt, updatedAt: Timestamp.now() });
+    assert.equal((await inbox("admin1")).filter(item => item.kind === "emergency").length, 1);
+  } finally { messaging.sendEachForMulticast = original; }
+});
 test("handlers reais selecionam destinatários, evitam duplicação e não disparam em edição", async () => {
   for (const name of ["owner", "member", "inactive", "other-city", "muted"]) {
     await database.doc(`mobileSubscriptions/${uid(name)}`).set({

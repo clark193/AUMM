@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getAuth, connectAuthEmulator, beforeAuthStateChanged } from "firebase/auth";
+import { stopBackgroundShareBeforeAuthChange } from "./backgroundLocation";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 const e = import.meta.env;
 export const configured = Boolean(
@@ -17,6 +18,9 @@ const app = configured
   : null;
 export const auth = app ? getAuth(app) : null;
 export const db = app ? getFirestore(app) : null;
+if (auth) beforeAuthStateChanged(auth, async (nextUser) => {
+  if (auth.currentUser && nextUser?.uid !== auth.currentUser.uid) await stopBackgroundShareBeforeAuthChange();
+});
 if (auth && db && e.DEV && e.VITE_USE_EMULATORS === "true") {
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
   connectFirestoreEmulator(db, "127.0.0.1", 8080);

@@ -67,6 +67,14 @@ export async function enableNativePush() {
 async function createChannels() {
   for (const channel of [
     {
+      id: "aumm-emergencies",
+      name: "Emergências da associação",
+      description: "Avisos para administradores, sem dados pessoais na notificação.",
+      importance: 4 as const,
+      vibration: true,
+      sound: "default",
+    },
+    {
       id: "aumm-help",
       name: "Pedidos de apoio na cidade",
       description: "Um motoboy precisa de ajuda na cidade escolhida.",
@@ -101,13 +109,14 @@ async function createChannels() {
 }
 function parseNotice(data: Record<string, unknown>): NoticeEvent | null {
   if (
-    !["news", "support", "communications"].includes(String(data.target)) ||
+    !["news", "support", "communications", "admin"].includes(String(data.target)) ||
     typeof data.noticeId !== "string" ||
     typeof data.itemId !== "string"
   )
     return null;
   if (
     ![
+      "emergency",
       "news",
       "communication",
       "support_sent",

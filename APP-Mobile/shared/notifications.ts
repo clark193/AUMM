@@ -1,4 +1,5 @@
 export type NoticeKind =
+  | "emergency"
   | "news"
   | "communication"
   | "support_sent"
@@ -12,7 +13,7 @@ export type NoticeEvent = {
   kind: NoticeKind;
   title: string;
   body: string;
-  target: "news" | "support" | "communications";
+  target: "news" | "support" | "communications" | "admin";
   itemId: string;
   createdAt: number;
   expiresAt: number;
@@ -182,6 +183,8 @@ export function shouldReceive(
   active: boolean,
   prefs: NoticePreferences,
 ): boolean {
+  // A autorização administrativa é conferida no servidor, separada do vínculo de associado.
+  if (event.kind === "emergency") return false;
   if (event.kind === "news") return prefs.news;
   if (event.kind === "communication") return active && prefs.communications;
   if (event.kind === "support_nearby")
@@ -197,6 +200,7 @@ export function shouldReceive(
   return uid === event.ownerUid || uid === event.helperUid;
 }
 export function noticeChannel(kind: NoticeKind) {
+  if (kind === "emergency") return "aumm-emergencies";
   return kind === "news"
     ? "aumm-news"
     : kind === "communication"

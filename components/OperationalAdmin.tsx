@@ -1,5 +1,6 @@
 "use client";
 
+import { wakeExternalNotifications } from "../lib/externalNotifications";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import {
@@ -127,6 +128,7 @@ export function OperationalAdmin({ module }: { module: string }) {
         setMessage({ type: "success", text: `${config.singular} cadastrado com sucesso.` });
       }
       setEditingId(null);
+      if (config.collection === "communications") wakeExternalNotifications(getFirebaseServices());
       setForm(blankForm(config.fields));
     } catch (reason) {
       setMessage({ type: "error", text: firebaseErrorMessage(reason, "Não foi possível salvar.") });

@@ -12,6 +12,7 @@ import { PasswordRecoveryForm } from "../../../components/PasswordRecoveryForm";
 import { doc, getDoc } from "firebase/firestore";
 import { services } from "../firebase";
 import { detachPushDevice } from "../push";
+import { stopBackgroundShareBeforeAuthChange } from "../backgroundLocation";
 import { isActiveSupport } from "../../shared/support";
 import { navigate, useRoute } from "./navigation";
 import "../../../app/globals.css";
@@ -23,6 +24,7 @@ async function beforeLogin() {
     const request = await getDoc(doc(db, "supportRequests", auth.currentUser.uid));
     if (request.exists() && isActiveSupport(request.data().status)) throw new Error("Conclua ou cancele seu pedido de apoio antes de trocar de conta.");
   }
+  await stopBackgroundShareBeforeAuthChange();
   await detachPushDevice();
 }
 class PortalError extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
