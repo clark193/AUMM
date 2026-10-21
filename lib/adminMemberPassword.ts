@@ -11,7 +11,8 @@ export async function setMemberPassword(memberId: string, password: string, admi
   if (typeof url !== "string" || !/^https:\/\/[a-z0-9-]+\.onrender\.com\/?$/.test(url)) throw new Error("O servidor administrativo ainda não foi configurado.");
   await reauthenticateWithCredential(actor, EmailAuthProvider.credential(actor.email, administratorPassword));
   const result = await fetch(`${url.replace(/\/$/, "")}/admin/member-password`, { method: "POST", headers: { Authorization: `Bearer ${await actor.getIdToken(true)}`, "Content-Type": "application/json" }, body: JSON.stringify({ memberId, password }), signal: AbortSignal.timeout(90000) });
-  const response = await result.json().catch(() => ({}));
-  if (!result.ok) throw new Error(response.message || "Não foi possível alterar a senha.");
-  return String(response.message);
+  const response: unknown = await result.json().catch(() => null);
+  const message = response && typeof response === "object" && "message" in response && typeof response.message === "string" ? response.message : "";
+  if (!result.ok) throw new Error(message || "Não foi possível alterar a senha.");
+  return message || "Senha alterada.";
 }
