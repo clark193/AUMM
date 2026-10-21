@@ -1,15 +1,16 @@
 {
-    "sourceCommit":  "e3ebd2bf34e2d8fe90c52640c69832b85e7b2da5",
+    "publishedAt":  "2026-10-21T23:40:40.5583297Z",
+    "sourceCommit":  "27ed5e4a313aea763051d7104bd05a932e7fc119",
     "features":  [
-                     "administracao-gratuita-nivel-1",
-                     "alertas-de-emergencia",
-                     "notificacoes-administradores",
-                     "cadastro-no-app",
-                     "acompanhamento-ao-vivo",
-                     "mapa-compartilhado-validado",
-                     "gps-em-segundo-plano",
-                     "push-servidor-externo-gratuito"
+                     "cadastro-completo-corrigido",
+                     "senha-servidor-admin-nivel-1",
+                     "fotos-associados",
+                     "emergencia-contato-previo-diretoria-manual",
+                     "recursos-associado-dentro-do-app",
+                     "eventos-e-jornadas",
+                     "compartilhamento-30min-1h-2h-4h-8h-12h",
+                     "copiar-e-compartilhar-link",
+                     "rota-ate-pessoa"
                  ],
-    "builtAt":  "2026-10-21T14:25:49.9998382Z",
-    "publishedAt":  "2026-10-21T15:22:13.0894835Z"
+    "builtAt":  "2026-10-21T23:40:40.5518196Z"
 }
