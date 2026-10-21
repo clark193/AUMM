@@ -52,17 +52,23 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/associados/$(request.auth.uid)).data.status == 'active';
     }
     function hasAssemblyPermission(permission) {
-      return superAdmin() || (signedIn() && adminProfile().data.active == true
-        && adminProfile().data.permissions is map
-        && adminProfile().data.permissions[permission] == true);
+      return signedIn()
+        && exists(/databases/$(database)/documents/adminRoles/$(request.auth.uid))
+        && adminProfile().data.active == true
+        && (adminProfile().data.get('superAdmin', false) == true
+          || adminProfile().data.get('level', 0) in [1, '1']
+          || (adminProfile().data.get('permissions', {}) is map
+            && adminProfile().data.get('permissions', {}).get(permission, false) == true));
     }
     function assemblyStaff() {
-      return hasAssemblyPermission('canManageAssemblies')
+      return signedIn()
+        && exists(/databases/$(database)/documents/adminRoles/$(request.auth.uid))
+        && (hasAssemblyPermission('canManageAssemblies')
         || hasAssemblyPermission('canPublishAssembly')
         || hasAssemblyPermission('canPresideAssembly')
         || hasAssemblyPermission('canModerateAssembly')
         || hasAssemblyPermission('canCertifyResults')
-        || hasAssemblyPermission('canFinalizeMinutes');
+        || hasAssemblyPermission('canFinalizeMinutes'));
     }
     function documentPermission(permission) {
       return superAdmin() || hasPermission('documents.write')

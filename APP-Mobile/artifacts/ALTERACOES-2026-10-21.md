@@ -54,7 +54,7 @@ Referência técnica de rotas: https://developers.google.com/maps/documentation/
 
 ## APK de teste
 
-aumm-2026-10-21-atualizado-debug.apk · 10.1 MiB · SHA-256: `6b561ad9775b6f606856e47521103a0748679f71dfa88b08f79959f934511af9`. AAB gerado sem assinatura de distribuição.
+aumm-2026-10-21-atualizado-debug.apk · 10.1 MiB · SHA-256: `3f334b4ff9cc43d8d22286eb7e8ad15592e8c00ab11e74d291ced7b7e44bfb84`. AAB gerado sem assinatura de distribuição.
 
 ## Arquivos alterados
 
@@ -109,3 +109,9 @@ aumm-2026-10-21-atualizado-debug.apk · 10.1 MiB · SHA-256: `6b561ad9775b6f6068
 - `firestore.rules`
 - `lib/adminMemberPassword.ts`
 - `lib/memberDates.ts`
+
+## Verificação final adicional
+
+Exportação estática do site com Next.js/webpack: 60 páginas, TypeScript concluído. APK e AAB recompilados após validação da resposta do servidor; assinatura APK v2 conferida novamente. Configuração de produção presente e projeto de teste ausente no pacote. Regras: 33 testes móveis, 17 de assembleias e 9 administrativos passaram (59 cenários). Outros 7 testes de negócio de assembleia/filiação passaram. A leitura de assembleias foi simplificada para evitar o limite de 1.000 expressões, preservando as permissões; incluído teste da permissão isolada de atas.
+
+Arquivo de regressão adicional: `tests/firestore-assemblies.rules.test.mjs`.

@@ -91,6 +91,15 @@ test("não autenticado não lê uma assembleia interna", async () => {
   await assertFails(getDoc(doc(db, "assemblies", assemblyId)));
 });
 
+test("permissão isolada de atas permite leitura sem exceder o limite de expressões", async () => {
+  await environment.withSecurityRulesDisabled(async context => {
+    await setDoc(doc(context.firestore(), "adminRoles", "minutes-only"), { active: true, level: 3, permissions: { canFinalizeMinutes: true } });
+    await setDoc(doc(context.firestore(), "adminRoles", "no-assembly"), { active: true, level: 3, permissions: {} });
+  });
+  await assertSucceeds(getDoc(doc(environment.authenticatedContext("minutes-only").firestore(), "assemblies", assemblyId)));
+  await assertFails(getDoc(doc(environment.authenticatedContext("no-assembly").firestore(), "assemblies", assemblyId)));
+});
+
 test("associado habilitado lê a assembleia, mas não cria nem eleva privilégios", async () => {
   const db = environment.authenticatedContext("member-1").firestore();
   await assertSucceeds(getDoc(doc(db, "assemblies", assemblyId)));
