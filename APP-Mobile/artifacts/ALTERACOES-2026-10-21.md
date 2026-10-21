@@ -115,3 +115,11 @@ aumm-2026-10-21-atualizado-debug.apk · 10.1 MiB · SHA-256: `3f334b4ff9cc43d8d2
 Exportação estática do site com Next.js/webpack: 60 páginas, TypeScript concluído. APK e AAB recompilados após validação da resposta do servidor; assinatura APK v2 conferida novamente. Configuração de produção presente e projeto de teste ausente no pacote. Regras: 33 testes móveis, 17 de assembleias e 9 administrativos passaram (59 cenários). Outros 7 testes de negócio de assembleia/filiação passaram. A leitura de assembleias foi simplificada para evitar o limite de 1.000 expressões, preservando as permissões; incluído teste da permissão isolada de atas.
 
 Arquivo de regressão adicional: `tests/firestore-assemblies.rules.test.mjs`.
+
+## Publicação confirmada
+
+- Site publicado em https://aumm.com.br pelo GitHub Pages, commit `872cbd9317c59bb41c5b4477429afb3a732b2330`, status `built`.
+- `versao.json` público confirma a fonte `27ed5e4a313aea763051d7104bd05a932e7fc119`.
+- `/`, `/acompanhar/` e `/admin/associados/`: HTTP 200. SHA-256 do JavaScript público do acompanhamento confere com o exportado e contém a nova ação de navegação.
+- Regras finais publicadas no projeto `aumm-21dda` após os testes. Render atualizado e saudável, mantendo o plano gratuito.
+- APK final recompilado: assinatura verificada; checksum em `SHA256SUMS.txt`. A validação em aparelho físico permanece pendente conforme descrito acima.
