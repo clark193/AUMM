@@ -1,12 +1,15 @@
 {
-    "sourceCommit":  "59cb4fe8ab0076527ab2ca84a305d79dfcef55b6",
+    "sourceCommit":  "e3ebd2bf34e2d8fe90c52640c69832b85e7b2da5",
     "features":  [
                      "administracao-gratuita-nivel-1",
                      "alertas-de-emergencia",
                      "notificacoes-administradores",
                      "cadastro-no-app",
                      "acompanhamento-ao-vivo",
-                     "mapa-compartilhado-validado"
+                     "mapa-compartilhado-validado",
+                     "gps-em-segundo-plano",
+                     "push-servidor-externo-gratuito"
                  ],
-    "builtAt":  "2026-10-21T14:25:49.9998382Z"
+    "builtAt":  "2026-10-21T14:25:49.9998382Z",
+    "publishedAt":  "2026-10-21T15:22:13.0894835Z"
 }
