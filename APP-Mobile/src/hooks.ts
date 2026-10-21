@@ -44,6 +44,11 @@ export type Member = {
   photoURL?: string;
   cardValidUntil?: Timestamp;
 };
+export function useMemberPhoto(uid?: string) {
+  const [photo,setPhoto]=useState("");
+  useEffect(()=>{setPhoto("");if(!db||!uid)return;return onSnapshot(doc(db,"memberPhotos",uid),s=>setPhoto(String(s.data()?.dataUrl||"")),()=>setPhoto(""));},[uid]);
+  return photo;
+}
 export function useSession() {
   const [user, setUser] = useState<User | null>(null);
   const [member, setMember] = useState<Member | null>(null);

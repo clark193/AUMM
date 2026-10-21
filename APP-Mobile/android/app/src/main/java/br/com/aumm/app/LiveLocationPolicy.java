@@ -1,7 +1,7 @@
 package br.com.aumm.app;
 
 final class LiveLocationPolicy {
-    static final long MAX_DURATION = 55 * 60 * 1000L;
+    static final long MAX_DURATION = 12 * 60 * 60 * 1000L;
     static boolean validSession(String project, String id, String token, long expiry, long now) {
         return project.matches("[a-z][a-z0-9-]{4,62}") && id.matches("[a-f0-9]{32}")
             && token.length() >= 100 && token.length() <= 8192 && !token.contains("\n") && !token.contains("\r")

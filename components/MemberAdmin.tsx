@@ -46,6 +46,9 @@ import { BulkMemberImport } from "./BulkMemberImport";
 import { maskBirthDate, maskCpf, maskWhatsapp, onlyDigits, parseBrazilianDate, validCpf } from "@/lib/membershipValidation";
 import { writeAdminAudit } from "@/lib/audit";
 import { manageMemberAccount } from "@/lib/memberAccount";
+import { setMemberPassword } from "@/lib/adminMemberPassword";
+import { displayMemberDate } from "@/lib/memberDates";
+import { MemberPhotoUpload } from "./MemberPhotoUpload";
 
 type MemberRow = {
   id: string;
@@ -118,7 +121,12 @@ export function MemberAdmin({ registrationOnly = false }: MemberAdminProps) {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [selected, setSelected] = useState<MemberRow | null>(null);
   const [levelOne, setLevelOne] = useState(false);
-  const [accountAction, setAccountAction] = useState<"password" | "delete" | null>(null);
+  const [accountAction, setAccountAction] = useState<"password" | "recovery" | "delete" | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [repeatPassword, setRepeatPassword] = useState("");
+  const [administratorPassword, setAdministratorPassword] = useState("");
+  const [selectedPhoto, setSelectedPhoto] = useState("");
+  const [canEditPhoto, setCanEditPhoto] = useState(false);
   const [confirmation, setConfirmation] = useState("");
   const [accountBusy, setAccountBusy] = useState(false);
   const [accountMessage, setAccountMessage] = useState("");
@@ -129,17 +137,25 @@ export function MemberAdmin({ registrationOnly = false }: MemberAdminProps) {
     let stopRole = () => {};
     const stopAuth = onAuthStateChanged(auth, (user) => {
       stopRole();
-      setLevelOne(false);
+      setLevelOne(false); setCanEditPhoto(false);
       if (user) stopRole = onSnapshot(doc(db, "adminRoles", user.uid), (snap) => {
         setLevelOne(snap.data()?.active === true && [1, "1"].includes(snap.data()?.level));
-      }, () => setLevelOne(false));
+        const role = snap.data();
+        setCanEditPhoto(role?.active === true && ([1,2,3].includes(Number(role.level)) || role.permissions?.["members.write"] === true));
+      }, () => { setLevelOne(false); setCanEditPhoto(false); });
     });
     return () => { stopAuth(); stopRole(); };
   }, [registrationOnly]);
 
   useEffect(() => {
-    setAccountAction(null); setConfirmation(""); setAccountMessage("");
+    setAccountAction(null); setConfirmation(""); setAccountMessage(""); setNewPassword(""); setRepeatPassword(""); setAdministratorPassword("");
   }, [selected?.id]);
+
+  useEffect(() => {
+    setSelectedPhoto("");
+    if (!selected || !firebaseEnabled) return;
+    return onSnapshot(doc(getFirebaseServices().db, "memberPhotos", selected.uid || selected.id), s => setSelectedPhoto(String(s.data()?.dataUrl || "")), () => setSelectedPhoto(""));
+  }, [selected?.id, selected?.uid]);
 
   async function submitAccountAction(event: FormEvent) {
     event.preventDefault();
@@ -147,15 +163,20 @@ export function MemberAdmin({ registrationOnly = false }: MemberAdminProps) {
 
     setAccountBusy(true); setAccountMessage("");
     try {
-      await manageMemberAccount({ memberId: selected.id, action: accountAction,
-        ...(accountAction === "password" ? {} : { confirmation }) });
+      if (accountAction === "password") {
+        if (newPassword !== repeatPassword) throw new Error("As senhas não conferem.");
+        const text = await setMemberPassword(selected.id, newPassword, administratorPassword);
+        setAccountAction(null); setAccountMessage(text); return;
+      }
+      await manageMemberAccount({ memberId: selected.id, action: accountAction === "recovery" ? "password" : "delete",
+        ...(accountAction === "recovery" ? {} : { confirmation }) });
       setMessage({ type: "success", text: accountAction === "delete"
         ? "Cadastro de associado removido. A conta de login e o histórico institucional foram preservados."
         : "Recuperação de senha solicitada. Oriente o associado a conferir o e-mail e a pasta de spam." });
       setSelected(null);
     } catch (error) {
       setAccountMessage(error instanceof Error ? error.message : "Não foi possível concluir a operação.");
-    } finally { setAccountBusy(false); }
+    } finally { setAccountBusy(false); setNewPassword(""); setRepeatPassword(""); setAdministratorPassword(""); }
   }
 
   useEffect(() => {
@@ -344,7 +365,7 @@ export function MemberAdmin({ registrationOnly = false }: MemberAdminProps) {
   }
 
   const statusName = (status: string) => status === "active" ? "Ativo" : status === "inactive" ? "Inativo" : "Pendente";
-  const birthDate = (value?: Timestamp) => value?.toDate().toLocaleDateString("pt-BR", { timeZone: "UTC" }) || "—";
+  const birthDate = (value?: unknown) => displayMemberDate(value);
 
   return (
     <>
@@ -534,7 +555,7 @@ export function MemberAdmin({ registrationOnly = false }: MemberAdminProps) {
           )}
         </section>
       )}
-      {selected && <div className="document-modal member-detail-modal" role="dialog" aria-modal="true" aria-labelledby="member-detail-title"><article><button className="modal-close" type="button" disabled={accountBusy} onClick={() => setSelected(null)}>×</button><span className="eyebrow">Cadastro completo</span><h1 id="member-detail-title">{selected.fullName}</h1><div className="member-detail-status"><span className={`status ${selected.status}`}>{statusName(selected.status)}</span><span>{selected.memberNumber || "Sem número"}</span></div><dl className="membership-details"><div><dt>Nome completo</dt><dd>{selected.fullName}</dd></div><div><dt>Data de nascimento</dt><dd>{birthDate(selected.birthDate)}</dd></div><div><dt>CPF</dt><dd>{selected.cpf ? maskCpf(selected.cpf) : "—"}</dd></div><div><dt>WhatsApp</dt><dd>{selected.whatsapp || selected.phone || "—"}</dd></div><div><dt>E-mail</dt><dd>{selected.email || "—"}</dd></div><div><dt>Categoria</dt><dd>{selected.category || "—"}</dd></div><div><dt>Direito a voto</dt><dd>{selected.eligibleToVote !== false ? "Habilitado" : "Desabilitado"}</dd></div><div><dt>Cadastrado em</dt><dd>{selected.createdAt?.toDate().toLocaleString("pt-BR") || "—"}</dd></div></dl><div className="member-detail-actions">{(selected.whatsapp || selected.phone) && <a className="button" href={`https://wa.me/55${(selected.whatsapp || selected.phone || "").replace(/\D/g, "").replace(/^55/, "")}`} target="_blank" rel="noreferrer"><MessageCircle /> Abrir WhatsApp</a>}<button className="button button-dark" type="button" onClick={() => toggleVotingEligibility(selected)} disabled={selected.status !== "active"}>{selected.eligibleToVote !== false ? "Desabilitar voto" : "Habilitar voto"}</button>{selected.status === "active" ? <button className="table-action-danger" type="button" onClick={() => changeStatus(selected, "inactive")}>Deixar inativo</button> : !selected.id.startsWith("pending-") && <button className="button" type="button" onClick={() => changeStatus(selected, "active")}>Ativar cadastro</button>}</div>{levelOne && <section className="member-account-admin"><h2><ShieldCheck size={18} /> Administração do cadastro · nível 1</h2><p>A recuperação é enviada por e-mail. A remoção do cadastro preserva a conta de login no Firebase Authentication.</p><div className="member-detail-actions"><button type="button" className="table-action" disabled={accountBusy || !selected.uid} onClick={() => { setAccountAction("password"); setAccountMessage(""); }}><KeyRound size={16} /> Enviar recuperação de senha</button><button type="button" className="table-action" disabled={accountBusy} onClick={() => { setAccountAction("delete"); setAccountMessage(""); }}><Trash2 size={16} /> Excluir perfil</button></div>{accountAction && <form onSubmit={submitAccountAction}>{accountAction === "password" ? <p>Enviar recuperação para <strong>{selected.email}</strong>? O associado escolherá a nova senha pelo link recebido.</p> : <><p>Esta ação remove o cadastro, a foto e as credenciais públicas de associado e encerra os apoios e links de localização vinculados. A conta de login permanece no Firebase Authentication, sem acesso aos recursos de associado. O histórico institucional é preservado.</p><label>Digite o nome completo para confirmar<input autoComplete="off" value={confirmation} onChange={event => setConfirmation(event.target.value)} required /></label></>}{accountMessage && <p role="alert">{accountMessage}</p>}<div className="member-detail-actions"><button type="submit" className="btn btn-primary" disabled={accountBusy || (accountAction === "delete" && confirmation !== selected.fullName)}>{accountBusy ? "Processando…" : accountAction === "delete" ? "Confirmar remoção do cadastro" : "Enviar e-mail de recuperação"}</button><button type="button" className="table-action" disabled={accountBusy} onClick={() => { setAccountAction(null); setConfirmation(""); setAccountMessage(""); }}>Cancelar</button></div></form>}</section>}{selected.id.startsWith("pending-") && <div className="form-message info">Este registro ainda não possui conta de acesso. Faça um novo cadastro autorizado para criar o login.</div>}</article></div>}
+      {selected && <div className="document-modal member-detail-modal" role="dialog" aria-modal="true" aria-labelledby="member-detail-title"><article><button className="modal-close" type="button" disabled={accountBusy} onClick={() => setSelected(null)}>×</button><span className="eyebrow">Cadastro completo</span><h1 id="member-detail-title">{selected.fullName}</h1>{canEditPhoto ? <MemberPhotoUpload photoURL={selectedPhoto} name={selected.fullName} targetUid={selected.uid || selected.id} onUploaded={setSelectedPhoto} compact /> : selectedPhoto && <img className="member-detail-photo" src={selectedPhoto} alt={`Foto de ${selected.fullName}`} />}<div className="member-detail-status"><span className={`status ${selected.status}`}>{statusName(selected.status)}</span><span>{selected.memberNumber || "Sem número"}</span></div><dl className="membership-details"><div><dt>Nome completo</dt><dd>{selected.fullName}</dd></div><div><dt>Data de nascimento</dt><dd>{birthDate(selected.birthDate)}</dd></div><div><dt>CPF</dt><dd>{selected.cpf ? maskCpf(selected.cpf) : "—"}</dd></div><div><dt>WhatsApp</dt><dd>{selected.whatsapp || selected.phone || "—"}</dd></div><div><dt>E-mail</dt><dd>{selected.email || "—"}</dd></div><div><dt>Categoria</dt><dd>{selected.category || "—"}</dd></div><div><dt>Direito a voto</dt><dd>{selected.eligibleToVote !== false ? "Habilitado" : "Desabilitado"}</dd></div><div><dt>Cadastrado em</dt><dd>{displayMemberDate(selected.createdAt, true)}</dd></div></dl><div className="member-detail-actions">{(selected.whatsapp || selected.phone) && <a className="button" href={`https://wa.me/55${(selected.whatsapp || selected.phone || "").replace(/\D/g, "").replace(/^55/, "")}`} target="_blank" rel="noreferrer"><MessageCircle /> Abrir WhatsApp</a>}<button className="button button-dark" type="button" onClick={() => toggleVotingEligibility(selected)} disabled={selected.status !== "active"}>{selected.eligibleToVote !== false ? "Desabilitar voto" : "Habilitar voto"}</button>{selected.status === "active" ? <button className="table-action-danger" type="button" onClick={() => changeStatus(selected, "inactive")}>Deixar inativo</button> : !selected.id.startsWith("pending-") && <button className="button" type="button" onClick={() => changeStatus(selected, "active")}>Ativar cadastro</button>}</div>{levelOne && <section className="member-account-admin"><h2><ShieldCheck size={18} /> Administração do cadastro · nível 1</h2><p>A alteração de senha é validada no servidor e encerra as sessões anteriores. A remoção do cadastro preserva a conta de login no Firebase Authentication.</p><div className="member-detail-actions"><button type="button" className="table-action" disabled={accountBusy || !selected.uid} onClick={() => { setAccountAction("password"); setAccountMessage(""); }}><KeyRound size={16} /> Alterar Senha</button><button type="button" className="table-action" disabled={accountBusy || !selected.uid} onClick={() => { setAccountAction("recovery"); setAccountMessage(""); }}>Enviar recuperação por e-mail</button><button type="button" className="table-action" disabled={accountBusy} onClick={() => { setAccountAction("delete"); setAccountMessage(""); }}><Trash2 size={16} /> Excluir perfil</button></div>{accountMessage && !accountAction && <p role="status">{accountMessage}</p>}{accountAction && <form onSubmit={submitAccountAction}>{accountAction === "password" ? <><p>Defina uma senha temporária. O associado deverá substituí-la no próximo acesso.</p><label>Nova senha<input type="password" autoComplete="new-password" minLength={12} maxLength={128} value={newPassword} onChange={e => setNewPassword(e.target.value)} required /></label><label>Confirmar nova senha<input type="password" autoComplete="new-password" value={repeatPassword} onChange={e => setRepeatPassword(e.target.value)} required /></label><label>Sua senha de administrador<input type="password" autoComplete="current-password" value={administratorPassword} onChange={e => setAdministratorPassword(e.target.value)} required /></label></> : accountAction === "recovery" ? <p>Enviar recuperação para <strong>{selected.email}</strong>? O associado escolherá a nova senha pelo link recebido.</p> : <><p>Esta ação remove o cadastro, a foto e as credenciais públicas de associado e encerra os apoios e links de localização vinculados. A conta de login permanece no Firebase Authentication, sem acesso aos recursos de associado. O histórico institucional é preservado.</p><label>Digite o nome completo para confirmar<input autoComplete="off" value={confirmation} onChange={event => setConfirmation(event.target.value)} required /></label></>}{accountMessage && <p role="alert">{accountMessage}</p>}<div className="member-detail-actions"><button type="submit" className="btn btn-primary" disabled={accountBusy || (accountAction === "delete" && confirmation !== selected.fullName)}>{accountBusy ? "Processando…" : accountAction === "delete" ? "Confirmar remoção do cadastro" : accountAction === "password" ? "Confirmar alteração de senha" : "Enviar e-mail de recuperação"}</button><button type="button" className="table-action" disabled={accountBusy} onClick={() => { setAccountAction(null); setConfirmation(""); setAccountMessage(""); }}>Cancelar</button></div></form>}</section>}{selected.id.startsWith("pending-") && <div className="form-message info">Este registro ainda não possui conta de acesso. Faça um novo cadastro autorizado para criar o login.</div>}</article></div>}
     </>
   );
 }

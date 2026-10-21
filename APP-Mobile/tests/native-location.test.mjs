@@ -18,8 +18,8 @@ public class NativeLocationCheck {
  static void check(boolean value) { if (!value) throw new AssertionError(); }
  public static void main(String[] args) {
   long now = System.currentTimeMillis(); String project = "demo-aumm-mobile", id = "0123456789abcdef0123456789abcdef", token = "a".repeat(200);
-  check(LiveLocationPolicy.validSession(project,id,token,now+55*60000,now));
-  check(!LiveLocationPolicy.validSession(project,id,token,now+60*60000,now));
+  check(LiveLocationPolicy.validSession(project,id,token,now+12*60*60000,now));
+  check(!LiveLocationPolicy.validSession(project,id,token,now+13*60*60000,now));
   check(!LiveLocationPolicy.validSession(project,id,token,now-1,now));
   check(!LiveLocationPolicy.validSession(project,id,token+"\\n",now+60000,now));
   check(!LiveLocationPolicy.validSession("evil/path",id,token,now+60000,now));

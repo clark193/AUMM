@@ -9,7 +9,7 @@ export type BackgroundShare = {
   error: string;
 };
 interface BackgroundLocationPlugin {
-  start(options: { projectId: string; shareId: string; idToken: string; expiresAt: number }): Promise<BackgroundShare>;
+  start(options: { projectId: string; shareId: string; idToken: string; refreshToken: string; apiKey: string; expiresAt: number }): Promise<BackgroundShare>;
   status(): Promise<BackgroundShare>;
   stop(): Promise<void>;
 }

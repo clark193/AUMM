@@ -1,7 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() { return request.auth != null; }
+    function signedIn() {
+      return request.auth != null
+        && (!exists(/databases/$(database)/documents/sessionRevocations/$(request.auth.uid))
+          || request.auth.token.auth_time >= get(/databases/$(database)/documents/sessionRevocations/$(request.auth.uid)).data.validAfter);
+    }
     function adminProfile() {
       return get(/databases/$(database)/documents/adminRoles/$(request.auth.uid));
     }
@@ -357,11 +361,12 @@ service cloud.firestore {
     }
     match /memberPhotos/{uid} {
       allow read: if own(uid) || hasPermission('members.read');
-      allow create, update: if own(uid)
+      allow create, update: if (own(uid) || hasPermission('members.write'))
         && request.resource.data.keys().hasOnly(['uid','dataUrl','contentType','updatedAt'])
-        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.uid == uid
         && request.resource.data.dataUrl is string
         && request.resource.data.dataUrl.size() <= 500000
+        && request.resource.data.dataUrl.matches('^data:image/(jpeg|webp);base64,[A-Za-z0-9+/=]+$')
         && request.resource.data.contentType in ['image/jpeg','image/webp']
         && request.resource.data.updatedAt == request.time;
       allow delete: if own(uid) || hasPermission('members.write');
@@ -924,7 +929,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['ownerUid','createdAt','expiresAt'])
         && request.resource.data.ownerUid == request.auth.uid && request.resource.data.createdAt == request.time
         && request.resource.data.expiresAt is timestamp && request.resource.data.expiresAt > request.time
-        && request.resource.data.expiresAt <= request.time + duration.value(1,'h');
+        && request.resource.data.expiresAt <= request.time + duration.value(12,'h');
     }
     match /liveLocations/{shareId} {
       function shareOwner() { return get(/databases/$(database)/documents/locationShareOwners/$(shareId)).data; }

@@ -34,8 +34,10 @@ public class BackgroundLocationPlugin extends Plugin {
         String project = call.getString("projectId", "");
         String id = call.getString("shareId", "");
         String token = call.getString("idToken", "");
+        String refresh = call.getString("refreshToken", "");
+        String apiKey = call.getString("apiKey", "");
         Long expiry = call.getLong("expiresAt", 0L);
-        if (!LiveLocationPolicy.validSession(project, id, token, expiry, System.currentTimeMillis())) {
+        if (!LiveLocationPolicy.validSession(project, id, token, expiry, System.currentTimeMillis()) || refresh.length() < 20 || !apiKey.matches("[A-Za-z0-9_-]{20,200}")) {
             call.reject("Sessão de localização inválida ou expirada.");
             return;
         }
@@ -53,6 +55,8 @@ public class BackgroundLocationPlugin extends Plugin {
             intent.putExtra("projectId", project);
             intent.putExtra("shareId", id);
             intent.putExtra("idToken", token);
+            intent.putExtra("refreshToken", refresh);
+            intent.putExtra("apiKey", apiKey);
             intent.putExtra("expiresAt", expiry);
             intent.putExtra("receiver", new ResultReceiver(new Handler(Looper.getMainLooper())) {
                 @Override protected void onReceiveResult(int code, android.os.Bundle data) {

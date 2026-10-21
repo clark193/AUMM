@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, serverTimestamp, Timestamp, writeBatch } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, serverTimestamp, Timestamp, writeBatch } from "firebase/firestore";
 import { AlertTriangle, ArrowLeft, BadgeCheck, Camera, Printer, RefreshCw, Share2, UserRound } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
@@ -18,7 +18,7 @@ type Member = {
 
 function formatted(value?: Timestamp) { return value?.toDate().toLocaleDateString("pt-BR") || "—"; }
 
-export function MemberCardContent() {
+export function MemberCardContent({ embedded = false, siteUrl, onPhoto, onShare }: { embedded?: boolean; siteUrl?: string; onPhoto?: () => void; onShare?: (url: string) => Promise<void> }) {
   const [member, setMember] = useState<Member | null>(null);
   const [uid, setUid] = useState("");
   const [busy, setBusy] = useState(false);
@@ -32,12 +32,13 @@ export function MemberCardContent() {
     setCurrentTime(Date.now());
   }
   useEffect(() => onAuthStateChanged(getFirebaseServices().auth, (user) => { if (!user) return; setUid(user.uid); void load(user.uid); }), []);
+  useEffect(()=>{if(!uid)return;return onSnapshot(doc(getFirebaseServices().db,"memberPhotos",uid),s=>setMember(v=>v?{...v,photoURL:String(s.data()?.dataUrl||"")}:v),()=>{});},[uid]);
 
   const validUntil = member?.cardValidUntil?.toDate();
   const expired = Boolean(validUntil && validUntil.getTime() < currentTime);
   const issued = Boolean(member?.cardIssuedAt && validUntil);
   const usable = issued && !expired && member?.status === "active" && Boolean(member?.photoURL);
-  const verifyUrl = typeof window !== "undefined" && member?.memberNumber ? `${window.location.origin}${withBasePath("/verificar")}?token=${encodeURIComponent(member.memberNumber)}` : "";
+  const verifyUrl = typeof window !== "undefined" && member?.memberNumber ? `${siteUrl || window.location.origin}${withBasePath("/verificar")}?token=${encodeURIComponent(member.memberNumber)}` : "";
 
   async function issue() {
     if (!uid || !member?.memberNumber || !member.photoURL || member.status !== "active" || (issued && !expired)) return;
@@ -55,11 +56,11 @@ export function MemberCardContent() {
     } catch (error) { setMessage(error instanceof Error ? error.message : "Não foi possível emitir a carteirinha."); }
     finally { setBusy(false); }
   }
-  async function share() { if (!verifyUrl || !usable) return; if (navigator.share) await navigator.share({ title: "Carteirinha AUMM", text: "Verificação da minha carteirinha AUMM", url: verifyUrl }); else await navigator.clipboard.writeText(verifyUrl); }
+  async function share() { if (!verifyUrl || !usable) return; try { if (onShare) await onShare(verifyUrl); else if (navigator.share) await navigator.share({ title: "Carteirinha AUMM", text: "Verificação da minha carteirinha AUMM", url: verifyUrl }); else { await navigator.clipboard.writeText(verifyUrl); setMessage("Link de verificação copiado."); } } catch { setMessage("Compartilhamento não concluído."); } }
 
   return <main className="id-page"><div className="id-page-inner">
-    <div className="id-actions"><Link href="/associado"><ArrowLeft size={15} /> Voltar</Link><span style={{ display: "flex", gap: 8 }}><button onClick={() => window.print()} disabled={!usable}><Printer size={15} /> Imprimir/PDF</button><button onClick={share} disabled={!usable}><Share2 size={15} /> Compartilhar</button></span></div>
-    {!member?.photoURL && <section className="credential-notice warning"><Camera /><div><h2>Adicione uma foto antes de emitir</h2><p>A foto é obrigatória para proteger sua identificação e aparecerá na validação pelo QR Code.</p><Link className="button button-sm" href="/associado/configuracoes">Adicionar foto</Link></div></section>}
+    <div className="id-actions">{!embedded && <Link href="/associado"><ArrowLeft size={15} /> Voltar</Link>}<span style={{ display: "flex", gap: 8 }}>{!embedded && <button onClick={() => window.print()} disabled={!usable}><Printer size={15} /> Imprimir/PDF</button>}<button onClick={share} disabled={!usable}><Share2 size={15} /> Compartilhar</button></span></div>
+    {!member?.photoURL && <section className="credential-notice warning"><Camera /><div><h2>Adicione uma foto antes de emitir</h2><p>A foto é obrigatória para proteger sua identificação e aparecerá na validação pelo QR Code.</p>{onPhoto ? <button className="button button-sm" onClick={onPhoto}>Adicionar foto</button> : <Link className="button button-sm" href="/associado/configuracoes">Adicionar foto</Link>}</div></section>}
     {member?.photoURL && (!issued || expired) && <section className={`credential-notice ${expired ? "danger" : ""}`}><RefreshCw /><div><h2>{expired ? "Sua carteirinha venceu" : "Sua carteirinha está pronta para emissão"}</h2><p>{expired ? `A validade terminou em ${formatted(member.cardValidUntil)}. Emita uma nova para continuar usando.` : "Ao emitir, ela terá validade de um ano e não poderá ser renovada antes do vencimento."}</p><button className="button button-sm" disabled={busy || member.status !== "active"} onClick={issue}>{busy ? "Emitindo…" : expired ? "Emitir nova carteirinha" : "Emitir carteirinha"}</button></div></section>}
     {message && <div className="form-message success">{message}</div>}
     {issued && <div className={`id-card ${expired ? "expired" : ""}`}>

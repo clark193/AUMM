@@ -1,0 +1,35 @@
+import assert from "node:assert/strict";
+import { createRequire } from "node:module";
+process.env.FIRESTORE_EMULATOR_HOST="127.0.0.1:8080";
+process.env.FIREBASE_AUTH_EMULATOR_HOST="127.0.0.1:9099";
+process.env.GCLOUD_PROJECT="demo-aumm-mobile";
+const require=createRequire(new URL("../backend/package.json",import.meta.url));
+const {initializeApp}=require("firebase-admin/app");
+const {getFirestore}=require("firebase-admin/firestore");
+const {getAuth}=require("firebase-admin/auth");
+initializeApp({projectId:"demo-aumm-mobile"});
+const {changeMemberPassword}=await import("../backend/lib/backend/src/adminPassword.js");
+const db=getFirestore(),suffix=Date.now();
+async function signup(kind){const r=await fetch("http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo-key",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:`password-${kind}-${suffix}@aumm.test`,password:"OriginalPassword123!",returnSecureToken:true})});assert.equal(r.status,200);return r.json();}
+const admin=await signup("admin"),member=await signup("member"),staff=await signup("staff");
+await db.doc(`adminRoles/${admin.localId}`).set({active:true,level:1,fullName:"Admin de teste"});
+await db.doc(`adminRoles/${staff.localId}`).set({active:true,level:2});
+await db.doc(`associados/${member.localId}`).set({uid:member.localId,status:"active",fullName:"Associado de teste"});
+const input={memberId:member.localId,password:"TemporaryPassword456!"};
+await assert.rejects(changeMemberPassword("invalid",input),e=>e.status===401);
+await assert.rejects(changeMemberPassword(staff.idToken,input),e=>e.status===403);
+await assert.rejects(changeMemberPassword(admin.idToken,{...input,password:"short"}),e=>e.status===400);
+await db.doc(`associados/${staff.localId}`).set({uid:staff.localId});
+await assert.rejects(changeMemberPassword(admin.idToken,{...input,memberId:staff.localId}),e=>e.status===403);
+const parts=admin.idToken.split('.');const payload=JSON.parse(Buffer.from(parts[1],'base64url'));payload.auth_time=Math.floor(Date.now()/1000)-600;parts[1]=Buffer.from(JSON.stringify(payload)).toString('base64url');
+await assert.rejects(changeMemberPassword(parts.join('.'),input),e=>e.status===401);
+await new Promise(r=>setTimeout(r,1100));
+const response=await changeMemberPassword(admin.idToken,input);assert.match(response.message,/Senha alterada/);
+assert.equal((await db.doc(`associados/${member.localId}`).get()).data().mustChangePassword,true);
+assert.equal(typeof (await db.doc(`sessionRevocations/${member.localId}`).get()).data().validAfter,"number");
+await assert.rejects(getAuth().verifyIdToken(member.idToken,true));
+async function login(password){return fetch("http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=demo-key",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:member.email,password,returnSecureToken:true})});}
+assert.equal((await login("OriginalPassword123!")).status,400);assert.equal((await login(input.password)).status,200);
+const logs=await db.collection("auditLogs").where("resourceId","==",member.localId).get();assert.equal(logs.size,1);assert.equal(logs.docs[0].data().action,"MEMBER_PASSWORD_CHANGED");assert.ok(!JSON.stringify(logs.docs[0].data()).includes(input.password));
+console.log("Senha administrativa: nível 1, bloqueio de nível 2/conta admin/senha fraca/sessão antiga, senha real no Auth, revogação e auditoria sem senha: aprovados no emulador.");
+await db.terminate();

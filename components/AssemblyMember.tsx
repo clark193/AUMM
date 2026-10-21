@@ -1,4 +1,5 @@
 "use client";
+import MinutesReading from "./MinutesReading";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -37,7 +38,7 @@ const statusNames: Record<string, string> = {
   discussion: "Discussão aberta", voting: "Votação aberta", voting_closed: "Apuração", result: "Resultado publicado",
 };
 
-export function AssemblyMember() {
+export function AssemblyMember({ embedded = false }: { embedded?: boolean }) {
   const [actor, setActor] = useState<AssemblyActor | null>(null);
   const [member, setMember] = useState<Member | null>(null);
   const [assemblies, setAssemblies] = useState<Assembly[]>([]);
@@ -129,9 +130,9 @@ export function AssemblyMember() {
   const eligible = member?.status === "active" && member.eligibleToVote !== false && eligibleForSelected;
 
   return <div className="dashboard member-dashboard assembly-member">
-    <MemberSidebar footer={member?.memberNumber || "Associado"} />
+    {!embedded && <MemberSidebar footer={member?.memberNumber || "Associado"} />}
     <main className="dashboard-main">
-      <MemberTopbar title="Assembleias eletrônicas" />
+      {!embedded && <MemberTopbar title="Assembleias eletrônicas" />}
       <div className="dash-content">
         <div className="dash-welcome"><div><span className="access-badge">Participação estatutária</span><h2>Assembleias Gerais da AUMM</h2><p>Convocações, presença, discussão e voto realizados integralmente por escrito.</p></div><div className="assembly-mini-stats"><span>{upcoming} próximas</span><span>{live} em curso</span></div></div>
         {message && <div className={`form-message ${message.type}`}>{message.type === "success" && <CheckCircle2 size={16} />} {message.text}</div>}
@@ -156,11 +157,11 @@ export function AssemblyMember() {
                 {currentAgenda.resultPublished && result && <div className="result-board"><h3>Resultado oficial</h3><strong>{result.resultStatus === "approved" ? "APROVADA" : result.resultStatus === "rejected" ? "REJEITADA" : "REGISTRADA"}</strong><div>{Object.entries(result.optionCounts).map(([option, count]) => <span key={option}>{option}: <b>{count}</b></span>)}</div><small>{result.totalVotes} votos · {result.notVoted} presentes não votaram</small></div>}
               </section>}
               {selected.status === "closed" && <div className="assembly-closed"><Clock3 /><div><strong>Assembleia encerrada</strong><p>A ata e os resultados permanecem disponíveis no histórico após sua finalização.</p></div></div>}
-              {minutes && <div className="assembly-minutes"><h3>Ata finalizada</h3><p>Integridade interna SHA-256:</p><code>{String(minutes.hash || "Hash não disponível")}</code><div className="assembly-actions"><button className="button button-sm button-dark" onClick={() => window.print()}>Visualizar / imprimir ata</button>{actor && selected.minutesApproverUids?.includes(actor.uid) && !minutesApproved && <button className="button button-sm" onClick={() => window.confirm("Confirmar que você leu e concorda com esta ata? Isto não é uma assinatura digital certificada.") && run(async () => { await confirmMinutesApproval(selected.id, actor); setMinutesApproved(true); }, "Confirmação interna registrada.")}>Li e concordo com a ata</button>}{minutesApproved && <span className="status active">Confirmação interna registrada</span>}</div><small>Esta confirmação não constitui assinatura digital ICP-Brasil.</small></div>}
+              {minutes && <div className="assembly-minutes"><h3>Ata finalizada</h3><MinutesReading minutes={minutes} /><p>Integridade interna SHA-256:</p><code>{String(minutes.hash || "Hash não disponível")}</code><div className="assembly-actions">{!embedded && <button className="button button-sm button-dark" onClick={() => window.print()}>Imprimir ata</button>}{actor && selected.minutesApproverUids?.includes(actor.uid) && !minutesApproved && <button className="button button-sm" onClick={() => window.confirm("Confirmar que você leu e concorda com esta ata? Isto não é uma assinatura digital certificada.") && run(async () => { await confirmMinutesApproval(selected.id, actor); setMinutesApproved(true); }, "Confirmação interna registrada.")}>Li e concordo com a ata</button>}{minutesApproved && <span className="status active">Confirmação interna registrada</span>}</div><small>Esta confirmação não constitui assinatura digital ICP-Brasil.</small></div>}
             </>}
           </section>
         </div>
-        <Link className="button button-sm button-dark" href="/associado"><ArrowLeft size={15} /> Voltar ao portal</Link>
+        {!embedded && <Link className="button button-sm button-dark" href="/associado"><ArrowLeft size={15} /> Voltar ao portal</Link>}
       </div>
     </main>
   </div>;

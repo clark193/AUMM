@@ -13,7 +13,7 @@ import { PasswordSettingsPanel } from "./PasswordSettingsPanel";
 
 type Member = { fullName?: string; email?: string; phone?: string; whatsapp?: string; cpf?: string; birthDate?: Timestamp; category?: string; memberNumber?: string; photoURL?: string };
 
-export function MemberSettingsPage() {
+export function MemberSettingsPage({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter();
   const [member, setMember] = useState<Member | null>(null);
   const [uid, setUid] = useState("");
@@ -59,7 +59,7 @@ export function MemberSettingsPage() {
   }
 
   const name = member?.fullName || "Associado";
-  return <div className="dashboard member-dashboard"><MemberSidebar footer={member?.memberNumber || "Associado AUMM"} /><main className="dashboard-main"><MemberTopbar title="Configurações" /><div className="dash-content settings-layout"><div className="dash-welcome"><div><span className="access-badge">Conta e privacidade</span><h2 style={{ marginTop: 12 }}>Suas configurações</h2><p>Atualize sua foto, contato, notificações, segurança e vínculo com a AUMM.</p></div><Settings size={40} /></div>
+  return <div className="dashboard member-dashboard">{!embedded && <MemberSidebar footer={member?.memberNumber || "Associado AUMM"} />}<main className="dashboard-main">{!embedded && <MemberTopbar title="Configurações" />}<div className="dash-content settings-layout"><div className="dash-welcome"><div><span className="access-badge">Conta e privacidade</span><h2 style={{ marginTop: 12 }}>Suas configurações</h2><p>Atualize sua foto, contato, notificações, segurança e vínculo com a AUMM.</p></div><Settings size={40} /></div>
     <section className="panel settings-section"><div className="panel-head"><div><h3><UserRound /> Perfil do associado</h3><p>Sua foto também é usada na carteirinha digital.</p></div></div><MemberPhotoUpload photoURL={member?.photoURL} name={name} onUploaded={(photoURL) => setMember((current) => current ? { ...current, photoURL } : current)} /><dl className="settings-profile-data"><div><dt>Nome</dt><dd>{name}</dd></div><div><dt>E-mail de acesso</dt><dd>{member?.email || "—"}</dd></div><div><dt>CPF</dt><dd>{member?.cpf ? `***.***.***-${member.cpf.replace(/\D/g, "").slice(-2)}` : "—"}</dd></div><div><dt>Categoria</dt><dd>{member?.category || "—"}</dd></div></dl></section>
     <section className="panel settings-section"><div className="panel-head"><div><h3><Bell /> Contato e notificações</h3><p>Defina como os comunicados aparecem e mantenha seu WhatsApp atualizado.</p></div></div><form onSubmit={save}><div className="form-grid"><label className="field full"><span>WhatsApp</span><input inputMode="numeric" value={phone} onChange={(event) => setPhone(maskWhatsapp(event.target.value))} maxLength={15} required /></label></div><label className="settings-toggle"><input type="checkbox" checked={notificationBadge} onChange={(event) => setNotificationBadge(event.target.checked)} /><span><strong>Contagem de novas notificações</strong><small>Exibir o número de comunicados não lidos no sininho.</small></span></label>{message && <div className={`form-message ${message.type}`}>{message.text}</div>}<button className="button" disabled={busy}><Save /> {busy ? "Salvando…" : "Salvar preferências"}</button></form></section>
     <PasswordSettingsPanel member />

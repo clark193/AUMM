@@ -60,7 +60,7 @@ import {
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { configured, db, friendly, services } from "./firebase";
-import { useFeed, usePublicSettings, useSession, type Row } from "./hooks";
+import { useFeed, useMemberPhoto, usePublicSettings, useSession, type Row } from "./hooks";
 import { categories, calculateShift } from "./domain.mjs";
 import {
   acceptRequest,
@@ -70,6 +70,7 @@ import {
 } from "./support";
 import { locate, openUrl, site } from "./platform";
 import "./styles.css";
+import "./improvements.css";
 import { SupportMap } from "./SupportTracking";
 import NotificationCenter, { NoticeBanner } from "./NotificationCenter";
 import { useNotices } from "./useNotices";
@@ -93,6 +94,10 @@ import LiveShare from "./LiveShare";
 import LiveShareIndicator from "./LiveShareIndicator";
 import { stopBackgroundShareBeforeAuthChange } from "./backgroundLocation";
 import EmergencyCenter, { EmergencyHome } from "./EmergencyCenter";
+import { EmergencyContactForm } from "./EmergencyContact";
+import MobileEvents, { EventCard, EventDetails, upcomingEvents } from "./MobileEvents";
+import RideLedger from "./RideLedger";
+const MemberFeatures = React.lazy(() => import("./MemberFeatures"));
 import AdminEmergencyPreview from "./AdminEmergencyPreview";
 import { isActiveSupport } from "../shared/support";
 type Tab = "home" | "support" | "news" | "utilities" | "account" | "request";
@@ -274,6 +279,9 @@ function App() {
   });
   const news = useFeed("news", true, "published");
   const events = useFeed("events");
+  const memberPhoto = useMemberPhoto(session.member?.uid);
+  const [selectedEvent, setSelectedEvent] = useState<Row | null>(null);
+  function openEvent(item: Row) { setSelectedEvent(item); setModal("eventDetails"); }
   const benefits = useFeed("benefits", session.active);
   const documents = useFeed("documents", session.active, "documents");
   const communications = useFeed("communications", session.active, "published");
@@ -541,7 +549,7 @@ function App() {
         </div>
       </aside>
       <div
-        className={`app-shell ${activeRequests.length && tab !== "request" ? "has-support-dock" : ""}`}
+        className={`app-shell ${tab === "home" ? "home-view" : ""} ${activeRequests.length && tab !== "request" ? "has-support-dock" : ""}`}
       >
         <header className="topbar">
           <button
@@ -567,7 +575,7 @@ function App() {
             >
               {session.user && !session.user.isAnonymous ? (
                 <>
-                  <UserRound size={16} /> Minha conta
+                  <UserRound size={16} /><span className="account-name">Logado como:<strong title={session.member?.fullName || session.user?.displayName || "Usuário"}>{session.member?.fullName || session.user?.displayName || "Usuário"}</strong></span>
                 </>
               ) : (
                 <>
@@ -603,7 +611,7 @@ function App() {
               onClick={() => setTab("account")}
             >
               {session.active ? (
-                firstName.slice(0, 1).toUpperCase()
+                memberPhoto ? <img src={memberPhoto} alt="Sua foto" /> : firstName.slice(0, 1).toUpperCase()
               ) : (
                 <UserRound size={19} />
               )}
@@ -717,7 +725,7 @@ function App() {
                   ))}
                 </div>
               </Section>
-              {!session.active && (
+              {session.member?.status !== "active" && (
                 <button
                   className="join-banner"
                   onClick={() => setModal("login")}
@@ -738,7 +746,7 @@ function App() {
                 title="Acontece na AUMM"
                 aside={
                   <button className="text-btn" onClick={() => setTab("news")}>
-                    Ver todas <ArrowRight size={14} />
+                    Ver todas as notícias <ArrowRight size={16} />
                   </button>
                 }
               >
@@ -748,6 +756,7 @@ function App() {
                     : feedContent(news, "A próxima notícia chega por aqui")}
                 </div>
               </Section>
+              {session.active && <Section title="Próximos Eventos da AUMM" aside={<button className="text-btn" onClick={() => setModal("events")}>Ver Todos os Eventos</button>}>{events.loading ? <p>Carregando eventos…</p> : events.error ? <p role="alert">{events.error}</p> : upcomingEvents(events.items).length ? <div className="home-events">{upcomingEvents(events.items).slice(0,2).map(item => <EventCard key={item.id} item={item} onOpen={() => openEvent(item)}/>)}</div> : <p>Nenhum próximo evento cadastrado. Acompanhe as novidades por aqui.</p>}</Section>}
               <section className="community-strip">
                 <div>
                   <HandHeart size={24} />
@@ -910,6 +919,7 @@ function App() {
                 title="Seu kit de utilidades"
                 text="Ferramentas que acompanham o seu dia na rua."
               />
+              <button className="list-row" onClick={() => setModal("ledger")}><Wallet size={22}/><span>Ganhos, despesas e quilometragem<small>Controle suas jornadas e veja seu lucro líquido</small></span><ChevronRight/></button>
               <div
                 className="utility-feature"
                 onClick={() => setModal("calculator")}
@@ -1018,7 +1028,7 @@ function App() {
               />
               <div className="profile-card">
                 <div className="profile-avatar">
-                  <UserRound size={35} />
+                  {memberPhoto ? <img src={memberPhoto} alt="Sua foto de perfil" /> : <UserRound size={35} />}
                 </div>
                 <h2>{session.member?.fullName || "Bem-vindo à rede"}</h2>
                 <span className="member-pill">
@@ -1054,7 +1064,8 @@ function App() {
                 )}
               </div>
               <Section title="Minha associação">
-                {session.active && <button className="list-row danger-text" onClick={() => setModal("emergency")}><HandHeart size={20} /><span>Emergência e contato de confiança<small>Configure o contato e acompanhe seu alerta</small></span><ChevronRight size={17} /></button>}
+                {session.active && <button className="list-row" onClick={() => setModal("memberSettings")}><Settings2 size={20}/><span>Configurações, foto e vínculo</span><ChevronRight size={17}/></button>}
+                {session.active && <button className="list-row danger-text" onClick={() => setModal("emergencyContact")}><HandHeart size={20} /><span>Contato de Emergência<small>Cadastre e atualize os números para a diretoria ligar</small></span><ChevronRight size={17} /></button>}
                 <button className="list-row" onClick={() => setModal("liveShare")}><MapPin size={20} /><span>Compartilhar localização ao vivo<small>Envie um link para uma pessoa de confiança</small></span><ChevronRight size={17} /></button>
                 <button className="list-row" onClick={() => isPreview ? setModal("adminPreview") : window.location.assign("./portal.html#/associado/login?destino=admin")}><ShieldCheck size={20} /><span>Acesso administrativo<small>Gerencie a AUMM pelo aplicativo</small></span><ChevronRight size={17} /></button>
                 <div className="menu-list">
@@ -1074,13 +1085,13 @@ function App() {
                       <ChevronRight size={17} />
                     </button>
                   ))}
-                  <button
+                  {session.member?.status !== "active" && <button
                     onClick={() => void perform(() => Promise.resolve(window.location.assign("./portal.html#/associe-se")))}
                   >
                     <Plus size={20} />
                     <span>Quero me associar</span>
                     <ExternalLink size={16} />
-                  </button>
+                  </button>}
                 </div>
               </Section>
               <div className="menu-list">
@@ -1201,6 +1212,7 @@ function App() {
                 benefits: "Seus benefícios",
                 documents: "Documentos da associação",
                 events: "Agenda AUMM",
+                statute: "Estatuto Social", eventDetails: "Detalhes do evento", emergencyContact: "Contato de Emergência", memberSettings: "Configurações do associado", ledger: "Minhas jornadas",
                 communications: "Comunicados",
                 privacy: "Sua privacidade",
                 contact: "Fale com a AUMM",
@@ -1263,12 +1275,16 @@ function App() {
               </Button>
             </>
           )}
+          {modal === "emergencyContact" && (session.active || isPreview) && <EmergencyContactForm uid={session.user?.uid || "preview-emergency"}/>}
+          {modal === "memberSettings" && session.active && <React.Suspense fallback={<p>Carregando configurações…</p>}><MemberFeatures feature="settings" onPhoto={() => setModal("memberSettings")}/></React.Suspense>}
+          {modal === "eventDetails" && selectedEvent && <EventDetails item={selectedEvent}/>}
+          {modal === "ledger" && <RideLedger key={session.user?.uid || "guest"} uid={session.user?.uid || "guest"}/>}
           {modal === "calculator" && <CalculatorPanel />}
           {modal === "checklist" && <Checklist />}
           {modal === "maintenance" && <Maintenance notify={notify} />}
           {modal === "emergency" && (
             <>
-              {(session.active || isPreview) ? <EmergencyCenter uid={session.user?.uid || "preview-emergency"} /> : <p>Entre com sua conta de associado ativo para cadastrar um contato e avisar a associação em caso de acidente.</p>}
+              {(session.active || isPreview) ? <EmergencyCenter uid={session.user?.uid || "preview-emergency"} onConfigure={() => { setTab("account"); setModal("emergencyContact"); }} onCancel={close} /> : <p>Entre com sua conta de associado ativo para cadastrar um contato e avisar a associação em caso de acidente.</p>}
               <p className="muted">
                 Em caso de risco imediato, ligue para o serviço de emergência. A
                 rede de apoio é voluntária.
@@ -1302,46 +1318,32 @@ function App() {
             </>
           )}
           {modal === "card" && session.active && (
-            <MemberCard member={session.member!} />
+            <React.Suspense fallback={<p>Carregando carteirinha…</p>}><MemberFeatures feature="card" onPhoto={() => setModal("memberSettings")}/></React.Suspense>
           )}
           {modal === "benefits" &&
             session.active &&
-            feedContent(benefits, "Novos benefícios a caminho")}
+            <React.Suspense fallback={<p>Carregando benefícios…</p>}><MemberFeatures feature="benefits" onPhoto={() => {}}/></React.Suspense>}
           {modal === "documents" && session.active && (
             <>
-              {feedContent(documents, "Nenhum documento publicado")}
+              <React.Suspense fallback={<p>Carregando documentos…</p>}><MemberFeatures feature="documents" onPhoto={() => {}}/></React.Suspense>
               <Button
                 secondary
-                onClick={() => void perform(() => site("/estatuto"))}
+                onClick={() => setModal("statute")}
               >
                 Ler Estatuto Social <ExternalLink size={16} />
               </Button>
             </>
           )}
           {modal === "events" &&
-            feedContent(events, "Novos encontros serão publicados aqui")}
+            <MobileEvents items={events.items} loading={events.loading} error={events.error} onOpen={openEvent}/>}
           {modal === "communications" &&
             session.active &&
             feedContent(communications, "Nenhum comunicado no momento")}
           {modal === "transparency" &&
             session.active &&
-            feedContent(transparency, "Nenhuma prestação de contas publicada")}
-          {modal === "assembly" && session.active && (
-            <>
-              <Empty icon={Users} title="Sua voz nas decisões">
-                Consulte as convocações, registre presença e participe das
-                votações no portal seguro da associação. Por segurança, o portal
-                solicitará seu login.
-              </Empty>
-              <Button
-                onClick={() =>
-                  void perform(() => site("/associado/assembleias"))
-                }
-              >
-                Abrir assembleias <ExternalLink size={17} />
-              </Button>
-            </>
-          )}
+            <React.Suspense fallback={<p>Carregando transparência…</p>}><MemberFeatures feature="transparency" onPhoto={() => {}}/></React.Suspense>}
+          {modal === "assembly" && session.active && <React.Suspense fallback={<p>Carregando assembleias…</p>}><MemberFeatures feature="assembly" onPhoto={() => {}}/></React.Suspense>}
+          {modal === "statute" && <React.Suspense fallback={<p>Carregando estatuto…</p>}><MemberFeatures feature="statute" onPhoto={() => {}}/></React.Suspense>}
           {modal === "privacy" && (
             <div className="privacy">
               <ShieldCheck size={35} />

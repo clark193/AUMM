@@ -9,7 +9,7 @@ import { validExternalDocumentUrl, validInternalDocumentPath } from "@/lib/docum
 import { withBasePath } from "@/lib/paths";
 import { DOCUMENT_CATEGORY_NAMES, type InstitutionalDocument } from "@/lib/documentTypes";
 
-export function DocumentLibrary({ member = false }: { member?: boolean }) {
+export function DocumentLibrary({ member = false, siteUrl, onStatute }: { member?: boolean; siteUrl?: string; onStatute?: () => void }) {
   const [rows, setRows] = useState<InstitutionalDocument[]>([]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
@@ -43,7 +43,7 @@ export function DocumentLibrary({ member = false }: { member?: boolean }) {
   function openUrl(item: InstitutionalDocument) {
     const internal = validInternalDocumentPath(item.internalUrl);
     return internal
-      ? withBasePath(internal)
+      ? siteUrl ? new URL(internal, siteUrl).href : withBasePath(internal)
       : validExternalDocumentUrl(item.externalUrl) || validExternalDocumentUrl(item.signedDocumentUrl);
   }
 
@@ -51,7 +51,7 @@ export function DocumentLibrary({ member = false }: { member?: boolean }) {
     {current && <section className="current-statute">
       <FileText />
       <div><span>Estatuto vigente</span><h2>{current.title}</h2><p>Versão {current.statuteVersion || current.year}</p></div>
-      <button className="button" onClick={() => setSelected(current)}>Visualizar</button>
+      <button className="button" onClick={() => current.internalUrl === "/estatuto" && onStatute ? onStatute() : setSelected(current)}>Visualizar</button>
     </section>}
     <div className="document-filters">
       <label className="admin-search"><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Pesquisar documentos" /></label>
@@ -73,7 +73,7 @@ export function DocumentLibrary({ member = false }: { member?: boolean }) {
             <p>{item.description}</p>
             <small>{item.documentNumber || item.year} · {item.documentDate?.toDate().toLocaleDateString("pt-BR")}</small>
             <div className="assembly-actions">
-              <button className="button button-sm" onClick={() => setSelected(item)}>Visualizar</button>
+              <button className="button button-sm" onClick={() => item.internalUrl === "/estatuto" && onStatute ? onStatute() : setSelected(item)}>Visualizar</button>
               {primaryUrl && <a className="button button-sm button-dark" href={primaryUrl} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Abrir documento</a>}
               {signedUrl && signedUrl !== primaryUrl && <a className="button button-sm button-dark" href={signedUrl} target="_blank" rel="noreferrer">Documento assinado</a>}
             </div>
@@ -94,7 +94,7 @@ export function DocumentLibrary({ member = false }: { member?: boolean }) {
         {selected.sourceType === "assembly_minutes" && <p>Ata eletrônica vinculada à Assembleia {selected.sourceId}. Consulte o histórico no Portal do Associado para pautas, resultados e hash.</p>}
         <div className="assembly-actions">
           {openUrl(selected) && <a className="button" href={openUrl(selected)} target="_blank" rel="noreferrer">Visualizar documento</a>}
-          <button className="button button-dark" onClick={() => window.print()}><Printer size={15} /> Imprimir / PDF</button>
+          {!siteUrl && <button className="button button-dark" onClick={() => window.print()}><Printer size={15} /> Imprimir / PDF</button>}
         </div>
       </article>
     </div>}

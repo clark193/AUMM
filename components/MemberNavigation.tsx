@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { signOut, onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { BarChart3, CalendarDays, CreditCard, FileText, Gift, Home, LogOut, Settings, Vote } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -36,12 +36,16 @@ export function MemberSidebar({ footer = "Conteúdo exclusivo para associados" }
 
 export function MemberTopbar({ title }: { title: string }) {
   const [profile, setProfile] = useState({ name: "Associado", photoURL: "" });
-  useEffect(() => onAuthStateChanged(getFirebaseServices().auth, async (user) => {
-    if (!user) return;
-    const { db } = getFirebaseServices();
-    const [member, photo] = await Promise.all([getDoc(doc(db, "associados", user.uid)), getDoc(doc(db, "memberPhotos", user.uid))]);
-    setProfile({ name: String(member.data()?.fullName || user.displayName || "Associado"), photoURL: String(photo.data()?.dataUrl || "") });
-  }), []);
+  useEffect(() => {
+    let stopMember=()=>{},stopPhoto=()=>{};
+    const {auth,db}=getFirebaseServices();
+    const stop=onAuthStateChanged(auth,user=>{
+      stopMember();stopPhoto();setProfile({name:"Associado",photoURL:""});if(!user)return;
+      stopMember=onSnapshot(doc(db,"associados",user.uid),s=>setProfile(v=>({...v,name:String(s.data()?.fullName||user.displayName||"Associado")})),()=>{});
+      stopPhoto=onSnapshot(doc(db,"memberPhotos",user.uid),s=>setProfile(v=>({...v,photoURL:String(s.data()?.dataUrl||"")})),()=>{});
+    });
+    return ()=>{stop();stopMember();stopPhoto();};
+  }, []);
   const initials = profile.name.split(" ").slice(0, 2).map((part) => part[0]).join("").toUpperCase();
   return <header className="dash-top"><h1>{title}</h1><div className="dash-profile"><NotificationBell audience="member" /><span>{profile.name}</span><Link className="avatar member-avatar" href="/associado/configuracoes" aria-label="Abrir configurações do perfil">{profile.photoURL ? <Image src={profile.photoURL} width={32} height={32} unoptimized alt="" /> : initials || "A"}</Link></div></header>;
 }

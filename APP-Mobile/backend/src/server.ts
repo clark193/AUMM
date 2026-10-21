@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import { getAuth } from "firebase-admin/auth";
+import { AdminPasswordError, changeMemberPassword } from "./adminPassword.js";
 import { getFirestore, Timestamp, type DocumentSnapshot } from "firebase-admin/firestore";
 import {
   mobileAdminEmergency, mobileCleanupSupportChat, mobileCommunicationPublished,
@@ -102,12 +103,27 @@ const server = createServer(async (request, response) => {
     response.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   }
   if (request.url === "/health" && request.method === "GET") { response.writeHead(ready ? 200 : 503); response.end(ready ? "ok" : "starting"); return; }
-  if (request.url !== "/wake") { response.writeHead(404); response.end(); return; }
+  if (!["/wake", "/admin/member-password"].includes(request.url || "")) { response.writeHead(404); response.end(); return; }
   if (origin && !allowedOrigins.has(origin)) { response.writeHead(403); response.end(); return; }
   if (request.method === "OPTIONS") { response.writeHead(204); response.end(); return; }
   if (request.method !== "POST") { response.writeHead(405); response.end(); return; }
   const bearer = request.headers.authorization?.match(/^Bearer ([A-Za-z0-9._-]{100,8192})$/)?.[1];
   if (!bearer) { response.writeHead(401); response.end(); return; }
+  if (request.url === "/admin/member-password") {
+    try {
+      let body = "";
+      for await (const chunk of request) { body += chunk.toString("utf8"); if (Buffer.byteLength(body) > 2048) throw new AdminPasswordError(413, "Requisição muito grande."); }
+      let input;
+      try { input = JSON.parse(body); } catch { throw new AdminPasswordError(400, "Requisição inválida."); }
+      if (!input || typeof input !== "object" || Array.isArray(input)) throw new AdminPasswordError(400, "Requisição inválida.");
+      const result = await changeMemberPassword(bearer, input);
+      response.writeHead(200, { "Content-Type": "application/json" }); response.end(JSON.stringify(result));
+    } catch (error) {
+      response.writeHead(error instanceof AdminPasswordError ? error.status : 500, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ message: error instanceof AdminPasswordError ? error.message : "Não foi possível processar a alteração de senha." }));
+    }
+    return;
+  }
   try {
     const identity = await getAuth().verifyIdToken(bearer);
     const previous = wakeLimits.get(identity.uid) || 0;

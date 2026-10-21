@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { Camera, LoaderCircle, UserRound } from "lucide-react";
-import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { useRef, useState } from "react";
 import { getFirebaseServices } from "@/lib/firebase";
 import { firebaseErrorMessage } from "@/lib/firebaseErrorMessage";
@@ -31,8 +31,9 @@ export async function compressedDataUrl(file: File, dimension = 480) {
   } finally { URL.revokeObjectURL(objectUrl); }
 }
 
-export function MemberPhotoUpload({ photoURL, name, onUploaded, compact = false }: { photoURL?: string; name: string; onUploaded: (url: string) => void; compact?: boolean }) {
+export function MemberPhotoUpload({ photoURL, name, onUploaded, compact = false, targetUid }: { photoURL?: string; name: string; onUploaded: (url: string) => void; compact?: boolean; targetUid?: string }) {
   const input = useRef<HTMLInputElement>(null);
+  const camera = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -46,13 +47,16 @@ export function MemberPhotoUpload({ photoURL, name, onUploaded, compact = false 
       const { auth, db } = getFirebaseServices();
       const user = auth.currentUser;
       if (!user) throw new Error("Sua sessão expirou. Entre novamente.");
+      const uid = targetUid || user.uid;
       const dataUrl = await compressedDataUrl(file);
-      await setDoc(doc(db, "memberPhotos", user.uid), { uid: user.uid, dataUrl, contentType: dataUrl.startsWith("data:image/webp") ? "image/webp" : "image/jpeg", updatedAt: serverTimestamp() }, { merge: true });
-      const member = await getDoc(doc(db, "associados", user.uid));
+      const batch = writeBatch(db);
+      batch.set(doc(db, "memberPhotos", uid), { uid, dataUrl, contentType: dataUrl.startsWith("data:image/webp") ? "image/webp" : "image/jpeg", updatedAt: serverTimestamp() }, { merge: true });
+      const member = await getDoc(doc(db, "associados", uid));
       const memberNumber = String(member.data()?.memberNumber || "");
-      if (memberNumber) {
-        await updateDoc(doc(db, "publicMembers", memberNumber), { photoDataUrl: dataUrl, updatedAt: serverTimestamp() });
+      if (memberNumber && (await getDoc(doc(db, "publicMembers", memberNumber))).exists()) {
+        batch.update(doc(db, "publicMembers", memberNumber), { photoDataUrl: dataUrl, updatedAt: serverTimestamp() });
       }
+      await batch.commit();
       onUploaded(dataUrl);
       setMessage("Foto atualizada com sucesso.");
     } catch (error) {
@@ -60,6 +64,7 @@ export function MemberPhotoUpload({ photoURL, name, onUploaded, compact = false 
     } finally {
       setBusy(false);
       if (input.current) input.current.value = "";
+      if (camera.current) camera.current.value = "";
     }
   }
 
@@ -67,5 +72,7 @@ export function MemberPhotoUpload({ photoURL, name, onUploaded, compact = false 
     <div className="member-photo-preview">{photoURL ? <Image src={photoURL} width={82} height={82} unoptimized alt={`Foto de ${name}`} /> : <UserRound />}</div>
     <div><button type="button" className="button button-sm button-dark" disabled={busy} onClick={() => input.current?.click()}>{busy ? <LoaderCircle className="spin" /> : <Camera />} {busy ? "Enviando…" : photoURL ? "Trocar foto" : "Adicionar foto"}</button>{!compact && <small>JPG, PNG ou WebP · até 5 MB. Não é necessário usar link público.</small>}{message && <span className={message.includes("sucesso") ? "upload-success" : "upload-error"}>{message}</span>}</div>
     <input ref={input} className="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => upload(event.target.files?.[0])} />
+    <button type="button" className="button button-sm button-dark" disabled={busy} onClick={() => camera.current?.click()}><Camera /> Tirar foto</button>
+    <input ref={camera} className="visually-hidden" type="file" accept="image/*" capture="user" onChange={event => upload(event.target.files?.[0])} />
   </div>;
 }

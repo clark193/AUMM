@@ -818,8 +818,8 @@ test("chat isola participantes e geração do pedido, valida remetente e bloquei
   await assertFails(getDocs(thread("guest")));
 });
 
-async function startLocationLink(id = "0123456789abcdef0123456789abcdef") {
-  const db = user("guest"), batch = writeBatch(db), expiresAt = Timestamp.fromMillis(Date.now() + 3300000);
+async function startLocationLink(id = "0123456789abcdef0123456789abcdef", duration = 3300000) {
+  const db = user("guest"), batch = writeBatch(db), expiresAt = Timestamp.fromMillis(Date.now() + duration);
   batch.set(doc(db, "locationShareOwners", id), { ownerUid: "guest", createdAt: serverTimestamp(), expiresAt });
   batch.set(doc(db, "liveLocations", id), { lat: -26.9, lng: -49.1, accuracy: 10, updatedAt: serverTimestamp(), sampledAt: Timestamp.now(), expiresAt });
   await assertSucceeds(batch.commit());
@@ -849,7 +849,7 @@ test("links expirados não podem ser lidos nem atualizados e novos prazos têm l
   });
   await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), "liveLocations", id)));
   await assertFails(updateDoc(doc(user("guest"), "liveLocations", id), { lat: -27, updatedAt: serverTimestamp() }));
-  await assertFails(setDoc(doc(user("guest"), "locationShareOwners", "11111111111111111111111111111111"), { ownerUid: "guest", createdAt: serverTimestamp(), expiresAt: Timestamp.fromMillis(Date.now() + 7200000) }));
+  await assertFails(setDoc(doc(user("guest"), "locationShareOwners", "11111111111111111111111111111111"), { ownerUid: "guest", createdAt: serverTimestamp(), expiresAt: Timestamp.fromMillis(Date.now() + 13*3600000) }));
 });
 test("exclusão direta de associado exige nível 1 ativo, mesmo com flag superAdmin em outro nível", async () => {
   await env.withSecurityRulesDisabled(async (c) => {
@@ -967,4 +967,22 @@ test("todos os admins ativos recebem sinal sem acesso adicional aos dados do aci
   await assertFails(updateDoc(doc(user("member1"), "emergencyAdminSignals", "member1"), { status: "resolved" }));
   await assertFails(updateDoc(doc(user("member1"), "emergencyAlerts", "member1"), { status: "cancelled", updatedAt: serverTimestamp() }));
   await assertSucceeds(updateEmergency(ref, { status: "cancelled", updatedAt: serverTimestamp() }));
+});
+
+test("link admite 12 horas; foto só pelo titular ou equipe autorizada", async () => {
+  await startLocationLink("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 12*3600000-1000);
+  await env.withSecurityRulesDisabled(c => setDoc(doc(c.firestore(), "adminRoles", "adminPhoto"), {active:true,level:3,permissions:{}}));
+  const photo = {uid:"member1",dataUrl:"data:image/jpeg;base64,YWJj",contentType:"image/jpeg",updatedAt:serverTimestamp()};
+  await assertSucceeds(setDoc(doc(user("member1"),"memberPhotos","member1"),photo));
+  await assertSucceeds(setDoc(doc(user("adminPhoto"),"memberPhotos","member1"),photo));
+  await assertFails(setDoc(doc(user("member2"),"memberPhotos","member1"),photo));
+  await assertFails(setDoc(doc(user("member1"),"memberPhotos","member1"),{...photo,dataUrl:"data:text/html;base64,YWJj"}));
+});
+test("revogação impede sessão antiga e não pode ser alterada pelo cliente", async () => {
+  await env.withSecurityRulesDisabled(c => setDoc(doc(c.firestore(),"sessionRevocations","member1"),{validAfter:200}));
+  const old=env.authenticatedContext("member1",{auth_time:100}).firestore();
+  const fresh=env.authenticatedContext("member1",{auth_time:201}).firestore();
+  await assertFails(getDoc(doc(old,"associados","member1")));
+  await assertSucceeds(getDoc(doc(fresh,"associados","member1")));
+  await assertFails(setDoc(doc(fresh,"sessionRevocations","member1"),{validAfter:0}));
 });

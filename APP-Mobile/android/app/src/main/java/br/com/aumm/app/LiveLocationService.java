@@ -35,7 +35,8 @@ public class LiveLocationService extends Service implements LocationListener {
     static volatile boolean active = false, closing = false;
     static volatile String shareId = "", error = "";
     static volatile long expiresAt = 0, updatedAt = 0;
-    private String project = "", idToken = "";
+    private String project = "", idToken = "", refreshToken = "", apiKey = "";
+    private long tokenAt = 0;
     private long lastAttempt = 0;
     private boolean sending = false;
     private LocationManager locations;
@@ -52,6 +53,9 @@ public class LiveLocationService extends Service implements LocationListener {
         project = intent.getStringExtra("projectId");
         String id = intent.getStringExtra("shareId");
         idToken = intent.getStringExtra("idToken");
+        refreshToken = intent.getStringExtra("refreshToken");
+        apiKey = intent.getStringExtra("apiKey");
+        tokenAt = System.currentTimeMillis();
         long expiry = intent.getLongExtra("expiresAt", 0);
         try {
             if (project == null || id == null || idToken == null || !LiveLocationPolicy.validSession(project, id, idToken, expiry, System.currentTimeMillis())) throw new IllegalArgumentException();
@@ -124,7 +128,11 @@ public class LiveLocationService extends Service implements LocationListener {
         HttpURLConnection connection = null;
         PowerManager.WakeLock lock = ((PowerManager) getSystemService(POWER_SERVICE)).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AUMM:LocationUpload");
         try {
-            lock.acquire(25_000);
+            lock.acquire(60_000);
+            if (System.currentTimeMillis() - tokenAt > 45 * 60_000) {
+                int refreshed = refreshAuthentication();
+                if (refreshed != 200) return refreshed;
+            }
             connection = (HttpURLConnection) new URL("https://firestore.googleapis.com/v1/projects/" + project + "/databases/(default)/documents:commit").openConnection();
             connection.setConnectTimeout(10_000); connection.setReadTimeout(10_000);
             connection.setInstanceFollowRedirects(false);
@@ -137,6 +145,29 @@ public class LiveLocationService extends Service implements LocationListener {
             return connection.getResponseCode();
         } catch (Exception exception) { return 0; }
         finally { if (connection != null) connection.disconnect(); if (lock.isHeld()) lock.release(); }
+    }
+    private int refreshAuthentication() {
+        HttpURLConnection connection = null;
+        try {
+            connection = (HttpURLConnection) new URL("https://securetoken.googleapis.com/v1/token?key=" + apiKey).openConnection();
+            connection.setConnectTimeout(10_000); connection.setReadTimeout(10_000);
+            connection.setInstanceFollowRedirects(false); connection.setRequestMethod("POST"); connection.setDoOutput(true);
+            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+            byte[] body = ("grant_type=refresh_token&refresh_token=" + java.net.URLEncoder.encode(refreshToken, "UTF-8")).getBytes(StandardCharsets.UTF_8);
+            try (java.io.OutputStream output = connection.getOutputStream()) { output.write(body); }
+            int status = connection.getResponseCode();
+            if (status != 200) return status == 400 ? 401 : status;
+            StringBuilder result = new StringBuilder();
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+                String line; while ((line = reader.readLine()) != null) { result.append(line); if (result.length() > 32768) return 401; }
+            }
+            org.json.JSONObject credentials = new org.json.JSONObject(result.toString());
+            idToken = credentials.getString("id_token");
+            refreshToken = credentials.getString("refresh_token");
+            tokenAt = System.currentTimeMillis();
+            return 200;
+        } catch (Exception exception) { return 0; }
+        finally { if (connection != null) connection.disconnect(); }
     }
     private void beginClose() {
         if (!active) { stopSelf(); return; }
@@ -172,7 +203,7 @@ public class LiveLocationService extends Service implements LocationListener {
         if (locations != null) locations.removeUpdates(this);
         handler.removeCallbacksAndMessages(null);
         network.shutdownNow();
-        active = false; closing = false; shareId = ""; expiresAt = 0; idToken = "";
+        active = false; closing = false; shareId = ""; expiresAt = 0; idToken = ""; refreshToken = ""; apiKey = "";
         stopForeground(STOP_FOREGROUND_REMOVE);
         super.onDestroy();
     }
