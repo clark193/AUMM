@@ -6,7 +6,7 @@
 - Cabeçalho mostra o nome completo da conta com truncamento; foto acompanha `memberPhotos`. Associado ativo não recebe convite para se associar novamente.
 - Emergência: contato cadastrado previamente em Meu Perfil; acionamento somente por confirmação. Sem contato, orienta o cadastro. Falta de GPS não impede registrar alerta sem coordenadas; falta de conexão não é apresentada como sucesso. A diretoria recebe avisos no painel e liga manualmente ao associado/contato. Nenhum SMS é aberto ou enviado.
 - Cadastro completo aceita datas antigas em texto ou Timestamp. Administração autorizada envia/troca foto ou abre a câmera. Apenas nível 1 altera senha de associado pelo servidor, com confirmação da própria senha, auditoria e revogação de sessões; conta administrativa não pode ser alvo. A remoção do perfil continua preservando o login Authentication, conforme escolha anterior.
-- Compartilhamento: opções exatas de 30 minutos, 1, 2, 4, 8 ou 12 horas. Compartilhar e Copiar link são botões separados. O destinatário usa o navegador, sem conta ou aplicativo. O mapa recebe novas posições, expira e é revogado ao encerrar. “Traçar rota até a pessoa” usa a última posição; Android usa `geo:`, iOS usa Apple Maps e desktop usa Google Maps. O navegador/sistema decide se apresenta uma escolha de aplicativos ou abre o padrão configurado.
+- Compartilhamento: opções exatas de 30 minutos, 1, 2, 4, 8 ou 12 horas. Compartilhar e Copiar link são botões separados. O destinatário usa o navegador, sem conta ou aplicativo. O mapa recebe novas posições, expira e é revogado ao encerrar. “Traçar rota até a pessoa” usa a última posição; Android abre a rota no Google Maps e oferece também `geo:` para outros aplicativos de mapas; iOS usa Apple Maps e desktop usa Google Maps. O navegador/sistema decide se apresenta uma escolha de aplicativos ou abre o padrão configurado.
 - Android usa serviço de localização visível, com aviso e botão Encerrar. Credenciais são renovadas durante sessões longas e mantidas somente na memória. Forçar parada, reiniciar/desligar ou restrições do fabricante podem interromper o serviço. No navegador, o envio requer a tela ativa.
 - Eventos publicados aparecem no início, com lista de próximos/anteriores, filtro por data e detalhes. Datas sem horário não inventam meia-noite nem mudam para o dia anterior. Nenhuma participação/inscrição fictícia foi criada.
 - Minhas jornadas registra ganhos/despesas em centavos, odômetro e resumo mensal real, com persistência local por conta. Dados não são sincronizados nem recuperados após limpar o armazenamento. Calculadoras, manutenção e checklist existentes permanecem.
@@ -44,8 +44,68 @@ O servidor Render permanece gratuito e usa uma permissão IAM personalizada some
 - Navegador: link público independente, mapa com tiles, deslocamento GPS simulado, expiração/revogação; emergência com/sem GPS, confirmação/cancelamento e avisos para administradores de níveis 3 e 5 sem exposição indevida.
 - Prévia visual sem escritas no Firebase ou mensagens reais.
 
-As verificações adicionais de interface, build, assinatura e publicação serão registradas abaixo ao término.
+A interface adicional passou: nome completo, convite oculto, data do evento, configurações locais, jornada, cadastro legado, formulário de senha e upload administrativo. O botão Copiar foi conferido lendo a área de transferência. Rotas Android/iPhone tiveram seus destinos validados com agentes de navegador correspondentes. Build Android e AAB concluídos; assinatura APK v2 válida; plugin Clipboard presente no pacote. Regras publicadas e servidor Render live; saúde HTTP 200 e endpoint de senha sem autenticação HTTP 401.
 
 ## Limites de teste
 
 Não há telefone Android conectado. GPS com tela bloqueada por 12h, consumo de bateria, câmera, seletor de navegação e push com aplicativo fechado precisam de validação em aparelho físico. Os testes não alteram senhas de usuários reais nem disparam mensagens de emergência reais. Nenhuma promessa de socorro ou entrega imediata foi adicionada.
+
+Referência técnica de rotas: https://developers.google.com/maps/documentation/urls/get-started . URLs de direções abrem a rota; `geo:` abre a posição em um aplicativo de mapas, onde o usuário pode iniciar a navegação.
+
+## APK de teste
+
+aumm-2026-10-21-atualizado-debug.apk · 10.1 MiB · SHA-256: `6b561ad9775b6f606856e47521103a0748679f71dfa88b08f79959f934511af9`. AAB gerado sem assinatura de distribuição.
+
+## Arquivos alterados
+
+- `APP-Mobile/android/app/capacitor.build.gradle`
+- `APP-Mobile/android/app/src/main/java/br/com/aumm/app/BackgroundLocationPlugin.java`
+- `APP-Mobile/android/app/src/main/java/br/com/aumm/app/LiveLocationPolicy.java`
+- `APP-Mobile/android/app/src/main/java/br/com/aumm/app/LiveLocationService.java`
+- `APP-Mobile/android/app/src/main/res/drawable/aumm_launcher.xml`
+- `APP-Mobile/android/app/src/main/res/mipmap-anydpi/ic_launcher.xml`
+- `APP-Mobile/android/app/src/main/res/mipmap-anydpi/ic_launcher_round.xml`
+- `APP-Mobile/android/capacitor.settings.gradle`
+- `APP-Mobile/artifacts/ALTERACOES-2026-10-21.md`
+- `APP-Mobile/artifacts/FIREBASE-REGRAS-COMPLETAS.txt`
+- `APP-Mobile/artifacts/SHA256SUMS.txt`
+- `APP-Mobile/backend/README.md`
+- `APP-Mobile/backend/src/adminPassword.ts`
+- `APP-Mobile/backend/src/server.ts`
+- `APP-Mobile/package-lock.json`
+- `APP-Mobile/package.json`
+- `APP-Mobile/src/EmergencyCenter.tsx`
+- `APP-Mobile/src/EmergencyContact.tsx`
+- `APP-Mobile/src/LiveShare.tsx`
+- `APP-Mobile/src/MemberFeatures.tsx`
+- `APP-Mobile/src/MobileEvents.tsx`
+- `APP-Mobile/src/RideLedger.tsx`
+- `APP-Mobile/src/backgroundLocation.ts`
+- `APP-Mobile/src/hooks.ts`
+- `APP-Mobile/src/improvements.css`
+- `APP-Mobile/src/main.tsx`
+- `APP-Mobile/src/ride-domain.d.mts`
+- `APP-Mobile/src/ride-domain.mjs`
+- `APP-Mobile/tests/admin-password.mjs`
+- `APP-Mobile/tests/emergency-ui.mjs`
+- `APP-Mobile/tests/live-share-ui.mjs`
+- `APP-Mobile/tests/map-navigation-ui.mjs`
+- `APP-Mobile/tests/member-improvements-ui.mjs`
+- `APP-Mobile/tests/member-improvements.test.mjs`
+- `APP-Mobile/tests/native-location.test.mjs`
+- `APP-Mobile/tests/security.rules.mjs`
+- `APP-Mobile/tests/visual-preview-ui.mjs`
+- `APP-Mobile/vite.config.ts`
+- `app/globals.css`
+- `components/AssemblyMember.tsx`
+- `components/DocumentLibrary.tsx`
+- `components/LiveLocationViewer.tsx`
+- `components/MemberAdmin.tsx`
+- `components/MemberCardContent.tsx`
+- `components/MemberNavigation.tsx`
+- `components/MemberPhotoUpload.tsx`
+- `components/MemberSettingsPage.tsx`
+- `components/MinutesReading.tsx`
+- `firestore.rules`
+- `lib/adminMemberPassword.ts`
+- `lib/memberDates.ts`
