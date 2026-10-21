@@ -7,6 +7,11 @@ const env = await initializeTestEnvironment({ projectId: "demo-aumm-mobile", fir
 const browser = await chromium.launch({ headless: true, executablePath: process.env.AUMM_BROWSER });
 const context = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ["geolocation"], geolocation: { latitude: -26.9194, longitude: -49.0661, accuracy: 12 } });
 const page = await context.newPage(); page.setDefaultTimeout(90000);
+const recipientBrowser = await chromium.launch({ headless: true, executablePath: process.env.AUMM_BROWSER });
+const recipientContext = await recipientBrowser.newContext({ viewport: { width: 390, height: 844 }, locale: "pt-BR" });
+const recipient = await recipientContext.newPage(); recipient.setDefaultTimeout(60000);
+let loadedTiles = 0;
+recipient.on("response", response => { if (response.ok() && response.url().includes("tiles.openfreemap.org") && !response.url().includes("/fonts/") && /\.pbf(?:\?|$)/.test(response.url())) loadedTiles++; });
 const errors = []; page.on("pageerror", (error) => errors.push(error.message));
 try {
   await page.goto("http://127.0.0.1:5175", { waitUntil: "domcontentloaded" });
@@ -24,17 +29,28 @@ try {
   const location = () => getDoc(doc(publicDb, "liveLocations", token));
   expect((await location()).data().lat).toBe(-26.9194);
   expect(Object.keys((await location()).data()).sort()).toEqual(["accuracy", "expiresAt", "lat", "lng", "sampledAt", "updatedAt"]);
+  await recipient.goto(`http://127.0.0.1:5175/mapa-preview.html#${token}`, { waitUntil: "domcontentloaded" });
+  await expect(recipient.getByRole("status")).toContainText("Recebendo localização", { timeout: 60000 });
+  await expect(recipient.locator(".maplibregl-canvas")).toBeVisible();
+  await expect.poll(() => loadedTiles, { timeout: 60000 }).toBeGreaterThan(0);
+  await expect(recipient.locator(".live-location-map")).toHaveAttribute("aria-busy", "false", { timeout: 60000 });
+  const initialMap = await recipient.locator(".maplibregl-canvas").screenshot();
+  await recipient.screenshot({ path: fileURLToPath(new URL("../artifacts/38-link-mapa-recebido.png", import.meta.url)) });
   await page.screenshot({ path: fileURLToPath(new URL("../artifacts/28-compartilhar-localizacao-ao-vivo.png", import.meta.url)) });
   // Força a próxima amostra depois da janela de dez segundos do remetente.
   await page.waitForTimeout(10500);
   await context.setGeolocation({ latitude: -26.925, longitude: -49.073, accuracy: 10 });
   await expect.poll(async () => (await location()).data()?.lat, { timeout: 30000 }).toBe(-26.925);
+  await expect(recipient.getByRole("status")).toContainText(/Último sinal há [0-3]s/);
+  await expect.poll(async () => !(await recipient.locator(".maplibregl-canvas").screenshot()).equals(initialMap), { timeout: 15000 }).toBe(true);
   await dialog.getByRole("button", { name: "Encerrar compartilhamento", exact: true }).click();
   await expect(input).toHaveCount(0);
+  await expect(recipient.getByRole("status")).toContainText(/encerrado|expirou|indisponível/i);
+  await expect(recipient.locator(".live-location-map")).toBeHidden();
   await env.withSecurityRulesDisabled(async (c) => {
     expect((await getDoc(doc(c.firestore(), "liveLocations", token))).exists()).toBe(false);
     expect((await getDoc(doc(c.firestore(), "locationShareOwners", token))).exists()).toBe(false);
   });
   expect(errors).toEqual([]);
-  console.log("Compartilhamento ao vivo: consentimento, link privado por posse, leitura pública sem dados cadastrais, movimento e revogação imediata: aprovados no emulador.");
-} finally { await browser.close(); await env.cleanup(); }
+  console.log("Compartilhamento ao vivo: consentimento, receptor independente sem login, mapa com tiles carregados, movimento de GPS simulado refletido no mapa e revogação do link: aprovados no emulador.");
+} finally { await browser.close(); await recipientBrowser.close(); await env.cleanup(); }

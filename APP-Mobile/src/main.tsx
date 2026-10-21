@@ -91,6 +91,7 @@ import SupportDetail from "./SupportDetail";
 import SupportDock from "./SupportDock";
 import LiveShare from "./LiveShare";
 import EmergencyCenter, { EmergencyHome } from "./EmergencyCenter";
+import AdminEmergencyPreview from "./AdminEmergencyPreview";
 import { isActiveSupport } from "../shared/support";
 type Tab = "home" | "support" | "news" | "utilities" | "account" | "request";
 const money = (n: number) =>
@@ -258,7 +259,7 @@ function App() {
       : []),
     ...supportActivity.helping,
   ];
-  const [modal, setModal] = useState<string | null>(new URLSearchParams(location.search).has("login") ? "login" : null);
+  const [modal, setModal] = useState<string | null>(isPreview && new URLSearchParams(location.search).get("role") === "admin" ? "adminPreview" : isPreview && new URLSearchParams(location.search).get("role") === "emergency" ? "emergency" : new URLSearchParams(location.search).has("login") ? "login" : null);
   const [toast, setToast] = useState("");
   const [online, setOnline] = useState(navigator.onLine);
   const [selectedNews, setSelectedNews] = useState<Row | null>(null);
@@ -644,7 +645,7 @@ function App() {
                   onOpen={() => openSupport(request.id)}
                 />
               ))}
-              {session.active && session.user && <EmergencyHome uid={session.user.uid} onOpen={() => setModal("emergency")} />}
+              {(session.active || isPreview) && <EmergencyHome uid={session.user?.uid || "preview-emergency"} onOpen={() => setModal("emergency")} />}
               <section className="hero">
                 <div className="hero-copy">
                   <span className="hero-label">
@@ -1049,7 +1050,7 @@ function App() {
               <Section title="Minha associação">
                 {session.active && <button className="list-row danger-text" onClick={() => setModal("emergency")}><HandHeart size={20} /><span>Emergência e contato de confiança<small>Configure o contato e acompanhe seu alerta</small></span><ChevronRight size={17} /></button>}
                 <button className="list-row" onClick={() => setModal("liveShare")}><MapPin size={20} /><span>Compartilhar localização ao vivo<small>Envie um link para uma pessoa de confiança</small></span><ChevronRight size={17} /></button>
-                <button className="list-row" onClick={() => window.location.assign("./portal.html#/associado/login?destino=admin")}><ShieldCheck size={20} /><span>Acesso administrativo<small>Gerencie a AUMM pelo aplicativo</small></span><ChevronRight size={17} /></button>
+                <button className="list-row" onClick={() => isPreview ? setModal("adminPreview") : window.location.assign("./portal.html#/associado/login?destino=admin")}><ShieldCheck size={20} /><span>Acesso administrativo<small>Gerencie a AUMM pelo aplicativo</small></span><ChevronRight size={17} /></button>
                 <div className="menu-list">
                   {[
                     { title: "Minha carteirinha", icon: Wallet, key: "card" },
@@ -1188,6 +1189,7 @@ function App() {
                 checklist: "Antes de sair",
                 maintenance: "Cuidados com a moto",
                 emergency: "Emergência e apoio após acidente",
+                adminPreview: "Painel administrativo · demonstração",
                 card: "Minha carteirinha",
                 benefits: "Seus benefícios",
                 documents: "Documentos da associação",
@@ -1213,6 +1215,7 @@ function App() {
               notify={notify}
             />
           )}
+          {isPreview && modal === "adminPreview" && <AdminEmergencyPreview />}
           {modal === "liveShare" && <LiveShare notify={notify} />}
           {modal === "login" && (
             <Login
@@ -1258,7 +1261,7 @@ function App() {
           {modal === "maintenance" && <Maintenance notify={notify} />}
           {modal === "emergency" && (
             <>
-              {session.active && session.user ? <EmergencyCenter uid={session.user.uid} /> : <p>Entre com sua conta de associado ativo para cadastrar um contato e avisar a associação em caso de acidente.</p>}
+              {(session.active || isPreview) ? <EmergencyCenter uid={session.user?.uid || "preview-emergency"} /> : <p>Entre com sua conta de associado ativo para cadastrar um contato e avisar a associação em caso de acidente.</p>}
               <p className="muted">
                 Em caso de risco imediato, ligue para o serviço de emergência. A
                 rede de apoio é voluntária.

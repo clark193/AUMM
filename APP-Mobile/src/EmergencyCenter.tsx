@@ -3,7 +3,7 @@ import { doc, onSnapshot, runTransaction, serverTimestamp, setDoc } from "fireba
 import { Siren, Phone, MapPin } from "lucide-react";
 import { friendly, services } from "./firebase";
 import { locate, composeEmergencySms } from "./platform";
-import { isPreview } from "./preview";
+import { isPreview, previewPosition } from "./preview";
 import { emergencyPhone, emergencyMessage } from "../../lib/emergencyMessage";
 
 type Alert = { status: string; fullName: string; location: { lat: number; lng: number; accuracy: number } | null; contactPhone: string; incidentId: string };
@@ -22,7 +22,7 @@ export default function EmergencyCenter({ uid }: { uid: string }) {
   const alive = useRef(true);
   useEffect(() => {
     alive.current = true;
-    if (isPreview) { setLoading(false); return; }
+    if (isPreview) { setName("Mariana · contato fictício"); setContactPhone("+5547999991234"); setPhone("+5547999994321"); setSaved(true); setLoading(false); return; }
     const { db } = services();
     const stopContact = onSnapshot(doc(db, "emergencyContacts", uid), { includeMetadataChanges: true }, (snap) => {
       if (snap.metadata.hasPendingWrites) return;
@@ -45,7 +45,7 @@ export default function EmergencyCenter({ uid }: { uid: string }) {
   }
   async function sendAlert() {
     if (isPreview) {
-      setAlert({ status: "open", fullName: "Associado de demonstração", location: null, contactPhone, incidentId: "preview" }); setConfirm(false); return;
+      setAlert({ status: "open", fullName: "Associado de demonstração", location: useGps ? { lat: previewPosition.lat, lng: previewPosition.lng, accuracy: previewPosition.accuracy } : null, contactPhone, incidentId: "preview" }); setConfirm(false); return;
     }
     setBusy(true); setError("");
     try {
@@ -74,7 +74,7 @@ export default function EmergencyCenter({ uid }: { uid: string }) {
   async function cancel() {
     setBusy(true); setError("");
     try {
-      if (isPreview) setAlert(null);
+      if (isPreview) setAlert(current => current ? { ...current, status: "cancelled" } : null);
       else {
         const { db } = services();
         await runTransaction(db, async tx => {
@@ -93,7 +93,7 @@ export default function EmergencyCenter({ uid }: { uid: string }) {
     <div className="emergency-intro"><Siren size={32} /><h3>Preciso de apoio após um acidente</h3><p>O alerta aparece no painel da AUMM. O atendimento depende de um responsável disponível e não substitui o socorro de emergência.</p></div>
     {isPreview && <p className="info-panel">Demonstração: nenhum alerta ou mensagem será enviado.</p>}
     {error && <p className="error-panel" role="alert">{error}</p>}
-    {active ? <div className="emergency-progress" role="status"><strong>{labels[alert.status]}</strong><p>{alert.location ? "Localização do momento do alerta registrada." : "Alerta registrado sem localização."}</p><p>O registro no painel não confirma que alguém já leu. Você pode ligar para o seu contato agora.</p><a className="btn" href={`tel:${alert.contactPhone}`}><Phone size={18} /> Ligar para o contato</a><EmergencyMessageAction alert={alert} /><button className="btn secondary" disabled={busy} onClick={() => void cancel()}>Cancelar alerta · acionei por engano</button></div> : <>
+    {active ? <div className="emergency-progress" role="status"><strong>{labels[alert.status]}</strong><p>{alert.location ? "Localização do momento do alerta registrada." : "Alerta registrado sem localização."}</p><p>O registro no painel não confirma que alguém já leu. Você pode ligar para o seu contato agora.</p><a className="btn" href={`tel:${alert.contactPhone}`} onClick={e => { if (isPreview) e.preventDefault(); }}><Phone size={18} /> Ligar para o contato</a><EmergencyMessageAction alert={alert} />{isPreview && <><button className="btn" onClick={() => setAlert(current => current ? { ...current, status: "contacting" } : null)}>Simular associação entrando em contato</button><button className="btn secondary" onClick={() => setAlert(current => current ? { ...current, status: "resolved" } : null)}>Simular atendimento encerrado</button></>}<button className="btn secondary" disabled={busy} onClick={() => void cancel()}>Cancelar alerta · acionei por engano</button></div> : <>
       {alert && <p role="status">{labels[alert.status]}</p>}
       <form onSubmit={(e) => { e.preventDefault(); void saveContact(); }} className="emergency-contact-form">
         <h3>Seu contato de emergência</h3><p>Combine com essa pessoa antes de cadastrá-la. Estes dados ficam disponíveis apenas para você e para a equipe autorizada da AUMM.</p>

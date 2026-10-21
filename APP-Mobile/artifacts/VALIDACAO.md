@@ -63,3 +63,12 @@ Sino com contador e destaque visual no painel conectado, com leitura individual 
 Verificação: 31 testes de regras aprovados, incluindo administradores de níveis 1 a 5, inativo e visitantes. Integração real com Auth/Firestore locais em 390px: administradores de níveis 3 e 5 conectados antes do acidente receberam sino e destaque; nível 5 não recebeu nome/telefone/link de atendimento; atualização de status não repetiu o aviso; novo incidente avisou e cancelamento limpou o destaque. Build móvel com TypeScript e APK/AAB gerados. Sem envio real de SMS ou push de sistema.
 
 Publicação dos avisos confirmada em 20/10/2026: regras Firestore publicadas em aumm-21dda; GitHub Pages aaa2771abb80d339701eef74e7567301bdefe7ad com status built, fonte 324cffce6299341517e83edcb42a07f92b3284af. O JavaScript público com emergencyAdminSignals tem SHA-256 idêntico à build local. APK/AAB com hashes conferidos. Prévia visual do aviso em 35-notificacao-emergencia-painel.png e do sino no nível 5 em 34-aviso-emergencia-admin-nivel-5.png.
+
+
+### Conferência do APK e acompanhamento — 21/10/2026
+
+APK e AAB regenerados com TypeScript e build Android aprovados. Receptor testado em um segundo navegador independente, sem login: mapa com tiles vetoriais carregados, atualização do GPS simulado refletida no canvas, horários atualizados e link revogado ao encerrar. A independência dos navegadores preserva o remetente em primeiro plano, como em dois aparelhos.
+
+Prévia local do destinatário em preview-celular.html?role=map, com percurso fictício explicitamente identificado e sem uso de GPS pessoal ou gravações no Firebase. Capturas 38-link-mapa-recebido.png e 39-preview-mapa-celular.png. Indicador de carregamento e erro no mapa; avisos não interceptam mais cliques nos controles, mantendo o botão de fechar acessível.
+
+Limitações preservadas: envio de posição somente em primeiro plano; pausa ao bloquear/sair do aplicativo. Push de sistema com o app fechado requer configuração e backend de envio. Teste em aparelho físico e publicação assinada na Play Store continuam pendentes.
