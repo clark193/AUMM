@@ -1,6 +1,6 @@
 {
-  "sourceCommit": "db1bf5d7a0d846e8dd802d283863a9cf6623cbca",
-  "publishedAt": "2026-10-22T04:40:58.464Z",
+  "sourceCommit": "cb1da3926182d27d975f4a12bd57854243f8b6a9",
+  "publishedAt": "2026-10-22T14:24:47.249Z",
   "features": [
     "conta-unificada",
     "cargo-e-nivel-separados",
@@ -8,6 +8,8 @@
     "reunioes-da-diretoria",
     "contatos-de-apoio",
     "credencial-por-cargo",
-    "revisao-de-links-e-permissoes"
+    "revisao-de-links-e-permissoes",
+    "administradores-associados",
+    "cargo-na-lista-de-associados"
   ]
 }
