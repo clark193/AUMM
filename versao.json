@@ -1,16 +1,12 @@
 {
-    "publishedAt":  "2026-10-21T23:40:40.5583297Z",
-    "sourceCommit":  "27ed5e4a313aea763051d7104bd05a932e7fc119",
-    "features":  [
-                     "cadastro-completo-corrigido",
-                     "senha-servidor-admin-nivel-1",
-                     "fotos-associados",
-                     "emergencia-contato-previo-diretoria-manual",
-                     "recursos-associado-dentro-do-app",
-                     "eventos-e-jornadas",
-                     "compartilhamento-30min-1h-2h-4h-8h-12h",
-                     "copiar-e-compartilhar-link",
-                     "rota-ate-pessoa"
-                 ],
-    "builtAt":  "2026-10-21T23:40:40.5518196Z"
+  "sourceCommit": "a2c69da754df424f31f76a628b6f28f3371b32aa",
+  "publishedAt": "2026-10-22T01:22:18.428Z",
+  "features": [
+    "conta-unificada",
+    "cargo-e-nivel-separados",
+    "central-de-emergencias",
+    "reunioes-da-diretoria",
+    "contatos-de-apoio",
+    "credencial-por-cargo"
+  ]
 }
