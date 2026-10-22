@@ -2,7 +2,7 @@ import {chromium,expect as baseExpect} from '@playwright/test';
 import {fileURLToPath} from 'node:url';
 const browser=await chromium.launch({headless:true,executablePath:process.env.AUMM_BROWSER});
 const expect=baseExpect.configure({timeout:45000});
-const context=await browser.newContext({viewport:{width:1280,height:1080},locale:'pt-BR'}),page=await context.newPage();
+const context=await browser.newContext({viewport:{width:1280,height:1080},locale:'pt-BR',permissions:['clipboard-read','clipboard-write']}),page=await context.newPage();
 page.setDefaultTimeout(45000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
 const path=name=>fileURLToPath(new URL(`../artifacts/${name}.png`,import.meta.url));
 try{
@@ -17,6 +17,8 @@ try{
  await app.getByLabel('Nome completo',{exact:true}).fill('Cadastro preservado ao voltar');
  await app.getByRole('link',{name:'Estatuto Social da AUMM',exact:true}).click();
  await expect(app.getByRole('heading',{name:'Estatuto Social da AUMM',exact:true})).toBeVisible();
+ await app.getByRole('button',{name:'Copiar link do artigo 1',exact:true}).click();
+ await expect.poll(()=>page.frames()[1].evaluate(()=>navigator.clipboard.readText())).toMatch(/^https:\/\/aumm\.com\.br\/estatuto#/);
  expect(await page.frames()[1].evaluate(async()=>{const loaded=performance.getEntriesByType('resource').find(entry=>new URL(entry.name).pathname==='/src/portal/navigation.ts');return (await import(loaded.name)).backFromEmbeddedNavigation();})).toBe(true);
  await expect(app.getByLabel('Nome completo',{exact:true})).toHaveValue('Cadastro preservado ao voltar');
  await page.screenshot({path:path('41-cadastro-dentro-do-app')});

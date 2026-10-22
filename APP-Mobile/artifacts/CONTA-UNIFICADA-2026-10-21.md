@@ -28,7 +28,7 @@ Preparação: `node APP-Mobile/tests/seed-unified-preview.mjs`. Este script usa 
 
 ## Limites e pendências
 
-- O usuário solicitou revisar a prévia antes do APK. O APK anterior não contém estas mudanças. Gerar o novo APK somente após a revisão.
+- A prévia foi apresentada antes da geração. Em 22/10 o usuário autorizou a geração após uma varredura de bugs; revisão, correções e novo APK estão registrados em `REVISAO-APK-2026-10-22.md`.
 - Não houve teste desta revisão em celular físico. Ainda validar câmera, permissões Android, notificações com tela bloqueada/app fechado, GPS prolongado e seletor de navegação no aparelho.
 - O servidor Render gratuito entra em repouso após inatividade. Os lembretes foram implementados, mas o horário de entrega não é garantido quando o servidor dorme, o aparelho está sem rede ou o Android restringe notificações. A agenda permanece disponível no painel. Não foi instalado um ping permanente que consumiria as horas gratuitas compartilhadas com outro serviço.
 - Fonte da limitação do Render: https://render.com/docs/free .
@@ -42,4 +42,4 @@ Preparação: `node APP-Mobile/tests/seed-unified-preview.mjs`. Este script usa 
 - Servidor Render atualizado: deploy `dep-dbcma6gm7kps73c74op0`, estado `live`, código `a2c69da754df424f31f76a628b6f28f3371b32aa`. Saúde HTTP 200; endpoint de senha sem autenticação retorna HTTP 401.
 - Regras do Firestore publicadas no projeto `aumm-21dda`. A revisão final também permite remover o cadastro de um ex-administrador cujo acesso já está inativo; administradores ativos continuam protegidos. Os 38 testes foram repetidos e passaram após esse ajuste.
 - Prévia disponível no navegador local pelo link acima. A revisão automática de aprovação bloqueou a abertura automática do navegador por política de execução.
-- APK novo aguardando revisão do usuário; nenhuma atualização Android foi anunciada como concluída nesta entrega.
+- Atualização posterior: novo APK de teste gerado e verificado em 22/10 após autorização do usuário; consultar `REVISAO-APK-2026-10-22.md`.
