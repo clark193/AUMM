@@ -1,4 +1,6 @@
 "use client";
+import {useContext} from "react";
+import {NativeActionsContext} from "./EmbeddedAdmin";
 
 import { deleteApp, FirebaseError, initializeApp } from "firebase/app";
 import { createUserWithEmailAndPassword, deleteUser, inMemoryPersistence, initializeAuth, signOut, type Auth, type User } from "firebase/auth";
@@ -45,6 +47,7 @@ async function uniqueMemberNumber() {
 }
 
 export function ApplicationReviewAdmin() {
+  const native = useContext(NativeActionsContext);
   const [requests, setRequests] = useState<MembershipRow[]>([]);
   const [audits, setAudits] = useState<MembershipAudit[]>([]);
   const [filter, setFilter] = useState<Filter>("pending");
@@ -129,7 +132,7 @@ export function ApplicationReviewAdmin() {
     finally { if (secondaryApp) { try { if (secondaryAuth) await signOut(secondaryAuth); } catch {} await deleteApp(secondaryApp); } setBusy(false); }
   }
 
-  async function copyCredentials() { if (!credentials) return; await navigator.clipboard.writeText(`Acesso AUMM\nE-mail: ${credentials.email}\nSenha temporária: ${credentials.password}\nNúmero: ${credentials.memberNumber}\nPortal: ${window.location.origin}${withBasePath("/associado/login")}`); setMessage({ type: "success", text: "Dados de acesso copiados." }); }
+  async function copyCredentials() { if (!credentials) return; await navigator.clipboard.writeText(`Acesso AUMM\nE-mail: ${credentials.email}\nSenha temporária: ${credentials.password}\nNúmero: ${credentials.memberNumber}\nPortal: ${native?.siteUrl || window.location.origin}${withBasePath("/associado/login")}`); setMessage({ type: "success", text: "Dados de acesso copiados." }); }
 
   return <div className="membership-admin">
     <section className="panel"><div className="panel-head"><div><h3><ShieldAlert size={18} /> Solicitações de Filiação</h3><p>Dados pessoais protegidos. Nenhuma cópia de CNH é armazenada.</p></div><span className="demo-badge">{pendingCount} aguardando análise</span></div>

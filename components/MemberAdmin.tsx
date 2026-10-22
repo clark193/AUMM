@@ -1,4 +1,6 @@
 "use client";
+import {useContext} from "react";
+import {NativeActionsContext} from "./EmbeddedAdmin";
 import { MemberRoleAssignment } from "./MemberRoleAssignment";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -105,6 +107,7 @@ type MemberAdminProps = {
 };
 
 export function MemberAdmin({ registrationOnly = false }: MemberAdminProps) {
+  const native = useContext(NativeActionsContext);
   const [form, setForm] = useState(emptyForm);
   const [authorizeNow, setAuthorizeNow] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -331,7 +334,7 @@ export function MemberAdmin({ registrationOnly = false }: MemberAdminProps) {
   async function copyCredentials() {
     if (!credentials) return;
     await navigator.clipboard.writeText(
-      `Acesso AUMM\nE-mail: ${credentials.email}\nSenha temporária: ${credentials.password}\nPortal: ${window.location.origin}${withBasePath("/associado/login")}`,
+      `Acesso AUMM\nE-mail: ${credentials.email}\nSenha temporária: ${credentials.password}\nPortal: ${native?.siteUrl || window.location.origin}${withBasePath("/associado/login")}`,
     );
     setMessage({ type: "success", text: "Dados de acesso copiados." });
   }

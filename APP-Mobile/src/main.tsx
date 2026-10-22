@@ -1,3 +1,4 @@
+import {backFromEmbeddedNavigation} from "./portal/navigation";
 import React, {
   useEffect,
   useState,
@@ -384,6 +385,7 @@ function App() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     const listener = NativeApp.addListener("backButton", () => {
+      if ((modal === "register" || tab === "admin") && backFromEmbeddedNavigation()) return;
       if (modal || selectedNews) close();
       else if (tab !== "home") setTab("home");
       else void NativeApp.minimizeApp();

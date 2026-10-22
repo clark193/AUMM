@@ -5,6 +5,17 @@ let embeddedExit:((path:string)=>void)|null=null;
 const embeddedListeners=new Set<()=>void>();
 export function activateEmbeddedNavigation(path:string,onExit:(path:string)=>void){embeddedPath=path;embeddedExit=onExit;embeddedListeners.forEach(fn=>fn());return()=>{embeddedPath=null;embeddedExit=null;embeddedListeners.forEach(fn=>fn());};}
 export function currentRoute() { return embeddedPath ?? (window.location.hash.slice(1) || "/admin"); }
+export function backFromEmbeddedNavigation() {
+  if (embeddedPath === "/estatuto" || embeddedPath === "/privacidade") {
+    navigate("/associe-se");
+    return true;
+  }
+  if (embeddedPath?.startsWith("/admin/")) {
+    navigate("/admin");
+    return true;
+  }
+  return false;
+}
 function subscribe(listener: () => void) {
   window.addEventListener("hashchange", listener);
   embeddedListeners.add(listener);

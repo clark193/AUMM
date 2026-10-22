@@ -28,7 +28,10 @@ try{
  await role.getByLabel('Cargo',{exact:true}).selectOption('');await role.getByRole('button',{name:'Salvar cargo e nível',exact:true}).click();
  await expect(role.getByRole('status')).toContainText('mesma conta de login');
  await env.withSecurityRulesDisabled(async c=>{expect((await getDoc(doc(c.firestore(),'adminRoles',accounts.target.uid))).data().active).toBe(false);expect((await getDoc(doc(c.firestore(),'associados',accounts.target.uid))).data().role).toBe('Associado');});
- await dialog.locator('.modal-close').click();await app.getByRole('button',{name:'Todas as ferramentas'}).click();
+ await role.getByLabel('Cargo',{exact:true}).selectOption('communications');
+ await expect(role.getByLabel('Nível de acesso',{exact:true})).toHaveValue('5');
+ await dialog.locator('.modal-close').click();
+ expect(await page.frames()[1].evaluate(async()=>{const loaded=performance.getEntriesByType('resource').find(entry=>new URL(entry.name).pathname==='/src/portal/navigation.ts');return (await import(loaded.name)).backFromEmbeddedNavigation();})).toBe(true);
  await app.getByRole('button',{name:'Contatos de apoio',exact:true}).click();
  await app.getByRole('button',{name:'Novo contato',exact:true}).click();
  await app.getByLabel('Nome do estabelecimento ou profissional').fill('Oficina teste UI');await app.getByLabel('Telefone com DDD').fill('47999991234');

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { Check, Copy, Menu, Printer, Search, X } from "lucide-react";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useContext, useMemo, useState } from "react";
+import { NativeActionsContext } from "./EmbeddedAdmin";
 import { statute2021 } from "@/lib/statute/2021";
 import { withBasePath } from "@/lib/paths";
 
@@ -18,6 +19,7 @@ function Highlight({ text, term }: { text: string; term: string }) {
 }
 
 export function StatutePage({ mobile = false }: { mobile?: boolean } = {}) {
+  const native = useContext(NativeActionsContext);
   const [search, setSearch] = useState("");
   const [indexOpen, setIndexOpen] = useState(false);
   const [copied, setCopied] = useState("");
@@ -28,7 +30,7 @@ export function StatutePage({ mobile = false }: { mobile?: boolean } = {}) {
   }, [search]);
 
   async function copyArticle(id: string) {
-    const url = new URL(`${withBasePath("/estatuto")}#${id}`, window.location.origin).toString();
+    const url = new URL(`${withBasePath("/estatuto")}#${id}`, native?.siteUrl || (mobile ? "https://aumm.com.br" : window.location.origin)).toString();
     await navigator.clipboard.writeText(url);
     setCopied(id);
     window.setTimeout(() => setCopied(""), 1600);

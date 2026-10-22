@@ -14,6 +14,11 @@ try{
  await app.getByRole('button',{name:'Quero me associar',exact:true}).click();
  await expect(app.locator('.mobile-registration')).toBeVisible();
  await expect(app.getByRole('textbox').first()).toBeVisible();
+ await app.getByLabel('Nome completo',{exact:true}).fill('Cadastro preservado ao voltar');
+ await app.getByRole('link',{name:'Estatuto Social da AUMM',exact:true}).click();
+ await expect(app.getByRole('heading',{name:'Estatuto Social da AUMM',exact:true})).toBeVisible();
+ expect(await page.frames()[1].evaluate(async()=>{const loaded=performance.getEntriesByType('resource').find(entry=>new URL(entry.name).pathname==='/src/portal/navigation.ts');return (await import(loaded.name)).backFromEmbeddedNavigation();})).toBe(true);
+ await expect(app.getByLabel('Nome completo',{exact:true})).toHaveValue('Cadastro preservado ao voltar');
  await page.screenshot({path:path('41-cadastro-dentro-do-app')});
  expect(new URL(page.frames()[1].url()).pathname).toBe('/');
  await page.getByRole('button',{name:'Convidado',exact:true}).click();

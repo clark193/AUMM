@@ -1,5 +1,7 @@
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
+import { AppLauncher } from "@capacitor/app-launcher";
+import { externalLinkTarget } from "./externalLinks";
 import { Geolocation } from "@capacitor/geolocation";
 import { Share } from "@capacitor/share";
 import { routeUrl } from "./domain.mjs";
@@ -33,8 +35,13 @@ export async function openNavigation(lat: number, lng: number) {
   await openUrl(routeUrl("google", lat, lng));
 }
 export async function openUrl(url: string) {
-  if (!/^https:\/\//i.test(url)) throw new Error("Link indisponível.");
-  if (Capacitor.isNativePlatform()) await Browser.open({ url });
+  const target = externalLinkTarget(url);
+  if (target === "application") {
+    if (Capacitor.isNativePlatform()) {
+      const result = await AppLauncher.openUrl({ url });
+      if (!result.completed) throw new Error("Nenhum aplicativo disponível para abrir este contato ou localização.");
+    } else window.location.href = url;
+  } else if (Capacitor.isNativePlatform()) await Browser.open({ url });
   else window.open(url, "_blank", "noopener,noreferrer");
 }
 export function site(path: string) {
