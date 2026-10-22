@@ -37,4 +37,9 @@ Preparação: `node APP-Mobile/tests/seed-unified-preview.mjs`. Este script usa 
 
 ## Publicação
 
-Registro de publicação e verificação será atualizado ao concluir o envio do site, regras e servidor.
+- Site publicado em https://aumm.com.br pelo GitHub Pages, release `a061970bf0e0de4e722daf3d1685c24193a2089d`, código do site `a2c69da754df424f31f76a628b6f28f3371b32aa`.
+- Verificados HTTP 200 na página inicial, login, área do associado, lista de associados, Emergências, Reuniões, Contatos de apoio e acompanhamento público. Os 25 arquivos JavaScript usados nessas páginas coincidem por SHA-256 com a exportação local.
+- Servidor Render atualizado: deploy `dep-dbcma6gm7kps73c74op0`, estado `live`, código `a2c69da754df424f31f76a628b6f28f3371b32aa`. Saúde HTTP 200; endpoint de senha sem autenticação retorna HTTP 401.
+- Regras do Firestore publicadas no projeto `aumm-21dda`. A revisão final também permite remover o cadastro de um ex-administrador cujo acesso já está inativo; administradores ativos continuam protegidos. Os 38 testes foram repetidos e passaram após esse ajuste.
+- Prévia disponível no navegador local pelo link acima. A revisão automática de aprovação bloqueou a abertura automática do navegador por política de execução.
+- APK novo aguardando revisão do usuário; nenhuma atualização Android foi anunciada como concluída nesta entrega.

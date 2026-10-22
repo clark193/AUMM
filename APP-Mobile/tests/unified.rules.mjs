@@ -40,10 +40,12 @@ test('contatos: só nível 1 gerencia e visitantes consultam apenas publicados',
 test('cargo e nível: só nível 1 concede acesso e não remove sua própria autoridade',async()=>{
  await assertFails(setDoc(doc(client('director'),'adminRoles','member'),{active:true,level:1}));
  await assertSucceeds(setDoc(doc(client('president'),'adminRoles','member'),{active:true,level:5,role:'Cadastro',permissions:{}}));
+ await assertFails(deleteDoc(doc(client('president'),'associados','member')));
  await assertFails(updateDoc(doc(client('president'),'adminRoles','president'),{active:false}));
  await assertFails(updateDoc(doc(client('president'),'adminRoles','president'),{level:5}));
  await assertFails(deleteDoc(doc(client('president'),'adminRoles','president')));
  await assertSucceeds(updateDoc(doc(client('president'),'adminRoles','member'),{active:false}));
+ await assertSucceeds(deleteDoc(doc(client('president'),'associados','member')));
 });
 test('credencial: presidente invalida cartão e titular reemite com cargo atual e foto no mesmo lote',async()=>{
  await env.withSecurityRulesDisabled(async c=>{await setDoc(doc(c.firestore(),'adminCards','director'),{uid:'director',cardNumber:'DIR-1',role:'Diretor anterior',status:'active',validUntil:Timestamp.fromMillis(Date.now()+86400000)});});

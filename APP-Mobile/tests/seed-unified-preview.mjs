@@ -34,6 +34,10 @@ try{
   await set(`emergencyAdminSignals/${member}`,{incidentId:incident,status:'open',createdAt:now,updatedAt:now});
   const starts=Timestamp.fromMillis(Date.now()+24*3600000);
   await set('adminMeetings/demo-meeting',{title:'Planejamento da diretoria · demonstração',description:'Pauta de exemplo: ações de apoio, agenda de eventos e atendimento aos associados. Não é uma convocação real.',location:'Online',joinUrl:'https://meet.google.com/demo-preview',startsAt:starts,endsAt:Timestamp.fromMillis(starts.toMillis()+3600000),status:'scheduled',createdBy:accounts.director.uid,createdByName:'João · demonstração',createdAt:now,updatedAt:now});
+  for(const mode of ['president','director']){
+   await set(`mobileInbox/${accounts[mode].uid}/items/demo-meeting-notice`,{id:'demo-meeting-notice',kind:'meeting',title:'Agenda da diretoria · demonstração',body:'Exemplo de aviso privado. Abra a agenda para conferir a reunião fictícia.',target:'admin',itemId:'demo-meeting',createdAt:Date.now(),expiresAt:Date.now()+86400000,read:false,pushStatus:'skipped'});
+   await set(`mobileInbox/${accounts[mode].uid}/items/demo-emergency-notice`,{id:'demo-emergency-notice',kind:'emergency',title:'Emergência · demonstração',body:'Um associado fictício pediu contato da associação. Nenhuma ligação real será feita.',target:'admin',itemId:member,createdAt:Date.now(),expiresAt:Date.now()+86400000,read:false,pushStatus:'skipped'});
+  }
  });
  mkdirSync(new URL('../.emulator/',import.meta.url),{recursive:true});writeFileSync(new URL('../.emulator/unified-accounts.json',import.meta.url),JSON.stringify(accounts,null,2));
  console.log('Prévia local preparada: quatro contas fictícias, cargos, contatos, emergência e agenda. Nenhum envio externo.');

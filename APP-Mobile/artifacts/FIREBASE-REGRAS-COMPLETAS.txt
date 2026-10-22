@@ -367,7 +367,8 @@ service cloud.firestore {
           ));
       allow delete: if levelOneAdmin() && id != request.auth.uid
         && resource.data.get('uid', id) != request.auth.uid
-        && !exists(/databases/$(database)/documents/adminRoles/$(resource.data.get('uid', id) is string ? resource.data.get('uid', id) : id));
+        && (!exists(/databases/$(database)/documents/adminRoles/$(resource.data.get('uid', id) is string ? resource.data.get('uid', id) : id))
+          || get(/databases/$(database)/documents/adminRoles/$(resource.data.get('uid', id) is string ? resource.data.get('uid', id) : id)).data.get('active',false) != true);
     }
     match /memberPhotos/{uid} {
       allow read: if own(uid) || hasPermission('members.read');

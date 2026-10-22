@@ -35,6 +35,15 @@ try{
  expect(await frame.locator('html').getAttribute('data-theme')).toBe('light');
  await page.screenshot({path:path('43-inicio-claro-login-salvo')});
  await app.getByRole('button',{name:'Ativar modo escuro',exact:true}).first().click();
+ await frame.evaluate(()=>window.scrollTo(0,700));
+ await expect.poll(()=>frame.locator('.topbar').evaluate(node=>Math.round(node.getBoundingClientRect().top))).toBe(0);
+ await frame.evaluate(()=>window.scrollTo(0,0));
+ await app.getByRole('button',{name:'Ver Todos os Eventos',exact:true}).click();
+ await expect(app.getByRole('heading',{name:'Uma agenda para estar mais perto.',exact:true})).toBeVisible();
+ await page.screenshot({path:path('51-agenda-de-eventos')});
+ await app.getByRole('dialog').getByRole('button',{name:'Ver Detalhes',exact:true}).first().click();
+ await expect(app.getByRole('heading',{name:'Sobre o evento',exact:true})).toBeVisible();
+ await page.keyboard.press('Escape');
  await nav.getByRole('button',{name:'Meu perfil',exact:true}).click();
  await expect(app.locator('.profile-card')).toBeVisible();
  await page.screenshot({path:path('44-perfil-atualizado')});
