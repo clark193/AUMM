@@ -24,3 +24,10 @@ SHA256: `92c5684f4cdb299d7b639cb194407e55dabec95b54d00b668b633e3391372766`.
 Não havia aparelho Android conectado para conferir fisicamente as barras do sistema, GPS em segundo plano e entrega de notificações. O servidor gratuito Render pode dormir; mantém-se a limitação de atraso em avisos e lembretes já documentada.
 
 Referências técnicas: https://capacitorjs.com/docs/updating/8-0 e https://developer.android.com/develop/ui/views/layout/edge-to-edge .
+## Publicação confirmada
+
+- Fonte: `cb1da3926182d27d975f4a12bd57854243f8b6a9`.
+- GitHub Pages: `ac601abe57564c91f05d0bc9470695a84aca65f9`. `https://aumm.com.br/versao.json` corresponde à fonte acima; nove rotas HTTP 200 e 26 scripts públicos com hashes idênticos à exportação local.
+- Render: `dep-dbd1ph0ae00c738c3u8g`, estado live, mesma fonte; /health HTTP 200 e endpoint administrativo sem autenticação HTTP 401.
+- Regras completas do artefato e arquivo raiz com SHA256 idêntico; publicação do Firebase concluída.
+- Conta principal reconfirmada como associado ativo e nível 1 após a publicação; credencial pública antiga de associado invalidada para emissão da credencial do cargo.
