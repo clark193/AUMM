@@ -1,12 +1,13 @@
 {
-  "sourceCommit": "a2c69da754df424f31f76a628b6f28f3371b32aa",
-  "publishedAt": "2026-10-22T01:22:18.428Z",
+  "sourceCommit": "db1bf5d7a0d846e8dd802d283863a9cf6623cbca",
+  "publishedAt": "2026-10-22T04:40:58.464Z",
   "features": [
     "conta-unificada",
     "cargo-e-nivel-separados",
     "central-de-emergencias",
     "reunioes-da-diretoria",
     "contatos-de-apoio",
-    "credencial-por-cargo"
+    "credencial-por-cargo",
+    "revisao-de-links-e-permissoes"
   ]
 }
