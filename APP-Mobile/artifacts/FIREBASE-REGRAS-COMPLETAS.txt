@@ -10,13 +10,13 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/adminRoles/$(request.auth.uid));
     }
     function superAdmin() {
-      return signedIn() && adminProfile().data.active == true
+      return signedIn() && activeAdmin()
         && (adminProfile().data.superAdmin == true
           || adminProfile().data.level == 1
           || adminProfile().data.level == '1');
     }
     function levelAllows(permission) {
-      return signedIn() && adminProfile().data.active == true && (
+      return signedIn() && activeAdmin() && (
         adminProfile().data.level in [1, '1']
         || (adminProfile().data.level in [2, '2'] && permission in [
           'applications.read','applications.review','users.read','users.update','members.read','members.write',
@@ -40,15 +40,23 @@ service cloud.firestore {
     }
     function hasPermission(permission) {
       return superAdmin() || levelAllows(permission)
-        || (signedIn() && adminProfile().data.active == true && adminProfile().data.permissions is map && adminProfile().data.permissions[permission] == true);
+        || (signedIn() && activeAdmin() && adminProfile().data.permissions is map && adminProfile().data.permissions[permission] == true);
     }
     function levelOneAdmin() {
-      return signedIn() && adminProfile().data.active == true && adminProfile().data.level in [1, '1'];
+      return signedIn() && activeAdmin() && adminProfile().data.level in [1, '1'];
     }
     function own(uid) { return signedIn() && request.auth.uid == uid; }
+    function adminHasMembership(uid, data) {
+      let memberId = data.get('memberId', uid);
+      return memberId is string
+        && exists(/databases/$(database)/documents/associados/$(memberId))
+        && get(/databases/$(database)/documents/associados/$(memberId)).data.uid == uid
+        && get(/databases/$(database)/documents/associados/$(memberId)).data.status == 'active';
+    }
     function activeAdmin() {
       return signedIn() && exists(/databases/$(database)/documents/adminRoles/$(request.auth.uid))
-        && adminProfile().data.active == true;
+        && adminProfile().data.active == true
+        && adminHasMembership(request.auth.uid, adminProfile().data);
     }
     function activeMember() {
       return signedIn()
@@ -58,31 +66,34 @@ service cloud.firestore {
     function hasAssemblyPermission(permission) {
       return signedIn()
         && exists(/databases/$(database)/documents/adminRoles/$(request.auth.uid))
-        && adminProfile().data.active == true
+        && activeAdmin()
         && (adminProfile().data.get('superAdmin', false) == true
           || adminProfile().data.get('level', 0) in [1, '1']
           || (adminProfile().data.get('permissions', {}) is map
             && adminProfile().data.get('permissions', {}).get(permission, false) == true));
     }
+    function assemblyRoleAllows(data) {
+      let permissions = data.get('permissions', {});
+      return data.get('superAdmin', false) == true || data.get('level', 0) in [1, '1']
+        || (permissions is map && (permissions.get('canManageAssemblies', false) == true
+          || permissions.get('canPublishAssembly', false) == true
+          || permissions.get('canPresideAssembly', false) == true
+          || permissions.get('canModerateAssembly', false) == true
+          || permissions.get('canCertifyResults', false) == true
+          || permissions.get('canFinalizeMinutes', false) == true));
+    }
     function assemblyStaff() {
-      return signedIn()
-        && exists(/databases/$(database)/documents/adminRoles/$(request.auth.uid))
-        && (hasAssemblyPermission('canManageAssemblies')
-        || hasAssemblyPermission('canPublishAssembly')
-        || hasAssemblyPermission('canPresideAssembly')
-        || hasAssemblyPermission('canModerateAssembly')
-        || hasAssemblyPermission('canCertifyResults')
-        || hasAssemblyPermission('canFinalizeMinutes'));
+      return activeAdmin() && assemblyRoleAllows(adminProfile().data);
     }
     function documentPermission(permission) {
       return superAdmin() || hasPermission('documents.write')
-        || (signedIn() && adminProfile().data.active == true && adminProfile().data.permissions is map && adminProfile().data.permissions[permission] == true);
+        || (signedIn() && activeAdmin() && adminProfile().data.permissions is map && adminProfile().data.permissions[permission] == true);
     }
     function documentStaff() {
       return documentPermission('canManageDocuments') || documentPermission('canPublishDocuments') || documentPermission('canArchiveDocuments');
     }
     function membershipStaff() {
-      return superAdmin() || (signedIn() && adminProfile().data.active == true
+      return superAdmin() || (signedIn() && activeAdmin()
         && adminProfile().data.permissions is map
         && adminProfile().data.permissions.canManageMembershipRequests == true);
     }
@@ -396,7 +407,7 @@ service cloud.firestore {
     match /publicMembers/{token} {
       allow read: if true;
       allow create: if hasPermission('members.create') || hasPermission('members.write') || membershipStaff()
-        || (signedIn() && adminProfile().data.active == true
+        || (signedIn() && activeAdmin()
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.credentialType == 'admin'
           && request.resource.data.memberNumber == token
@@ -420,7 +431,7 @@ service cloud.firestore {
             && request.resource.data.cardValidUntil <= request.time + duration.value(366, 'd')
             && getAfter(/databases/$(database)/documents/associados/$(request.auth.uid)).data.cardValidUntil == request.resource.data.cardValidUntil)
         )
-      ) || (signedIn() && adminProfile().data.active == true
+      ) || (signedIn() && activeAdmin()
         && resource.data.uid == request.auth.uid
         && request.resource.data.credentialType == 'admin'
         && request.resource.data.memberNumber == token
@@ -432,7 +443,7 @@ service cloud.firestore {
     match /adminCards/{uid} {
       allow read: if own(uid) || superAdmin();
       allow create: if own(uid)
-        && adminProfile().data.active == true
+        && activeAdmin()
         && existsAfter(/databases/$(database)/documents/adminPhotos/$(uid))
         && request.resource.data.keys().hasOnly(['uid','cardNumber','fullName','role','level','status','issuedAt','validUntil','updatedAt'])
         && request.resource.data.uid == request.auth.uid
@@ -444,7 +455,7 @@ service cloud.firestore {
       allow update: if (levelOneAdmin() && request.resource.data.status == 'inactive'
           && request.resource.data.updatedAt == request.time
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt'])) || (own(uid)
-        && adminProfile().data.active == true
+        && activeAdmin()
         && existsAfter(/databases/$(database)/documents/adminPhotos/$(uid))
         && (resource.data.validUntil <= request.time || resource.data.get('status','active') == 'inactive' || resource.data.role != adminProfile().data.role)
         && request.resource.data.cardNumber == resource.data.cardNumber
@@ -679,8 +690,8 @@ service cloud.firestore {
     }
     match /adminRoles/{id} {
       allow read: if own(id) || hasPermission('admins.read');
-      allow create: if levelOneAdmin();
-      allow update: if levelOneAdmin() && (id != request.auth.uid
+      allow create: if levelOneAdmin() && (request.resource.data.get('active', false) != true || adminHasMembership(id, request.resource.data));
+      allow update: if levelOneAdmin() && (request.resource.data.get('active', false) != true || adminHasMembership(id, request.resource.data)) && (id != request.auth.uid
         || (request.resource.data.active == true && request.resource.data.level in [1, '1']));
       allow delete: if levelOneAdmin() && id != request.auth.uid;
     }
@@ -1023,7 +1034,7 @@ service cloud.firestore {
           && data.incidentId == alert.incidentId && data.status == alert.status
           && data.createdAt == alert.createdAt && data.updatedAt == alert.updatedAt;
       }
-      allow read: if signedIn() && adminProfile().data.active == true;
+      allow read: if signedIn() && activeAdmin();
       allow create, update: if (own(uid) || hasPermission('requests.write')) && validSignal();
       allow delete: if false;
     }

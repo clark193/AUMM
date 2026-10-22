@@ -9,6 +9,7 @@ const member=await signup('member'),admin=await signup('admin');const fullName='
 await env.withSecurityRulesDisabled(async c=>{
  for(const item of (await getDocs(collection(c.firestore(),'events'))).docs)await deleteDoc(item.ref);
  await setDoc(doc(c.firestore(),'associados',member.localId),{uid:member.localId,fullName,email:member.email,memberNumber:`UI-${suffix}`,birthDate:'1990-05-20',createdAt:'2025-10-20',status:'active',mustChangePassword:false});
+ await setDoc(doc(c.firestore(),'associados',admin.localId),{uid:admin.localId,fullName:'Admin UI',status:'active',mustChangePassword:false});
  await setDoc(doc(c.firestore(),'adminRoles',admin.localId),{active:true,level:1,fullName:'Admin UI',permissions:{}});
  await setDoc(doc(c.firestore(),'events',`test-${suffix}`),{title:`Evento local ${suffix}`,description:'Informações reais do registro de teste.',date:'2099-12-25',status:'active',location:'Sede de teste'});
 });

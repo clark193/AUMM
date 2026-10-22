@@ -75,6 +75,7 @@ import { locate, openUrl, site } from "./platform";
 import "./styles.css";
 import "./improvements.css";
 import "./account-theme.css";
+import "./mobile-fixes.css";
 import { SupportMap } from "./SupportTracking";
 import NotificationCenter, { NoticeBanner } from "./NotificationCenter";
 import { useNotices } from "./useNotices";
@@ -407,6 +408,7 @@ function App() {
   function memberFeature(name: string) {
     setModal(session.active || (name === "card" && session.admin) ? name : "restricted");
   }
+  useEffect(()=>{if(!session.loading && session.member?.mustChangePassword)setModal("password");},[session.loading,session.user?.uid,session.member?.mustChangePassword]);
   const firstName = (session.member?.fullName || session.admin?.fullName)?.split(" ")[0] || "motoboy";
   const nav: { id: Tab; title: string; icon: LucideIcon }[] = [
     { id: "home", title: "Início", icon: House },
@@ -653,9 +655,11 @@ function App() {
                   <i />
                   {isPreviewHelper
                     ? "Associado · demo"
-                    : session.active
+                    : session.admin
+                      ? `Administração · nível ${session.admin.level}`
+                      : session.active
                       ? "Associado"
-                      : "Convidado"}
+                      : session.user && !session.user.isAnonymous ? "Vínculo pendente" : "Convidado"}
                 </span>
               </div>
               {supportActivity.own &&
@@ -1092,7 +1096,7 @@ function App() {
                       <ChevronRight size={17} />
                     </button>
                   ))}
-                  {session.member?.status !== "active" && <button
+                  {!session.member && !session.admin && <button
                     onClick={() => setModal("register")}
                   >
                     <Plus size={20} />

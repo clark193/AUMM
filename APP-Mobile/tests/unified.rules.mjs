@@ -7,7 +7,7 @@ let env;
 before(async()=>{env=await initializeTestEnvironment({projectId:'demo-aumm-mobile',firestore:{host:'127.0.0.1',port:8080,rules:readFileSync(new URL('../../firestore.rules',import.meta.url),'utf8')}});});
 after(async()=>{await env.cleanup();});
 const client=uid=>env.authenticatedContext(uid,{firebase:{sign_in_provider:'password'}}).firestore();
-beforeEach(async()=>{await env.clearFirestore();await env.withSecurityRulesDisabled(async c=>{for(const [uid,level,active] of [['president',1,true],['director',2,true],['recruiter',5,true],['off',1,false]])await setDoc(doc(c.firestore(),'adminRoles',uid),{active,level,fullName:uid,role:'Diretoria',permissions:{}});await setDoc(doc(c.firestore(),'associados','member'),{uid:'member',status:'active',mustChangePassword:false});});});
+beforeEach(async()=>{await env.clearFirestore();await env.withSecurityRulesDisabled(async c=>{for(const uid of ['president','director','recruiter','off'])await setDoc(doc(c.firestore(),'associados',uid),{uid,status:'active',mustChangePassword:false});for(const [uid,level,active] of [['president',1,true],['director',2,true],['recruiter',5,true],['off',1,false]])await setDoc(doc(c.firestore(),'adminRoles',uid),{active,level,fullName:uid,role:'Diretoria',permissions:{}});await setDoc(doc(c.firestore(),'associados','member'),{uid:'member',status:'active',mustChangePassword:false});});});
 const meeting=uid=>({title:'Reunião mensal',description:'Pauta interna',location:'Online',joinUrl:'https://meet.google.com/abc-defg-hij',startsAt:Timestamp.fromMillis(Date.now()+3600000),endsAt:Timestamp.fromMillis(Date.now()+7200000),status:'scheduled',createdBy:uid,createdByName:uid,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
 test('qualquer administrador ativo cria reuniões; associados e visitantes não acessam',async()=>{
  for(const uid of ['president','director','recruiter'])await assertSucceeds(setDoc(doc(client(uid),'adminMeetings',uid),meeting(uid)));
@@ -38,6 +38,7 @@ test('contatos: só nível 1 gerencia e visitantes consultam apenas publicados',
  await assertSucceeds(deleteDoc(doc(client('president'),'supportContacts','hidden')));
 });
 test('cargo e nível: só nível 1 concede acesso e não remove sua própria autoridade',async()=>{
+ await assertFails(setDoc(doc(client('president'),'adminRoles','without-member'),{active:true,level:1}));
  await assertFails(setDoc(doc(client('director'),'adminRoles','member'),{active:true,level:1}));
  await assertSucceeds(setDoc(doc(client('president'),'adminRoles','member'),{active:true,level:5,role:'Cadastro',permissions:{}}));
  await assertFails(deleteDoc(doc(client('president'),'associados','member')));
@@ -46,6 +47,15 @@ test('cargo e nível: só nível 1 concede acesso e não remove sua própria aut
  await assertFails(deleteDoc(doc(client('president'),'adminRoles','president')));
  await assertSucceeds(updateDoc(doc(client('president'),'adminRoles','member'),{active:false}));
  await assertSucceeds(deleteDoc(doc(client('president'),'associados','member')));
+});
+test('acesso administrativo exige associado ativo e é bloqueado ao inativar o vínculo',async()=>{
+ await env.withSecurityRulesDisabled(async c=>{await setDoc(doc(c.firestore(),'adminRoles','orphan'),{active:true,level:1,fullName:'orphan',permissions:{}});});
+ await assertFails(setDoc(doc(client('orphan'),'adminMeetings','orphan'),meeting('orphan')));
+ await assertFails(getDocs(collection(client('orphan'),'adminRoles')));
+ await env.withSecurityRulesDisabled(async c=>{await setDoc(doc(c.firestore(),'associados','orphan'),{uid:'orphan',status:'active'});});
+ await assertSucceeds(setDoc(doc(client('orphan'),'adminMeetings','orphan'),meeting('orphan')));
+ await assertSucceeds(updateDoc(doc(client('president'),'associados','orphan'),{status:'inactive'}));
+ await assertFails(getDocs(collection(client('orphan'),'adminRoles')));
 });
 test('credencial: presidente invalida cartão e titular reemite com cargo atual e foto no mesmo lote',async()=>{
  await env.withSecurityRulesDisabled(async c=>{await setDoc(doc(c.firestore(),'adminCards','director'),{uid:'director',cardNumber:'DIR-1',role:'Diretor anterior',status:'active',validUntil:Timestamp.fromMillis(Date.now()+86400000)});});

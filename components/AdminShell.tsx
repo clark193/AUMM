@@ -71,7 +71,6 @@ export const navGroups: { label: string; links: AdminLink[] }[] = [
   ] },
   { label: "Sistema", links: [
     { href: "/admin/carteirinha", label: "Minha carteirinha", icon: CreditCard, levels: [1, 2, 3, 4, 5] },
-    { href: "/admin/administradores", label: "Administradores", icon: UsersRound, levels: [1] },
     { href: "/admin/logs", label: "Auditoria", icon: ScrollText, levels: [1] },
     { href: "/admin/configuracoes", label: "Configurações", icon: Settings, levels: [1, 2, 3, 4, 5] },
   ] },

@@ -46,7 +46,7 @@ beforeEach(async () => {
   clients.clear();
   await env.clearFirestore();
   await env.withSecurityRulesDisabled(async (c) => {
-    for (const uid of ["member1", "member2"])
+    for (const uid of ["member1", "member2", "level1", "level2", "disabled1", "staff", "comms", "chief", "deputy", "recruiter", "adminPhoto"])
       await setDoc(doc(c.firestore(), "associados", uid), {
         uid,
         status: "active",

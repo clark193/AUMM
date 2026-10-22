@@ -9,13 +9,14 @@ const db=getFirestore(),prefix=`meeting-test-${Date.now()}`;
 after(async()=>{await db.terminate();await deleteApp(getApp());});
 test('reuniões notificam somente administradores ativos, deduplicam e respeitam alteração/cancelamento',async()=>{
  const now=Date.now(),start=now+30*60000;
- for(const [name,active,level] of [['one',true,1],['five',true,5],['off',false,1]])await db.doc(`adminRoles/${prefix}-${name}`).set({active,level});
+ for(const [name,active,level] of [['one',true,1],['five',true,5],['off',false,1]]){await db.doc(`associados/${prefix}-${name}`).set({uid:`${prefix}-${name}`,status:'active'});await db.doc(`adminRoles/${prefix}-${name}`).set({active,level});}
+ await db.doc(`adminRoles/${prefix}-orphan`).set({active:true,level:1});
  const ref=db.doc(`adminMeetings/${prefix}`),meeting={title:'Pauta confidencial',description:'Não deve ir para a tela bloqueada',joinUrl:'https://meet.google.com/privado',status:'scheduled',startsAt:Timestamp.fromMillis(start),endsAt:Timestamp.fromMillis(start+3600000),createdAt:Timestamp.fromMillis(now-3600000),updatedAt:Timestamp.fromMillis(now)};
  await ref.set(meeting);
  const inbox=async name=>(await db.collection(`mobileInbox/${prefix}-${name}/items`).get()).docs.map(d=>d.data()).filter(d=>d.itemId===prefix);
  await backend.processMeetingChange(prefix,null,meeting);await backend.processMeetingChange(prefix,null,meeting);
  for(const name of ['one','five']){const records=await inbox(name);assert.equal(records.length,1);assert.equal(records[0].target,'admin');assert.doesNotMatch(records[0].body,/confidencial|privado|meet.google/);}
- assert.equal((await inbox('off')).length,0);
+ assert.equal((await inbox('off')).length,0);assert.equal((await inbox('orphan')).length,0);
  await backend.sendMeetingReminders(now);await backend.sendMeetingReminders(now);
  assert.equal((await inbox('one')).filter(d=>d.meetingStage==='30m').length,1);
  await backend.sendMeetingReminders(start);

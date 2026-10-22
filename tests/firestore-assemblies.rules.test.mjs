@@ -41,6 +41,7 @@ beforeEach(async () => {
   await environment.clearFirestore();
   await environment.withSecurityRulesDisabled(async (context) => {
     const db = context.firestore();
+    for(const uid of ["admin-1","minutes-only","no-assembly"])await setDoc(doc(db,"associados",uid),{uid,status:"active"});
     await Promise.all([
       setDoc(doc(db, "adminRoles", "admin-1"), { active: true, level: 1, role: "Presidente" }),
       setDoc(doc(db, "associados", "member-1"), { uid: "member-1", status: "active", eligibleToVote: true, role: "Associado" }),
@@ -93,6 +94,8 @@ test("não autenticado não lê uma assembleia interna", async () => {
 
 test("permissão isolada de atas permite leitura sem exceder o limite de expressões", async () => {
   await environment.withSecurityRulesDisabled(async context => {
+    // Administradores também são associados: use um rascunho para testar a permissão administrativa isolada.
+    await updateDoc(doc(context.firestore(), "assemblies", assemblyId), {status:"draft"});
     await setDoc(doc(context.firestore(), "adminRoles", "minutes-only"), { active: true, level: 3, permissions: { canFinalizeMinutes: true } });
     await setDoc(doc(context.firestore(), "adminRoles", "no-assembly"), { active: true, level: 3, permissions: {} });
   });

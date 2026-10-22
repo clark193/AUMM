@@ -1,3 +1,4 @@
+import {hasAdminMembership} from "./adminMembership.js";
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import {
   FieldValue,
@@ -37,7 +38,7 @@ async function meetingNotice(id:string,data:Record<string,unknown>,stage:NoticeE
  const at=millis(data.startsAt);const time=new Date(at).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
  const title=stage==="cancelled"?"Reunião da diretoria cancelada":stage==="30m"?"Lembrete de reunião da diretoria":stage==="start"?"Horário da reunião da diretoria":"Agenda da diretoria atualizada";
  const notice:NoticeEvent={id:`meeting_${encodeURIComponent(id)}_${generation}_${stage}`,kind:"meeting",title,body:stage==="cancelled"?"Confira a agenda administrativa para acompanhar as alterações.":`Reunião prevista para ${time} (Brasília). Abra a agenda para consultar as informações e o link.`,target:"admin",itemId:id,createdAt:now,expiresAt:now+86400000,sourceVersion:generation,meetingStage:stage};
- await eachProfile(db.collection("adminRoles").where("active","==",true),async uid=>{await store(uid,notice);});
+ await eachProfile(db.collection("adminRoles").where("active","==",true),async (uid,_prefs,profile)=>{if(await hasAdminMembership(uid,profile))await store(uid,notice);});
 }
 export async function processMeetingChange(id:string,before:Record<string,unknown>|null,after:Record<string,unknown>){
  if(!["scheduled","cancelled"].includes(String(after.status)))return;
@@ -100,7 +101,7 @@ async function store(uid: string, event: NoticeEvent) {
 }
 async function eachProfile(
   query: Query,
-  visit: (uid: string, prefs: NoticePreferences) => Promise<void>,
+  visit: (uid: string, prefs: NoticePreferences, profile:Record<string,unknown>) => Promise<void>,
 ) {
   let cursor;
   for (;;) {
@@ -114,7 +115,7 @@ async function eachProfile(
           visit(d.id, {
             ...defaultNoticePreferences,
             ...d.data(),
-          } as NoticePreferences),
+          } as NoticePreferences, d.data()),
         ),
       );
     if (page.size < 200) break;
@@ -214,12 +215,12 @@ export const mobileSupportChanged = onDocumentWritten(
 async function currentEvent(event: NoticeEvent, uid: string) {
   if(event.kind === "meeting"){
     const [role,meeting]=await Promise.all([db.doc(`adminRoles/${uid}`).get(),db.doc(`adminMeetings/${event.itemId}`).get()]);
-    return role.data()?.active===true && meeting.exists && millis(meeting.data()?.updatedAt)===event.sourceVersion
+    return role.data()?.active===true && await hasAdminMembership(uid,role.data()||{}) && meeting.exists && millis(meeting.data()?.updatedAt)===event.sourceVersion
       && meeting.data()?.status===(event.meetingStage==="cancelled"?"cancelled":"scheduled");
   }
   if (event.kind === "emergency") {
     const [admin, signal] = await Promise.all([db.doc(`adminRoles/${uid}`).get(), db.doc(`emergencyAdminSignals/${event.itemId}`).get()]);
-    return admin.data()?.active === true && signal.data()?.incidentId === event.id.slice("emergency_".length)
+    return admin.data()?.active === true && await hasAdminMembership(uid,admin.data()||{}) && signal.data()?.incidentId === event.id.slice("emergency_".length)
       && ["open", "contacting"].includes(signal.data()?.status);
   }
   if (
@@ -369,7 +370,7 @@ export const mobileAdminEmergency = onDocumentWritten(
     const notice: NoticeEvent = { id: `emergency_${data.incidentId}`, kind: "emergency", title: "Alerta de emergência na AUMM",
       body: "Um associado solicitou apoio. Abra o painel para verificar o atendimento.", target: "admin", itemId: event.params.id,
       createdAt, expiresAt: createdAt + 24 * 3600000 };
-    await eachProfile(db.collection("adminRoles").where("active", "==", true), async uid => { await store(uid, notice); });
+    await eachProfile(db.collection("adminRoles").where("active", "==", true), async (uid,_prefs,profile) => { if(await hasAdminMembership(uid,profile))await store(uid, notice); });
   },
 );
 

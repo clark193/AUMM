@@ -16,6 +16,7 @@ beforeEach(async () => {
   await env.clearFirestore();
   await env.withSecurityRulesDisabled(async (context) => {
     const db = context.firestore();
+    for(const uid of ["master","legacy-master","communication","director","new-admin"]) await setDoc(doc(db,"associados",uid),{uid,status:"active"});
     await Promise.all([
       setDoc(doc(db, "adminRoles", "master"), { active: true, level: 1, superAdmin: true, role: "TI", permissions: {} }),
       setDoc(doc(db, "adminRoles", "legacy-master"), { active: true, level: "1", role: "TI legado", permissions: {} }),

@@ -3,7 +3,10 @@ const config: CapacitorConfig = {
   appId: "br.com.aumm.app",
   appName: "AUMM",
   webDir: "dist",
-  android: { backgroundColor: "#f5f6f8" },
-  plugins: { PushNotifications: { presentationOptions: [] } },
+  android: { backgroundColor: "#191d25" },
+  plugins: {
+    PushNotifications: { presentationOptions: [] },
+    SystemBars: { insetsHandling: "native", style: "DARK", initialViewportFitValueHint: "auto" },
+  },
 };
 export default config;

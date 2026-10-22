@@ -12,6 +12,7 @@ const {changeMemberPassword}=await import("../backend/lib/backend/src/adminPassw
 const db=getFirestore(),suffix=Date.now();
 async function signup(kind){const r=await fetch("http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo-key",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:`password-${kind}-${suffix}@aumm.test`,password:"OriginalPassword123!",returnSecureToken:true})});assert.equal(r.status,200);return r.json();}
 const admin=await signup("admin"),member=await signup("member"),staff=await signup("staff");
+await db.doc(`associados/${admin.localId}`).set({uid:admin.localId,status:"active"});
 await db.doc(`adminRoles/${admin.localId}`).set({active:true,level:1,fullName:"Admin de teste"});
 await db.doc(`adminRoles/${staff.localId}`).set({active:true,level:2});
 await db.doc(`associados/${member.localId}`).set({uid:member.localId,status:"active",fullName:"Associado de teste"});

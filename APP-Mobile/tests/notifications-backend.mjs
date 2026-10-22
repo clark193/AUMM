@@ -54,6 +54,7 @@ test("emergência notifica somente administradores ativos, com texto genérico e
   messaging.sendEachForMulticast = async payload => { sent.push(payload); return { responses: payload.tokens.map(() => ({ success: true })) }; };
   try {
     for (const [name, active] of [["admin1", true], ["admin5", true], ["admin-off", false]]) {
+      await database.doc(`associados/${uid(name)}`).set({uid:uid(name),status:"active"});
       await database.doc(`adminRoles/${uid(name)}`).set({ active, level: name === "admin1" ? 1 : 5 });
       await database.doc(`mobilePushDevices/${uid(name)}/devices/test`).set({ token: `token-${name}`, enabled: true });
     }

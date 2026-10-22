@@ -1,3 +1,4 @@
+import {hasAdminMembership} from "./adminMembership.js";
 import { getAuth } from "firebase-admin/auth";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 
@@ -9,7 +10,7 @@ export async function changeMemberPassword(bearer: string, input: Record<string,
   let identity;
   try { identity = await auth.verifyIdToken(bearer, true); } catch { throw new AdminPasswordError(401, "Sua sessão expirou. Entre novamente."); }
   const role = (await db.doc(`adminRoles/${identity.uid}`).get()).data();
-  if (role?.active !== true || ![1, "1"].includes(role.level)) throw new AdminPasswordError(403, "Somente administradores ativos de nível 1 podem alterar senhas.");
+  if (role?.active !== true || ![1, "1"].includes(role.level) || !await hasAdminMembership(identity.uid,role)) throw new AdminPasswordError(403, "Somente administradores ativos de nível 1 podem alterar senhas.");
   if (Date.now() / 1000 - identity.auth_time > 300) throw new AdminPasswordError(401, "Confirme novamente sua senha de administrador.");
   const id = input.memberId, password = input.password;
   if (typeof id !== "string" || !/^[A-Za-z0-9_-]{1,160}$/.test(id)) throw new AdminPasswordError(400, "Cadastro inválido.");
