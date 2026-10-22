@@ -1,4 +1,5 @@
 "use client";
+import {saveProfilePhoto} from "@/lib/profilePhoto";
 
 import Image from "next/image";
 import { Camera, LoaderCircle, UserRound } from "lucide-react";
@@ -49,14 +50,8 @@ export function MemberPhotoUpload({ photoURL, name, onUploaded, compact = false,
       if (!user) throw new Error("Sua sessão expirou. Entre novamente.");
       const uid = targetUid || user.uid;
       const dataUrl = await compressedDataUrl(file);
-      const batch = writeBatch(db);
-      batch.set(doc(db, "memberPhotos", uid), { uid, dataUrl, contentType: dataUrl.startsWith("data:image/webp") ? "image/webp" : "image/jpeg", updatedAt: serverTimestamp() }, { merge: true });
-      const member = await getDoc(doc(db, "associados", uid));
-      const memberNumber = String(member.data()?.memberNumber || "");
-      if (memberNumber && (await getDoc(doc(db, "publicMembers", memberNumber))).exists()) {
-        batch.update(doc(db, "publicMembers", memberNumber), { photoDataUrl: dataUrl, updatedAt: serverTimestamp() });
-      }
-      await batch.commit();
+      await saveProfilePhoto(uid,dataUrl);
+
       onUploaded(dataUrl);
       setMessage("Foto atualizada com sucesso.");
     } catch (error) {

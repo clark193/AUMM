@@ -1,36 +1,19 @@
 "use client";
-import { useEffect, useState } from "react";
+import {useEffect,useState} from "react";
 import Link from "next/link";
-import { collection, doc, limit, onSnapshot, query, runTransaction, serverTimestamp, where } from "firebase/firestore";
-import { Siren } from "lucide-react";
-import { firebaseEnabled, getFirebaseServices } from "@/lib/firebase";
-
-type Emergency = { id: string; fullName: string; memberNumber: string; phone: string; contactName: string; contactPhone: string; status: string; location: { lat: number; lng: number; accuracy: number } | null; createdAt?: { toMillis(): number; toDate(): Date } };
-export function EmergencyAdmin({ compact = false }: { compact?: boolean }) {
-  const [items, setItems] = useState<Emergency[]>([]);
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState("");
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    if (!firebaseEnabled) { setLoading(false); return; }
-    return onSnapshot(query(collection(getFirebaseServices().db, "emergencyAlerts"), where("status", "in", ["open", "contacting"]), limit(100)), snap => {
-      setItems(snap.docs.map(item => ({ id: item.id, ...item.data() }) as Emergency).sort((a, b) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0))); setLoading(false); setError("");
-    }, () => { setError("Não foi possível acompanhar os alertas. Confira sua conexão e as permissões."); setItems([]); setLoading(false); });
-  }, []);
-  async function update(item: Emergency, status: "contacting" | "resolved") {
-    setBusy(item.id); setError("");
-    try {
-      const { db, auth } = getFirebaseServices();
-      await runTransaction(db, async tx => {
-        const ref = doc(db, "emergencyAlerts", item.id), current = await tx.get(ref);
-        if (!current.exists()) throw new Error("Alerta não encontrado.");
-        const updatedAt = serverTimestamp();
-        tx.update(ref, { status, handledBy: auth.currentUser!.uid, updatedAt });
-        tx.set(doc(db, "emergencyAdminSignals", item.id), { incidentId: current.data().incidentId, status, createdAt: current.data().createdAt, updatedAt });
-      });
-    } catch { setError("O alerta mudou ou a atualização falhou. Confira a lista e tente novamente."); }
-    finally { setBusy(""); }
-  }
-  if (compact) return items.length ? <Link className="emergency-admin-banner" href="/admin/solicitacoes"><Siren size={22} /><strong>{items.length} alerta(s) de emergência aguardando acompanhamento</strong><span>Abrir atendimento →</span></Link> : error ? <p role="alert">{error}</p> : null;
-  return <section className="panel emergency-admin"><h2><Siren size={22} /> Alertas de acidente</h2><p>Alertas recebidos pelo aplicativo. Ligue para o associado, verifique a situação e registre o acompanhamento. Esta fila não aciona serviços públicos de socorro.</p>{error && <p role="alert">{error}</p>}{loading && <p role="status">Carregando alertas…</p>}{!loading && !error && !items.length && <p>Nenhum alerta de emergência em andamento.</p>}{items.map(item => <article key={item.id} className="emergency-admin-card"><h3>{item.fullName}</h3><p>{item.memberNumber} · {item.createdAt?.toDate().toLocaleString("pt-BR") || "Registrando horário…"}</p><strong>{item.status === "open" ? "Aguardando atendimento" : "Em acompanhamento pela associação"}</strong><p><a href={`tel:${item.phone}`}>Ligar para o associado: {item.phone}</a></p><p>Contato de emergência: {item.contactName} · <a href={`tel:${item.contactPhone}`}>{item.contactPhone}</a></p>{item.location ? <p><a href={`https://www.google.com/maps/search/?api=1&query=${item.location.lat}%2C${item.location.lng}`} target="_blank" rel="noopener noreferrer">Abrir localização do alerta no mapa</a> · precisão estimada: {Math.round(item.location.accuracy)} m</p> : <p>Localização não obtida. Confirme onde o associado está ao ligar.</p>}<div className="member-detail-actions">{item.status === "open" && <button className="btn btn-primary" disabled={busy === item.id} onClick={() => void update(item, "contacting")}>Estou entrando em contato</button>}<button className="table-action" disabled={busy === item.id} onClick={() => void update(item, "resolved")}>Encerrar atendimento</button></div></article>)}</section>;
+import {collection,doc,limit,onSnapshot,query,runTransaction,serverTimestamp,where,type Timestamp} from "firebase/firestore";
+import {Siren,MapPin,CheckCircle2,XCircle,Phone} from "lucide-react";
+import {getFirebaseServices} from "@/lib/firebase";
+type Alert={id:string;fullName:string;memberNumber:string;phone:string;contactName:string;contactPhone:string;status:string;createdAt?:Timestamp;updatedAt?:Timestamp;location?:{lat:number;lng:number;accuracy:number}|null};
+export function EmergencyAdmin({compact=false}:{compact?:boolean}){
+ const [items,setItems]=useState<Alert[]>([]),[filter,setFilter]=useState("active"),[error,setError]=useState(""),[busy,setBusy]=useState(""),[loading,setLoading]=useState(true);
+ useEffect(()=>{setLoading(true);setError("");const statuses=compact||filter==="active"?["open","contacting"]:filter==="resolved"?["resolved"]:["cancelled"];
+  return onSnapshot(query(collection(getFirebaseServices().db,"emergencyAlerts"),where("status","in",statuses),limit(100)),s=>{setItems(s.docs.map(d=>({id:d.id,...d.data()}) as Alert).sort((a,b)=>(b.updatedAt?.toMillis()||0)-(a.updatedAt?.toMillis()||0)));setLoading(false);},()=>{setError("Não foi possível consultar as emergências. Confira sua permissão e conexão.");setLoading(false);});
+ },[compact,filter]);
+ async function update(item:Alert,status:"contacting"|"resolved"|"cancelled"){
+  if(status==="cancelled"&&!window.confirm("Cancelar este alerta? Ele ficará no histórico de cancelados."))return;
+  setBusy(item.id);setError("");try{const {auth,db}=getFirebaseServices();if(!auth.currentUser)throw Error();await runTransaction(db,async tx=>{const ref=doc(db,"emergencyAlerts",item.id),current=await tx.get(ref);if(!current.exists()||!["open","contacting"].includes(current.data().status))throw Error();const updatedAt=serverTimestamp();tx.update(ref,{status,handledBy:auth.currentUser!.uid,updatedAt});tx.set(doc(db,"emergencyAdminSignals",item.id),{incidentId:current.data().incidentId,status,createdAt:current.data().createdAt,updatedAt});});}catch{setError("O alerta mudou ou a atualização falhou. Confira a lista e tente novamente.");}finally{setBusy("");}
+ }
+ if(compact)return items.length?<Link className="emergency-admin-banner" href="/admin/emergencias"><Siren size={22}/><strong>{items.length} alerta(s) de emergência aguardando acompanhamento</strong><span>Abrir emergências →</span></Link>:error?<p role="alert">{error}</p>:null;
+ return <section className="panel emergency-admin"><div className="panel-head"><div><span className="access-badge">Central de atendimento</span><h2><Siren size={22}/> Emergências</h2><p>Confirme a situação por telefone, consulte a posição registrada no acionamento e atualize o atendimento.</p></div></div><div className="assembly-tabs">{[["active","Aguardando e em contato"],["resolved","Atendidos"],["cancelled","Cancelados"]].map(([value,label])=><button key={value} aria-pressed={filter===value} className={filter===value?"active":""} onClick={()=>setFilter(value)}>{label}</button>)}</div>{error&&<p role="alert">{error}</p>}{loading&&<p role="status">Carregando alertas…</p>}{!loading&&!error&&!items.length&&<p>Nenhum alerta nesta categoria.</p>}{items.map(item=><article className="emergency-admin-card" key={item.id}><span className={`status ${item.status}`}>{({open:"Aguardando atendimento",contacting:"Em acompanhamento",resolved:"Atendido",cancelled:"Cancelado"} as Record<string,string>)[item.status]}</span><h3>{item.fullName}</h3><p>{item.memberNumber} · {item.createdAt?.toDate().toLocaleString("pt-BR")||"Horário indisponível"}</p><p><a href={`tel:${item.phone}`}><Phone size={16}/> Ligar para o associado: {item.phone}</a></p><p>Contato: {item.contactName} · <a href={`tel:${item.contactPhone}`}>{item.contactPhone}</a></p>{item.location?<a className="button button-dark" href={`https://www.google.com/maps/search/?api=1&query=${item.location.lat}%2C${item.location.lng}`} target="_blank" rel="noopener noreferrer"><MapPin size={18}/> Conferir localização do alerta</a>:<p>Localização não obtida. Confirme onde o associado está ao ligar.</p>}{["open","contacting"].includes(item.status)&&<div className="member-detail-actions">{item.status==="open"&&<button className="button" disabled={busy===item.id} onClick={()=>void update(item,"contacting")}>Estou entrando em contato</button>}<button className="button button-dark" disabled={busy===item.id} onClick={()=>void update(item,"resolved")}><CheckCircle2 size={17}/> Marcar como atendido</button><button className="table-action-danger" disabled={busy===item.id} onClick={()=>void update(item,"cancelled")}><XCircle size={17}/> Cancelar alerta</button></div>}</article>)}<small>Até 100 registros por categoria. O alerta não aciona serviços públicos de socorro.</small></section>;
 }

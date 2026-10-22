@@ -274,7 +274,7 @@ export function useNotices(
                 serverIds.current.add(change.doc.id);
                 if (
                   row.expiresAt > Date.now() &&
-                  (row.kind === "emergency" || shouldReceive(row, uid, active, preferencesRef.current))
+                  (row.kind === "emergency" || row.kind === "meeting" || shouldReceive(row, uid, active, preferencesRef.current))
                 )
                   add(
                     { ...row, id: change.doc.id },

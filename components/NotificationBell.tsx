@@ -7,12 +7,13 @@ import { collection, doc, getDoc, limit, onSnapshot, query, serverTimestamp, set
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getFirebaseServices } from "@/lib/firebase";
 
-type Notice = { id: string; emergency?: boolean; subject?: string; body?: string; audience?: string; status?: string; createdAt?: Timestamp; updatedAt?: Timestamp };
+type Notice = { id: string; emergency?: boolean; meeting?:boolean; subject?: string; body?: string; audience?: string; status?: string; createdAt?: Timestamp; updatedAt?: Timestamp };
 
 function millis(value?: Timestamp) { return value?.toMillis?.() || 0; }
 
 export function NotificationBell({ audience, canAttend = false }: { audience: "admin" | "member"; canAttend?: boolean }) {
   const [items, setItems] = useState<Notice[]>([]);
+  const [meetings,setMeetings]=useState<Notice[]>([]);
   const [emergencies, setEmergencies] = useState<Notice[]>([]);
   const [emergencyPopup, setEmergencyPopup] = useState(false);
   const [emergencyError, setEmergencyError] = useState("");
@@ -26,11 +27,12 @@ export function NotificationBell({ audience, canAttend = false }: { audience: "a
     const { auth, db } = getFirebaseServices();
     let stopItems: (() => void) | undefined;
     let stopEmergencies: (() => void) | undefined;
+    let stopMeetings:(()=>void)|undefined;
     let generation = 0;
     const stopAuth = onAuthStateChanged(auth, async (user) => {
       const current = ++generation;
-      stopItems?.(); stopEmergencies?.();
-      setItems([]); setEmergencies([]); setEmergencyPopup(false); setEmergencyError(""); setUid(""); setLastRead(0);
+      stopItems?.(); stopEmergencies?.(); stopMeetings?.();
+      setItems([]); setMeetings([]); setEmergencies([]); setEmergencyPopup(false); setEmergencyError(""); setUid(""); setLastRead(0);
       if (!user) return;
       setUid(user.uid);
       const [read, preferences] = await Promise.all([getDoc(doc(db, "notificationReads", user.uid)), getDoc(doc(db, "userPreferences", user.uid))]).catch(() => [null, null]);
@@ -47,6 +49,7 @@ export function NotificationBell({ audience, canAttend = false }: { audience: "a
           .slice(0, 8));
       }, () => setItems([]));
       if (audience === "admin") {
+        stopMeetings=onSnapshot(query(collection(db,"mobileInbox",user.uid,"items"),where("kind","==","meeting"),limit(50)),snap=>setMeetings(snap.docs.map(d=>{const data=d.data();return {id:d.id,meeting:true,subject:String(data.title||"Reunião da diretoria"),body:String(data.body||""),createdAt:Timestamp.fromMillis(Number(data.createdAt)||0)};}).sort((a,b)=>millis(b.createdAt)-millis(a.createdAt))),()=>setMeetings([]));
         const seen = new Set<string>();
         const storageKey = `aumm.admin.emergencies.${user.uid}`;
         try { const stored = JSON.parse(sessionStorage.getItem(storageKey) || "[]"); if (Array.isArray(stored)) for (const id of stored) if (typeof id === "string") seen.add(id); } catch { /* Continua sem armazenamento local. */ }
@@ -77,7 +80,7 @@ export function NotificationBell({ audience, canAttend = false }: { audience: "a
     return () => document.removeEventListener("mousedown", close);
   }, []);
 
-  const notices = useMemo(() => [...emergencies, ...items].sort((a, b) => Number(Boolean(b.emergency)) - Number(Boolean(a.emergency)) || Math.max(millis(b.updatedAt), millis(b.createdAt)) - Math.max(millis(a.updatedAt), millis(a.createdAt))), [items, emergencies]);
+  const notices = useMemo(() => [...emergencies, ...meetings, ...items].sort((a, b) => Number(Boolean(b.emergency)) - Number(Boolean(a.emergency)) || Math.max(millis(b.updatedAt), millis(b.createdAt)) - Math.max(millis(a.updatedAt), millis(a.createdAt))), [items, emergencies, meetings]);
   const unread = useMemo(() => notices.filter((item) => (badgeEnabled || item.emergency) && Math.max(millis(item.updatedAt), millis(item.createdAt)) > lastRead).length, [notices, lastRead, badgeEnabled]);
 
   async function markRead() {
@@ -100,9 +103,9 @@ export function NotificationBell({ audience, canAttend = false }: { audience: "a
     </button>
     {open && <section className="notification-popover">
       <header><div><strong>Notificações</strong><small>{unread ? `${unread} nova${unread > 1 ? "s" : ""}` : "Tudo em dia"}</small></div><button type="button" onClick={() => setOpen(false)} aria-label="Fechar notificações"><X /></button></header>
-      <div className="notification-list">{emergencyError && <p role="alert">{emergencyError}</p>}{notices.length === 0 ? <div className="empty-state">Nenhuma notificação disponível.</div> : notices.map((item) => <article className={item.emergency ? "emergency-notice" : ""} key={item.id}>{item.emergency ? <Siren /> : <Bell />}<div><strong>{item.subject || "Comunicado AUMM"}</strong><p>{item.body}</p><small>{(item.updatedAt || item.createdAt)?.toDate().toLocaleString("pt-BR") || "Publicado pela AUMM"}</small>{item.emergency && (canAttend ? <Link href="/admin/solicitacoes" onClick={() => setOpen(false)}>Abrir atendimento →</Link> : <p>A equipe autorizada acompanha os detalhes em Solicitações.</p>)}</div></article>)}</div>
+      <div className="notification-list">{emergencyError && <p role="alert">{emergencyError}</p>}{notices.length === 0 ? <div className="empty-state">Nenhuma notificação disponível.</div> : notices.map((item) => <article className={item.emergency ? "emergency-notice" : ""} key={item.id}>{item.emergency ? <Siren /> : <Bell />}<div><strong>{item.subject || "Comunicado AUMM"}</strong><p>{item.body}</p><small>{(item.updatedAt || item.createdAt)?.toDate().toLocaleString("pt-BR") || "Publicado pela AUMM"}</small>{item.meeting && <Link href="/admin/reunioes" onClick={()=>setOpen(false)}>Abrir agenda da diretoria →</Link>}{item.emergency && (canAttend ? <Link href="/admin/emergencias" onClick={() => setOpen(false)}>Abrir atendimento →</Link> : <p>A equipe autorizada acompanha os detalhes em Emergências.</p>)}</div></article>)}</div>
       <footer><CheckCheck /> {audience === "admin" ? "Visualizar o aviso não encerra o atendimento." : "Comunicados visualizados"}</footer>
     </section>}
-    {emergencyPopup && emergencies.length > 0 && <aside className="admin-emergency-toast" role="alert" aria-live="assertive"><Siren size={25} /><div><strong>Emergência de associado</strong><p>{emergencies.length > 1 ? `${emergencies.length} alertas aguardam acompanhamento da AUMM.` : "Um associado pediu contato após um acidente."}</p>{canAttend ? <Link href="/admin/solicitacoes" onClick={() => { setEmergencyPopup(false); void markRead().catch(() => undefined); }}>Abrir atendimento →</Link> : <button type="button" onClick={() => { setEmergencyPopup(false); setOpen(true); void markRead().catch(() => undefined); }}>Ver aviso</button>}</div><button type="button" aria-label="Dispensar aviso de emergência" onClick={() => setEmergencyPopup(false)}><X size={18} /></button></aside>}
+    {emergencyPopup && emergencies.length > 0 && <aside className="admin-emergency-toast" role="alert" aria-live="assertive"><Siren size={25} /><div><strong>Emergência de associado</strong><p>{emergencies.length > 1 ? `${emergencies.length} alertas aguardam acompanhamento da AUMM.` : "Um associado pediu contato após um acidente."}</p>{canAttend ? <Link href="/admin/emergencias" onClick={() => { setEmergencyPopup(false); void markRead().catch(() => undefined); }}>Abrir atendimento →</Link> : <button type="button" onClick={() => { setEmergencyPopup(false); setOpen(true); void markRead().catch(() => undefined); }}>Ver aviso</button>}</div><button type="button" aria-label="Dispensar aviso de emergência" onClick={() => setEmergencyPopup(false)}><X size={18} /></button></aside>}
   </div>;
 }

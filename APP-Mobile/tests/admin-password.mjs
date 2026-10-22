@@ -24,6 +24,7 @@ await assert.rejects(changeMemberPassword(admin.idToken,{...input,memberId:staff
 const parts=admin.idToken.split('.');const payload=JSON.parse(Buffer.from(parts[1],'base64url'));payload.auth_time=Math.floor(Date.now()/1000)-600;parts[1]=Buffer.from(JSON.stringify(payload)).toString('base64url');
 await assert.rejects(changeMemberPassword(parts.join('.'),input),e=>e.status===401);
 await new Promise(r=>setTimeout(r,1100));
+await db.doc(`adminRoles/${member.localId}`).set({active:false,level:4,role:"Comunicação anterior"});
 const response=await changeMemberPassword(admin.idToken,input);assert.match(response.message,/Senha alterada/);
 assert.equal((await db.doc(`associados/${member.localId}`).get()).data().mustChangePassword,true);
 assert.equal(typeof (await db.doc(`sessionRevocations/${member.localId}`).get()).data().validAfter,"number");

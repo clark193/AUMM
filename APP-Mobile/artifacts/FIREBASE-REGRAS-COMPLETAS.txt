@@ -46,6 +46,10 @@ service cloud.firestore {
       return signedIn() && adminProfile().data.active == true && adminProfile().data.level in [1, '1'];
     }
     function own(uid) { return signedIn() && request.auth.uid == uid; }
+    function activeAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/adminRoles/$(request.auth.uid))
+        && adminProfile().data.active == true;
+    }
     function activeMember() {
       return signedIn()
         && exists(/databases/$(database)/documents/associados/$(request.auth.uid))
@@ -428,7 +432,7 @@ service cloud.firestore {
       allow read: if own(uid) || superAdmin();
       allow create: if own(uid)
         && adminProfile().data.active == true
-        && exists(/databases/$(database)/documents/adminPhotos/$(uid))
+        && existsAfter(/databases/$(database)/documents/adminPhotos/$(uid))
         && request.resource.data.keys().hasOnly(['uid','cardNumber','fullName','role','level','status','issuedAt','validUntil','updatedAt'])
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.role == adminProfile().data.role
@@ -436,16 +440,18 @@ service cloud.firestore {
         && request.resource.data.issuedAt == request.time
         && request.resource.data.validUntil >= request.time + duration.value(364, 'd')
         && request.resource.data.validUntil <= request.time + duration.value(366, 'd');
-      allow update: if own(uid)
+      allow update: if (levelOneAdmin() && request.resource.data.status == 'inactive'
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt'])) || (own(uid)
         && adminProfile().data.active == true
-        && exists(/databases/$(database)/documents/adminPhotos/$(uid))
-        && resource.data.validUntil <= request.time
+        && existsAfter(/databases/$(database)/documents/adminPhotos/$(uid))
+        && (resource.data.validUntil <= request.time || resource.data.get('status','active') == 'inactive' || resource.data.role != adminProfile().data.role)
         && request.resource.data.cardNumber == resource.data.cardNumber
         && request.resource.data.role == adminProfile().data.role
         && request.resource.data.status == 'active'
         && request.resource.data.issuedAt == request.time
         && request.resource.data.validUntil >= request.time + duration.value(364, 'd')
-        && request.resource.data.validUntil <= request.time + duration.value(366, 'd');
+        && request.resource.data.validUntil <= request.time + duration.value(366, 'd'));
       allow delete: if superAdmin();
     }
     match /membershipCancellations/{uid} {
@@ -672,7 +678,10 @@ service cloud.firestore {
     }
     match /adminRoles/{id} {
       allow read: if own(id) || hasPermission('admins.read');
-      allow write: if levelOneAdmin();
+      allow create: if levelOneAdmin();
+      allow update: if levelOneAdmin() && (id != request.auth.uid
+        || (request.resource.data.active == true && request.resource.data.level in [1, '1']));
+      allow delete: if levelOneAdmin() && id != request.auth.uid;
     }
     match /news/{id} {
       allow read: if resource.data.status == 'published' || hasPermission('news.read');
@@ -999,7 +1008,7 @@ service cloud.firestore {
           && request.resource.data.status == 'cancelled' && request.resource.data.updatedAt == request.time
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt']))
         || (hasPermission('requests.write') && resource.data.status in ['open','contacting']
-          && ((resource.data.status == 'open' && request.resource.data.status == 'contacting') || request.resource.data.status == 'resolved')
+          && ((resource.data.status == 'open' && request.resource.data.status == 'contacting') || request.resource.data.status in ['resolved','cancelled'])
           && request.resource.data.handledBy == request.auth.uid && request.resource.data.updatedAt == request.time
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','handledBy','updatedAt'])));
       allow delete: if false;
@@ -1015,6 +1024,47 @@ service cloud.firestore {
       }
       allow read: if signedIn() && adminProfile().data.active == true;
       allow create, update: if (own(uid) || hasPermission('requests.write')) && validSignal();
+      allow delete: if false;
+    }
+    match /supportContacts/{id} {
+      function validContact() {
+        let data = request.resource.data;
+        return data.keys().hasOnly(['name','phone','city','address','notes','whatsappEnabled','active','createdBy','createdAt','updatedAt'])
+          && data.name is string && data.name.size() >= 2 && data.name.size() <= 120
+          && data.phone is string && data.phone.matches('^\\+55[0-9]{10,11}$')
+          && data.city is string && data.city.size() <= 80 && data.address is string && data.address.size() <= 200
+          && data.notes is string && data.notes.size() <= 500
+          && data.whatsappEnabled is bool && data.active is bool && data.updatedAt == request.time;
+      }
+      allow read: if resource.data.active == true || levelOneAdmin();
+      allow create: if levelOneAdmin() && validContact() && request.resource.data.createdBy == request.auth.uid && request.resource.data.createdAt == request.time;
+      allow update: if levelOneAdmin() && validContact() && request.resource.data.createdBy == resource.data.createdBy && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if levelOneAdmin();
+    }
+    match /adminMeetings/{id} {
+      function validMeeting() {
+        let data = request.resource.data;
+        return data.keys().hasOnly(['title','description','location','joinUrl','startsAt','endsAt','status','createdBy','createdByName','createdAt','updatedAt'])
+          && data.title is string && data.title.size() >= 3 && data.title.size() <= 160
+          && data.description is string && data.description.size() <= 4000
+          && data.location is string && data.location.size() <= 240
+          && data.joinUrl is string && data.joinUrl.size() <= 2048
+          && (data.joinUrl == '' || data.joinUrl.matches('^https://[^/@]+([/?#][^@]*)?$'))
+          && data.startsAt is timestamp && data.endsAt is timestamp
+          && data.endsAt >= data.startsAt + duration.value(15,'m')
+          && data.endsAt <= data.startsAt + duration.value(12,'h')
+          && data.status in ['scheduled','cancelled'] && data.updatedAt == request.time;
+      }
+      allow read: if activeAdmin();
+      allow create: if activeAdmin() && validMeeting() && request.resource.data.status == 'scheduled'
+        && request.resource.data.startsAt > request.time && request.resource.data.startsAt <= request.time + duration.value(366,'d')
+        && request.resource.data.createdAt == request.time && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdByName == adminProfile().data.get('fullName','Administrador');
+      allow update: if activeAdmin() && (resource.data.createdBy == request.auth.uid || levelOneAdmin())
+        && resource.data.status == 'scheduled' && validMeeting()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title','description','location','joinUrl','startsAt','endsAt','status','updatedAt'])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['startsAt'])
+          || (request.resource.data.startsAt > request.time && request.resource.data.startsAt <= request.time + duration.value(366,'d')));
       allow delete: if false;
     }
     match /counters/{id} { allow read, write: if false; }

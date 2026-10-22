@@ -1,4 +1,6 @@
 "use client";
+import { AdminMeetings } from "./AdminMeetings";
+import { SupportContacts } from "./SupportContacts";
 import { EmergencyAdmin } from "./EmergencyAdmin";
 import { notFound } from "next/navigation";
 import { AdminShell } from "@/components/AdminShell";
@@ -19,6 +21,9 @@ import { operationalModules } from "@/lib/adminModuleConfig";
 
 type Module = { title: string; description: string; headers: string[]; rows?: string[][] };
 const modules: Record<string, Module> = {
+  emergencias: {title:"Emergências",description:"Atendimento de alertas de acidente.",headers:[]},
+  reunioes: {title:"Reuniões da diretoria",description:"Agenda privada da administração.",headers:[]},
+  "contatos-apoio": {title:"Contatos de apoio",description:"Rede de apoio para a jornada.",headers:[]},
   recrutamento: { title: "Novo associado", description: "Cadastro manual de novos associados.", headers: [] },
   associados: { title: "Cadastros e associados", description: "Análise de inscrições, autorização e situação dos associados.", headers: ["Nome", "Número", "E-mail", "Cidade", "Status"] },
   filiacoes: { title: "Solicitações de Filiação", description: "Análise, conferência estatutária e decisão sobre pedidos de filiação.", headers: [] },
@@ -44,6 +49,7 @@ const modules: Record<string, Module> = {
 };
 
 const moduleAccess: Record<string, readonly number[]> = {
+  emergencias:[1,2,3],reunioes:[1,2,3,4,5],"contatos-apoio":[1],
   recrutamento: [1, 2, 3, 5], associados: [1, 2, 3], filiacoes: [1], assembleias: [1], cargos: [1, 2], diretoria: [1, 2], noticias: [1, 2, 4], comunicados: [1, 2, 4], eventos: [1, 2, 4], beneficios: [1, 2, 4], parceiros: [1, 2, 4], patrocinadores: [1, 2, 4], realizacoes: [1, 2, 4], solicitacoes: [1, 2, 3], "recuperacao-senha": [1, 3], transparencia: [1, 2], financeiro: [1, 2], documentos: [1, 2, 3], administradores: [1], logs: [1], configuracoes: [1, 2, 3, 4, 5], carteirinha: [1, 2, 3, 4, 5],
 };
 
@@ -54,6 +60,9 @@ export function AdminModuleContent({ module }: { module: string }) {
   const item = modules[module];
   if (!item) notFound();
   const allowedLevels = moduleAccess[module] || [1];
+  if (module === "emergencias") return <AdminShell title={item.title} allowedLevels={allowedLevels}><EmergencyAdmin/></AdminShell>;
+  if (module === "reunioes") return <AdminShell title={item.title} allowedLevels={allowedLevels}><AdminMeetings/></AdminShell>;
+  if (module === "contatos-apoio") return <AdminShell title={item.title} allowedLevels={allowedLevels}><SupportContacts admin/></AdminShell>;
   if (module === "recrutamento") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Novo associado</h2><p>Cadastre um associado e decida se o acesso será ativado imediatamente.</p></div></div><MemberAdmin registrationOnly /></AdminShell>;
   if (module === "associados") return <AdminShell title={item.title} allowedLevels={allowedLevels}><div className="dash-welcome"><div><h2>Associados da AUMM</h2><p>Pesquise quem já faz parte, consulte números e atualize a situação dos associados.</p></div></div><MemberAdmin /></AdminShell>;
   if (module === "filiacoes") return <AdminShell title={item.title} allowedLevels={allowedLevels} requiredPermissions={["canManageMembershipRequests"]}><ApplicationReviewAdmin /></AdminShell>;

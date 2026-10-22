@@ -1,4 +1,5 @@
 export type NoticeKind =
+  | "meeting"
   | "emergency"
   | "news"
   | "communication"
@@ -21,6 +22,8 @@ export type NoticeEvent = {
   helperUid?: string;
   city?: string;
   cityKey?: string;
+  sourceVersion?: number;
+  meetingStage?: "changed" | "30m" | "start" | "cancelled";
 };
 export type NoticePreferences = {
   news: boolean;
@@ -184,7 +187,7 @@ export function shouldReceive(
   prefs: NoticePreferences,
 ): boolean {
   // A autorização administrativa é conferida no servidor, separada do vínculo de associado.
-  if (event.kind === "emergency") return false;
+  if (event.kind === "emergency" || event.kind === "meeting") return false;
   if (event.kind === "news") return prefs.news;
   if (event.kind === "communication") return active && prefs.communications;
   if (event.kind === "support_nearby")
@@ -200,6 +203,7 @@ export function shouldReceive(
   return uid === event.ownerUid || uid === event.helperUid;
 }
 export function noticeChannel(kind: NoticeKind) {
+  if (kind === "meeting") return "aumm-community";
   if (kind === "emergency") return "aumm-emergencies";
   return kind === "news"
     ? "aumm-news"

@@ -1,0 +1,2 @@
+import {useEffect,useState} from "react";
+export function useTheme(){const [theme,setTheme]=useState<"dark"|"light">(()=>{try{return localStorage.getItem("aumm.theme")==="light"?"light":"dark";}catch{return "dark";}});useEffect(()=>{document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme;document.querySelector('meta[name="theme-color"]')?.setAttribute("content",theme==="dark"?"#101217":"#ffffff");try{localStorage.setItem("aumm.theme",theme);}catch{}},[theme]);return {theme,toggleTheme:()=>setTheme(value=>value==="dark"?"light":"dark")};}

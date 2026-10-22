@@ -49,7 +49,7 @@ export async function manageMemberAccount(data: { memberId: string; action: "pas
       tx.get(doc(db, "supportRequests", uid)), ...active.map((item) => tx.get(item.ref)),
     ]);
     if (currentRole.data()?.active !== true || ![1, "1"].includes(currentRole.data()?.level)) throw new Error("Acesso revogado.");
-    if (targetRole.exists()) throw new Error("Este perfil também possui acesso administrativo. Gerencie-o em Administradores.");
+    if (targetRole.data()?.active === true) throw new Error("Este perfil possui acesso administrativo. Altere primeiro seu cargo para Associado e confirme a remoção do acesso administrativo.");
     if (!currentMember.exists() || currentMember.data().fullName !== data.confirmation || String(currentMember.data().uid || data.memberId) !== uid) throw new Error("O cadastro mudou. Abra-o novamente.");
     const support = new Map([ownSupport, ...supportDocs].map((item) => [item.id, item]));
     for (const item of support.values()) {

@@ -1,4 +1,7 @@
 "use client";
+import { useActiveAdmin } from "@/lib/useActiveAdmin";
+import { AdminShell } from "./AdminShell";
+import { AdminDashboardContent } from "./AdminDashboardContent";
 
 import Link from "next/link";
 import { onAuthStateChanged } from "firebase/auth";
@@ -32,7 +35,7 @@ type Member = {
   cardValidUntil?: Timestamp;
 };
 
-export function MemberPortalContent() {
+function MemberOnlyPortalContent() {
   const [member, setMember] = useState<Member | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
 
@@ -135,3 +138,5 @@ export function MemberPortalContent() {
     </div>
   );
 }
+
+export function MemberPortalContent(){const {role,loading}=useActiveAdmin();if(loading)return <p role="status">Carregando sua conta…</p>;return role?<AdminShell title="Minha área administrativa"><AdminDashboardContent/></AdminShell>:<MemberOnlyPortalContent/>;}

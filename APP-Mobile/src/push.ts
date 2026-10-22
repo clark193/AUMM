@@ -117,6 +117,7 @@ function parseNotice(data: Record<string, unknown>): NoticeEvent | null {
   if (
     ![
       "emergency",
+      "meeting",
       "news",
       "communication",
       "support_sent",

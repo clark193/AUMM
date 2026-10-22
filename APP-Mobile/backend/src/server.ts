@@ -5,11 +5,12 @@ import { getFirestore, Timestamp, type DocumentSnapshot } from "firebase-admin/f
 import {
   mobileAdminEmergency, mobileCleanupSupportChat, mobileCommunicationPublished,
   mobileExpireConfirmations, mobileNewsPublished, mobileSupportChanged,
+  processMeetingChange, sendMeetingReminders,
 } from "./index.js";
 
 if (process.env.AUMM_EXTERNAL_PUSH !== "true") throw new Error("Defina AUMM_EXTERNAL_PUSH=true para executar o servidor externo.");
 const db = getFirestore();
-const sources = ["news", "communications", "supportRequests", "emergencyAdminSignals"] as const;
+const sources = ["news", "communications", "supportRequests", "emergencyAdminSignals", "adminMeetings"] as const;
 type SourceName = typeof sources[number];
 const pending = new Map<string, DocumentSnapshot>();
 const running = new Set<string>();
@@ -20,7 +21,7 @@ const time = (value: unknown) => (value as Timestamp | undefined)?.toMillis?.() 
 
 // O estado mínimo sobrevive ao repouso/reinício da hospedagem gratuita.
 function minimal(data: Record<string, unknown>) {
-  return Object.fromEntries(["status", "title", "audience", "city", "ownerUid", "helperUid", "createdAt", "publishedAt", "updatedAt", "expiresAt", "acceptedAt", "confirmedAt", "incidentId", "chatId"]
+  return Object.fromEntries(["status", "title", "audience", "city", "ownerUid", "helperUid", "createdAt", "publishedAt", "updatedAt", "expiresAt", "acceptedAt", "confirmedAt", "incidentId", "chatId", "startsAt", "endsAt"]
     .filter(key => data[key] !== undefined).map(key => [key, data[key]]));
 }
 
@@ -44,7 +45,8 @@ async function processSource(collection: SourceName, snapshot: DocumentSnapshot,
       data: { before: { data: () => before }, after: snapshot } };
     const handler = collection === "news" ? mobileNewsPublished : collection === "communications" ? mobileCommunicationPublished
       : collection === "supportRequests" ? mobileSupportChanged : mobileAdminEmergency;
-    await handler.run(event as Parameters<typeof handler.run>[0]);
+    if(collection === "adminMeetings") await processMeetingChange(snapshot.id,before,snapshot.data()!);
+    else await handler.run(event as Parameters<typeof handler.run>[0]);
     if (collection === "supportRequests") await mobileCleanupSupportChat.run(event as Parameters<typeof mobileCleanupSupportChat.run>[0]);
   }
   await stateRef.set({ source: after, sourceVersion: snapshot.updateTime?.toMillis() || 0, processedAt: now() });
@@ -84,7 +86,7 @@ let expiring = false;
 const expiry = setInterval(() => {
   if (expiring) return;
   expiring = true;
-  void Promise.resolve(mobileExpireConfirmations.run({ scheduleTime: new Date().toISOString() } as Parameters<typeof mobileExpireConfirmations.run>[0]))
+  void Promise.resolve(mobileExpireConfirmations.run({ scheduleTime: new Date().toISOString() } as Parameters<typeof mobileExpireConfirmations.run>[0])).then(()=>sendMeetingReminders())
     .catch(() => console.error("Não foi possível expirar confirmações nesta tentativa."))
     .finally(() => { expiring = false; });
 }, 60000);

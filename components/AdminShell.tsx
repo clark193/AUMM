@@ -1,12 +1,14 @@
 "use client";
+import { EmbeddedAdminContext } from "./EmbeddedAdmin";
+import { Siren, Phone, Video } from "lucide-react";
 import { EmergencyAdmin } from "./EmergencyAdmin";
 
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import {
   BarChart3,
   BadgeCheck,
@@ -38,7 +40,7 @@ import { withBasePath } from "@/lib/paths";
 import { NotificationBell } from "./NotificationBell";
 
 type AdminLink = { href: string; label: string; icon: LucideIcon; levels: readonly number[] };
-const navGroups: { label: string; links: AdminLink[] }[] = [
+export const navGroups: { label: string; links: AdminLink[] }[] = [
   { label: "Visão geral", links: [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard, levels: [1, 2, 3, 4, 5] },
   ] },
@@ -58,6 +60,9 @@ const navGroups: { label: string; links: AdminLink[] }[] = [
     { href: "/admin/patrocinadores", label: "Apoio, patrocínio e parceiros", icon: Handshake, levels: [1, 2, 4] },
   ] },
   { label: "Atendimento e gestão", links: [
+    { href: "/admin/emergencias", label: "Emergências", icon: Siren, levels: [1, 2, 3] },
+    { href: "/admin/reunioes", label: "Reuniões da diretoria", icon: Video, levels: [1, 2, 3, 4, 5] },
+    { href: "/admin/contatos-apoio", label: "Contatos de apoio", icon: Phone, levels: [1] },
     { href: "/admin/solicitacoes", label: "Solicitações", icon: MessageSquareText, levels: [1, 2, 3] },
     { href: "/admin/recuperacao-senha", label: "Recuperar senhas", icon: LockKeyhole, levels: [1, 3] },
     { href: "/admin/assembleias", label: "Assembleias", icon: Vote, levels: [1] },
@@ -85,6 +90,7 @@ export function AdminShell({
   allowedLevels = [1, 2, 3, 4, 5],
   requiredPermissions = [],
 }: Props) {
+  const embedded = useContext(EmbeddedAdminContext);
   const pathname = usePathname();
   const router = useRouter();
   const [level, setLevel] = useState<number | null>(firebaseEnabled ? null : 1);
@@ -96,17 +102,11 @@ export function AdminShell({
 
   useEffect(() => {
     if (!firebaseEnabled) return;
-    const { auth, db } = getFirebaseServices();
-    return onAuthStateChanged(auth, async (user) => {
-      if (!user) return;
-      const [access, photo] = await Promise.all([getDoc(doc(db, "adminRoles", user.uid)), getDoc(doc(db, "adminPhotos", user.uid))]);
-      setPhotoURL(String(photo.data()?.dataUrl || ""));
-      if (access.exists()) {
-        setLevel(Number(access.data().level || 5));
-        setRole(String(access.data().role || "Administrador"));
-        setPermissions((access.data().permissions || {}) as Record<string, boolean>);
-      }
-    });
+    const {auth,db}=getFirebaseServices();let stopRole=()=>{},stopPhoto=()=>{};
+    const stop=onAuthStateChanged(auth,user=>{stopRole();stopPhoto();setLevel(null);setPermissions({});setPhotoURL("");if(!user)return;
+      stopRole=onSnapshot(doc(db,"adminRoles",user.uid),snap=>{const data=snap.data();setLevel(data?.active===true?Number(data.level||5):0);setRole(String(data?.role||"Administrador"));setPermissions(data?.permissions||{});},()=>setLevel(0));
+      stopPhoto=onSnapshot(doc(db,"memberPhotos",user.uid),snap=>{if(snap.exists())setPhotoURL(String(snap.data().dataUrl||""));else void getDoc(doc(db,"adminPhotos",user.uid)).then(p=>setPhotoURL(String(p.data()?.dataUrl||""))).catch(()=>{});},()=>{});
+    });return()=>{stop();stopRole();stopPhoto();};
   }, []);
 
   async function logout() {
@@ -119,6 +119,7 @@ export function AdminShell({
     }
   }
 
+  if (embedded) return <AuthGate admin>{level === null ? <p role="status">Carregando permissões…</p> : allowedLevels.includes(level) || requiredPermissions.some(p => permissions[p] === true) ? <section className="embedded-admin-module"><h2>{title}</h2>{children}</section> : <p role="alert">Seu nível não permite abrir este módulo.</p>}</AuthGate>;
   return (
     <AuthGate admin>
       {level === null ? (

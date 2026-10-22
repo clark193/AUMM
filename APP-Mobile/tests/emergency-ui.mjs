@@ -28,12 +28,12 @@ async function readAlert() {
 }
 try {
   await admin.goto("http://127.0.0.1:5175/portal.html#/associado/login?destino=admin", { waitUntil: "domcontentloaded" });
-  await admin.getByPlaceholder("admin", { exact: true }).fill(staff.email);
+  await admin.getByPlaceholder("seu@email.com", { exact: true }).fill(staff.email);
   await admin.getByPlaceholder("Sua senha", { exact: true }).fill("EmergencyTest123!");
   await admin.getByRole("button", { name: "Entrar", exact: true }).click();
 
   await observer.goto("http://127.0.0.1:5175/portal.html#/associado/login?destino=admin", { waitUntil: "domcontentloaded" });
-  await observer.getByPlaceholder("admin", { exact: true }).fill(recruiter.email);
+  await observer.getByPlaceholder("seu@email.com", { exact: true }).fill(recruiter.email);
   await observer.getByPlaceholder("Sua senha", { exact: true }).fill("EmergencyTest123!");
   await observer.getByRole("button", { name: "Entrar", exact: true }).click();
   await expect(observer.getByRole("button", { name: /^Notificações/ })).toBeVisible();
@@ -84,7 +84,7 @@ try {
   await expect(dialog.getByText("A diretoria está entrando em contato", { exact: true })).toBeVisible();
   await expect(observer.locator(".admin-emergency-toast")).toHaveCount(0);
   await admin.screenshot({ path: fileURLToPath(new URL("../artifacts/33-emergencia-painel-aumm.png", import.meta.url)) });
-  await card.getByRole("button", { name: "Encerrar atendimento", exact: true }).click();
+  await card.getByRole("button", { name: "Marcar como atendido", exact: true }).click();
   await expect(dialog.getByText("Atendimento encerrado", { exact: true })).toBeVisible();
   await page.bringToFront();
   // Um segundo incidente confirma o caminho com GPS e o cancelamento pelo associado.

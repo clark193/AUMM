@@ -64,7 +64,7 @@ try {
   });
   for (const [index, account] of accounts.reverse().entries()) {
     await page.goto("http://127.0.0.1:5175/portal.html#/associado/login?destino=admin", { waitUntil: "domcontentloaded" });
-    await page.getByPlaceholder("admin", { exact: true }).fill(account.email);
+    await page.getByPlaceholder("seu@email.com", { exact: true }).fill(account.email);
     await page.getByPlaceholder("Sua senha", { exact: true }).fill("PortalTest123!");
     await page.getByRole("button", { name: "Entrar", exact: true }).click();
     await page.getByRole("button", { name: "Abrir menu", exact: true }).click();

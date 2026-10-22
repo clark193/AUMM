@@ -9,6 +9,7 @@ import { App as NativeApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import {
   signInWithEmailAndPassword,
+  browserLocalPersistence, setPersistence,
   signOut,
   updatePassword,
 } from "firebase/auth";
@@ -22,6 +23,7 @@ import {
   where,
 } from "firebase/firestore";
 import {
+  Sun, Moon,
   ArrowRight,
   ArrowUpRight,
   Bell,
@@ -71,6 +73,7 @@ import {
 import { locate, openUrl, site } from "./platform";
 import "./styles.css";
 import "./improvements.css";
+import "./account-theme.css";
 import { SupportMap } from "./SupportTracking";
 import NotificationCenter, { NoticeBanner } from "./NotificationCenter";
 import { useNotices } from "./useNotices";
@@ -97,10 +100,16 @@ import EmergencyCenter, { EmergencyHome } from "./EmergencyCenter";
 import { EmergencyContactForm } from "./EmergencyContact";
 import MobileEvents, { EventCard, EventDetails, upcomingEvents } from "./MobileEvents";
 import RideLedger from "./RideLedger";
+import {SupportContacts} from "../../components/SupportContacts";
+import {useTheme} from "./useTheme";
+import {useUnifiedPreview} from "./useUnifiedPreview";
+const AdminWorkspace=React.lazy(()=>import("./AdminWorkspace"));
+const RegistrationWizard=React.lazy(()=>import("./RegistrationWizard"));
+const AccountRecovery=React.lazy(()=>import("./RegistrationWizard").then(m=>({default:m.AccountRecovery})));
 const MemberFeatures = React.lazy(() => import("./MemberFeatures"));
 import AdminEmergencyPreview from "./AdminEmergencyPreview";
 import { isActiveSupport } from "../shared/support";
-type Tab = "home" | "support" | "news" | "utilities" | "account" | "request";
+type Tab = "home" | "support" | "news" | "utilities" | "account" | "request" | "benefits" | "admin";
 const money = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 function formatDate(value: Row["date"]) {
@@ -253,6 +262,10 @@ function Modal({
 
 function App() {
   const session = useSession();
+  const {theme,toggleTheme}=useTheme();
+  const [adminPath,setAdminPath]=useState("/admin");
+  const [entryChoice,setEntryChoice]=useState(()=>{try{return localStorage.getItem("aumm.entry")||"choice";}catch{return "choice";}});
+  function chooseEntry(value:string){setEntryChoice(value);try{localStorage.setItem("aumm.entry",value);}catch{}}
   const supportActivity = useSupportActivity(session.user, session.active);
   const [tab, setTab] = useState<Tab>(isPreviewHelper ? "support" : "home");
   const [selectedSupportId, setSelectedSupportId] = useState("");
@@ -279,7 +292,7 @@ function App() {
   });
   const news = useFeed("news", true, "published");
   const events = useFeed("events");
-  const memberPhoto = useMemberPhoto(session.member?.uid);
+  const memberPhoto = useMemberPhoto(session.user?.uid);
   const [selectedEvent, setSelectedEvent] = useState<Row | null>(null);
   function openEvent(item: Row) { setSelectedEvent(item); setModal("eventDetails"); }
   const benefits = useFeed("benefits", session.active);
@@ -289,7 +302,9 @@ function App() {
   const settings = usePublicSettings();
   const [search, setSearch] = useState("");
   const [newsFilter, setNewsFilter] = useState("Todas");
-  const notify = (text: string) => setToast(text);
+  const notify = React.useCallback((text:string)=>setToast(text),[]);
+  const previewMode=React.useCallback((mode:string)=>{setModal(null);setAdminPath("/admin");setEntryChoice(mode === "entry" ? "choice" : mode === "guest" ? "guest" : "user");try{localStorage.setItem("aumm.entry",mode === "entry" ? "choice" : mode === "guest" ? "guest" : "user");}catch{}setTab(mode === "president" || mode === "director" ? "admin" : "home");},[]);
+  useUnifiedPreview(previewMode,notify);
   const pendingNotice = React.useRef<NoticeEvent | null>(null);
   const openNotice = React.useCallback(
     (notice: NoticeEvent) => {
@@ -299,7 +314,7 @@ function App() {
       }
       setModal(null);
       if (notice.target === "admin") {
-        window.location.assign("./portal.html#/admin");
+        setAdminPath(notice.kind === "meeting" ? "/admin/reunioes" : "/admin/emergencias"); setTab("admin");
         return;
       }
       if (notice.target === "support") {
@@ -388,15 +403,17 @@ function App() {
     localStorage.setItem("aumm.saved", JSON.stringify(next));
   }
   function memberFeature(name: string) {
-    setModal(session.active ? name : "restricted");
+    setModal(session.active || (name === "card" && session.admin) ? name : "restricted");
   }
-  const firstName = session.member?.fullName?.split(" ")[0] || "motoboy";
+  const firstName = (session.member?.fullName || session.admin?.fullName)?.split(" ")[0] || "motoboy";
   const nav: { id: Tab; title: string; icon: LucideIcon }[] = [
     { id: "home", title: "Início", icon: House },
     { id: "support", title: "Apoio", icon: HandHeart },
     { id: "news", title: "Notícias", icon: Newspaper },
+    { id: "benefits", title: "Benefícios", icon: Gift },
     { id: "utilities", title: "Utilidades", icon: Wrench },
     { id: "account", title: "Meu perfil", icon: UserRound },
+    ...(session.admin ? [{id:"admin" as Tab,title:"Admin",icon:ShieldCheck}] : []),
   ];
   const shortcuts: {
     title: string;
@@ -421,13 +438,6 @@ function App() {
       icon: Wallet,
       color: "blue",
       action: () => memberFeature("card"),
-    },
-    {
-      title: "Benefícios",
-      detail: "Vantagens AUMM",
-      icon: Gift,
-      color: "purple",
-      action: () => memberFeature("benefits"),
     },
     {
       title: "Utilidades",
@@ -515,7 +525,8 @@ function App() {
     );
   }
   return (
-    <div className="app-layout">
+    <div className="app-layout" onClickCapture={event=>{if(import.meta.env.DEV && import.meta.env.VITE_USE_EMULATORS === "true" && new URLSearchParams(location.search).get("demo") === "1"){const anchor=(event.target as Element).closest("a");if(anchor && /^(https?:|tel:|mailto:|geo:)/i.test(anchor.getAttribute("href")||"")){event.preventDefault();event.stopPropagation();notify("Demonstração: nenhum contato externo ou ligação será aberto.");}}}}>
+      {!isPreview && (session.loading || ((!session.user || session.user.isAnonymous) && entryChoice !== "guest")) && !modal && <div className="entry-overlay"><div className="entry-brand"><img src="./logo.png" alt="AUMM"/><span>ASSOCIAÇÃO UNIÃO MAIOR MOTOBOYS</span></div>{session.loading?<p role="status">Recuperando seu acesso…</p>:<><span className="eyebrow">Sua união. Seu caminho.</span><h1>Bem-vindo à AUMM</h1><p>Uma conta para seus benefícios, sua carteirinha e, quando autorizado, as ferramentas da diretoria.</p><button className="btn" onClick={()=>setModal("login")}>Entrar na minha conta</button><button className="btn secondary" onClick={()=>setModal("register")}>Quero me associar</button><button className="text-btn" onClick={()=>chooseEntry("guest")}>Entrar como convidado</button><small>Notícias, utilidades e apoio público. Recursos de associados e da diretoria exigem acesso autorizado.</small></>}<button className="theme-switch" onClick={toggleTheme}>{theme === "dark" ? <Sun/> : <Moon/>} Usar modo {theme === "dark" ? "claro" : "escuro"}</button></div>}
       <aside className="desktop-rail">
         <img src="./logo.png" alt="AUMM" />
         <p>
@@ -532,7 +543,7 @@ function App() {
                   ? "active"
                   : ""
               }
-              onClick={() => setTab(id)}
+              onClick={() => {if(id === "admin") setAdminPath("/admin"); setTab(id);}}
             >
               <Icon size={20} />
               {title}
@@ -565,6 +576,7 @@ function App() {
             </span>
           </button>
           <div className="top-actions">
+            <button className="icon-btn theme-switch" aria-label={theme === "dark" ? "Ativar modo claro" : "Ativar modo escuro"} onClick={toggleTheme}>{theme === "dark" ? <Sun size={19}/> : <Moon size={19}/>}</button>
             <button
               className="top-login"
               onClick={() => {
@@ -575,7 +587,7 @@ function App() {
             >
               {session.user && !session.user.isAnonymous ? (
                 <>
-                  <UserRound size={16} /><span className="account-name">Logado como:<strong title={session.member?.fullName || session.user?.displayName || "Usuário"}>{session.member?.fullName || session.user?.displayName || "Usuário"}</strong></span>
+                  <UserRound size={16} /><span className="account-name">Logado como:<strong title={session.member?.fullName || session.admin?.fullName || session.user?.displayName || "Usuário"}>{session.member?.fullName || session.admin?.fullName || session.user?.displayName || "Usuário"}</strong></span>
                 </>
               ) : (
                 <>
@@ -610,7 +622,7 @@ function App() {
               aria-label="Meu perfil"
               onClick={() => setTab("account")}
             >
-              {session.active ? (
+              {session.active || session.admin ? (
                 memberPhoto ? <img src={memberPhoto} alt="Sua foto" /> : firstName.slice(0, 1).toUpperCase()
               ) : (
                 <UserRound size={19} />
@@ -757,18 +769,10 @@ function App() {
                 </div>
               </Section>
               {session.active && <Section title="Próximos Eventos da AUMM" aside={<button className="text-btn" onClick={() => setModal("events")}>Ver Todos os Eventos</button>}>{events.loading ? <p>Carregando eventos…</p> : events.error ? <p role="alert">{events.error}</p> : upcomingEvents(events.items).length ? <div className="home-events">{upcomingEvents(events.items).slice(0,2).map(item => <EventCard key={item.id} item={item} onOpen={() => openEvent(item)}/>)}</div> : <p>Nenhum próximo evento cadastrado. Acompanhe as novidades por aqui.</p>}</Section>}
-              <section className="community-strip">
-                <div>
-                  <HandHeart size={24} />
-                  <span>
-                    <strong>A força está na nossa união.</strong>
-                    <small>Apoio real para quem movimenta a cidade.</small>
-                  </span>
-                </div>
-                <span className="mini-tag">#SomosAUMM</span>
-              </section>
             </>
           )}
+          {tab === "benefits" && <><PageHeading eyebrow="VANTAGENS DE FAZER PARTE" title="Benefícios AUMM" text="Parcerias para facilitar sua jornada."/>{session.active ? <React.Suspense fallback={<p>Carregando benefícios…</p>}><MemberFeatures feature="benefits" onPhoto={()=>{}}/></React.Suspense> : <section className="guest-benefits"><Gift size={38}/><h2>Mais vantagens para associados</h2><p>Entre com seu vínculo ativo para consultar as condições e os parceiros exclusivos.</p><button className="btn" onClick={()=>setModal("login")}>Entrar na minha conta</button><button className="btn secondary" onClick={()=>setModal("register")}>Quero me associar</button></section>}</>}
+          {tab === "admin" && (session.admin ? <React.Suspense fallback={<p>Carregando ferramentas…</p>}><AdminWorkspace profile={session.admin} startPath={adminPath} onExit={()=>setTab("account")}/></React.Suspense> : <p>O acesso administrativo não está disponível nesta conta.</p>)}
           {tab === "support" && (
             <>
               <PageHeading
@@ -785,6 +789,7 @@ function App() {
                 login={() => setModal("login")}
                 notify={notify}
               />
+              <SupportContacts onOpen={openUrl}/>
               <Section title="Apoio para a sua jornada">
                 <div className="service-grid">
                   {[
@@ -1033,19 +1038,19 @@ function App() {
                 <h2>{session.member?.fullName || "Bem-vindo à rede"}</h2>
                 <span className="member-pill">
                   <i />
-                  {session.active
+                  {session.admin ? `${session.admin.role} · Administração` : session.active
                     ? `Associado · ${session.member?.memberNumber || "AUMM"}`
                     : "Acesso de convidado"}
                 </span>
                 <p>
-                  {session.active
+                  {session.admin ? "Seu cargo está ativo. Acesse as ferramentas administrativas na mesma conta." : session.active
                     ? "Seu vínculo está ativo. Conte com a AUMM no seu dia a dia."
                     : "Use as utilidades, acompanhe notícias e peça apoio. Faça parte da associação para ter acesso completo."}
                 </p>
                 {session.loading ? (
                   <p>Verificando seu vínculo…</p>
                 ) : (
-                  !session.active && (
+                  !session.active && !session.admin && (
                     <Button onClick={() => setModal("login")}>
                       <LogIn size={18} /> Entrar como associado
                     </Button>
@@ -1064,10 +1069,10 @@ function App() {
                 )}
               </div>
               <Section title="Minha associação">
-                {session.active && <button className="list-row" onClick={() => setModal("memberSettings")}><Settings2 size={20}/><span>Configurações, foto e vínculo</span><ChevronRight size={17}/></button>}
+                {(session.active || session.admin) && <button className="list-row" onClick={() => setModal("memberSettings")}><Settings2 size={20}/><span>Configurações, foto e vínculo</span><ChevronRight size={17}/></button>}
                 {session.active && <button className="list-row danger-text" onClick={() => setModal("emergencyContact")}><HandHeart size={20} /><span>Contato de Emergência<small>Cadastre e atualize os números para a diretoria ligar</small></span><ChevronRight size={17} /></button>}
                 <button className="list-row" onClick={() => setModal("liveShare")}><MapPin size={20} /><span>Compartilhar localização ao vivo<small>Envie um link para uma pessoa de confiança</small></span><ChevronRight size={17} /></button>
-                <button className="list-row" onClick={() => isPreview ? setModal("adminPreview") : window.location.assign("./portal.html#/associado/login?destino=admin")}><ShieldCheck size={20} /><span>Acesso administrativo<small>Gerencie a AUMM pelo aplicativo</small></span><ChevronRight size={17} /></button>
+                {session.admin && <button className="list-row" onClick={()=>{setAdminPath("/admin");setTab("admin");}}><ShieldCheck size={20}/><span>Ferramentas administrativas<small>{session.admin.role} · nível {session.admin.level}</small></span><ChevronRight size={17}/></button>}
                 <div className="menu-list">
                   {[
                     { title: "Minha carteirinha", icon: Wallet, key: "card" },
@@ -1086,7 +1091,7 @@ function App() {
                     </button>
                   ))}
                   {session.member?.status !== "active" && <button
-                    onClick={() => void perform(() => Promise.resolve(window.location.assign("./portal.html#/associe-se")))}
+                    onClick={() => setModal("register")}
                   >
                     <Plus size={20} />
                     <span>Quero me associar</span>
@@ -1212,7 +1217,7 @@ function App() {
                 benefits: "Seus benefícios",
                 documents: "Documentos da associação",
                 events: "Agenda AUMM",
-                statute: "Estatuto Social", eventDetails: "Detalhes do evento", emergencyContact: "Contato de Emergência", memberSettings: "Configurações do associado", ledger: "Minhas jornadas",
+                register:"Faça parte da AUMM", recovery:"Recuperar meu acesso", statute: "Estatuto Social", eventDetails: "Detalhes do evento", emergencyContact: "Contato de Emergência", memberSettings: "Configurações do associado", ledger: "Minhas jornadas",
                 communications: "Comunicados",
                 privacy: "Sua privacidade",
                 contact: "Fale com a AUMM",
@@ -1236,10 +1241,12 @@ function App() {
           )}
           {isPreview && modal === "adminPreview" && <AdminEmergencyPreview />}
           {modal === "liveShare" && <LiveShare notify={notify} />}
+          {modal === "register" && <React.Suspense fallback={<p>Carregando cadastro…</p>}><RegistrationWizard onExit={close}/></React.Suspense>}
+          {modal === "recovery" && <React.Suspense fallback={<p>Carregando recuperação…</p>}><AccountRecovery onExit={()=>setModal("login")}/></React.Suspense>}
           {modal === "login" && (
-            <Login
+            <Login onRegister={()=>setModal("register")} onRecovery={()=>setModal("recovery")}
               onDone={() => {
-                close();
+                chooseEntry("user"); close();
                 notify(
                   "Login realizado. Verificando seu vínculo de associado…",
                 );
@@ -1269,14 +1276,14 @@ function App() {
               </Button>
               <Button
                 secondary
-                onClick={() => void perform(() => Promise.resolve(window.location.assign("./portal.html#/associe-se")))}
+                onClick={() => setModal("register")}
               >
                 Quero me associar <ExternalLink size={16} />
               </Button>
             </>
           )}
           {modal === "emergencyContact" && (session.active || isPreview) && <EmergencyContactForm uid={session.user?.uid || "preview-emergency"}/>}
-          {modal === "memberSettings" && session.active && <React.Suspense fallback={<p>Carregando configurações…</p>}><MemberFeatures feature="settings" onPhoto={() => setModal("memberSettings")}/></React.Suspense>}
+          {modal === "memberSettings" && (session.active || session.admin) && <React.Suspense fallback={<p>Carregando configurações…</p>}><MemberFeatures feature={session.admin && !session.active ? "adminSettings" : "settings"} onPhoto={() => setModal("memberSettings")}/></React.Suspense>}
           {modal === "eventDetails" && selectedEvent && <EventDetails item={selectedEvent}/>}
           {modal === "ledger" && <RideLedger key={session.user?.uid || "guest"} uid={session.user?.uid || "guest"}/>}
           {modal === "calculator" && <CalculatorPanel />}
@@ -1317,7 +1324,7 @@ function App() {
               ))}
             </>
           )}
-          {modal === "card" && session.active && (
+          {modal === "card" && (session.active || session.admin) && (
             <React.Suspense fallback={<p>Carregando carteirinha…</p>}><MemberFeatures feature="card" onPhoto={() => setModal("memberSettings")}/></React.Suspense>
           )}
           {modal === "benefits" &&
@@ -1439,7 +1446,7 @@ function App() {
                     }
                     await stopBackgroundShareBeforeAuthChange();
                     await detachPushDevice();
-                    await signOut(services().auth);
+                    await signOut(services().auth); chooseEntry("choice");
                     [
                       "aumm.saved",
                       "aumm.maintenance",
@@ -1482,8 +1489,9 @@ function PageHeading({
 }
 function Login({
   onDone,
-  notify,
+  notify, onRegister, onRecovery,
 }: {
+  onRegister:()=>void; onRecovery:()=>void;
   onDone: () => void;
   notify: (s: string) => void;
 }) {
@@ -1506,6 +1514,7 @@ function Login({
       }
       await stopBackgroundShareBeforeAuthChange();
       await detachPushDevice();
+      await setPersistence(auth,browserLocalPersistence);
       await signInWithEmailAndPassword(
         auth,
         String(data.get("email")).trim(),
@@ -1556,11 +1565,7 @@ function Login({
       <button
         type="button"
         className="text-btn"
-        onClick={() =>
-          void Promise.resolve(window.location.assign("./portal.html#/associado/recuperar-senha")).catch((e) =>
-            notify(friendly(e)),
-          )
-        }
+        onClick={onRecovery}
       >
         Preciso recuperar meu acesso
       </button>
@@ -1569,9 +1574,7 @@ function Login({
         <button
           type="button"
           className="text-btn"
-          onClick={() =>
-            void Promise.resolve(window.location.assign("./portal.html#/associe-se")).catch((e) => notify(friendly(e)))
-          }
+          onClick={onRegister}
         >
           Faça parte da AUMM
         </button>

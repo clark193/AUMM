@@ -1,3 +1,4 @@
+import {useActiveAdmin} from "../../lib/useActiveAdmin";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import {
@@ -44,12 +45,9 @@ export type Member = {
   photoURL?: string;
   cardValidUntil?: Timestamp;
 };
-export function useMemberPhoto(uid?: string) {
-  const [photo,setPhoto]=useState("");
-  useEffect(()=>{setPhoto("");if(!db||!uid)return;return onSnapshot(doc(db,"memberPhotos",uid),s=>setPhoto(String(s.data()?.dataUrl||"")),()=>setPhoto(""));},[uid]);
-  return photo;
-}
+export function useMemberPhoto(uid?:string){const [photo,setPhoto]=useState("");useEffect(()=>{setPhoto("");if(!db||!uid)return;let member="",admin="";const update=()=>setPhoto(member||admin);const a=onSnapshot(doc(db,"memberPhotos",uid),s=>{member=String(s.data()?.dataUrl||"");update();},()=>{});const b=onSnapshot(doc(db,"adminPhotos",uid),s=>{admin=String(s.data()?.dataUrl||"");update();},()=>{});return()=>{a();b();};},[uid]);return photo;}
 export function useSession() {
+  const adminState=useActiveAdmin();
   const [user, setUser] = useState<User | null>(null);
   const [member, setMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(Boolean(auth));
@@ -95,7 +93,8 @@ export function useSession() {
   return {
     user,
     member,
-    loading,
+    loading: loading || adminState.loading,
+    admin: adminState.role,
     error,
     active: member?.status === "active" && !member.mustChangePassword,
   };

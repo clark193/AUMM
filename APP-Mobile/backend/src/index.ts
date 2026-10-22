@@ -12,6 +12,7 @@ import {
 } from "firebase-functions/v2/firestore";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { logger } from "firebase-functions";
+import {dueMeetingStages} from "../../shared/meetings.js";
 import {
   defaultNoticePreferences,
   noticeChannel,
@@ -30,6 +31,28 @@ const region = "southamerica-east1";
 const options = { region, retry: true, maxInstances: 5 } as const;
 const millis = (value: unknown) =>
   (value as Timestamp | undefined)?.toMillis?.() || 0;
+
+async function meetingNotice(id:string,data:Record<string,unknown>,stage:NoticeEvent["meetingStage"],now:number){
+ const generation=millis(data.updatedAt);if(!generation)return;
+ const at=millis(data.startsAt);const time=new Date(at).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+ const title=stage==="cancelled"?"Reunião da diretoria cancelada":stage==="30m"?"Lembrete de reunião da diretoria":stage==="start"?"Horário da reunião da diretoria":"Agenda da diretoria atualizada";
+ const notice:NoticeEvent={id:`meeting_${encodeURIComponent(id)}_${generation}_${stage}`,kind:"meeting",title,body:stage==="cancelled"?"Confira a agenda administrativa para acompanhar as alterações.":`Reunião prevista para ${time} (Brasília). Abra a agenda para consultar as informações e o link.`,target:"admin",itemId:id,createdAt:now,expiresAt:now+86400000,sourceVersion:generation,meetingStage:stage};
+ await eachProfile(db.collection("adminRoles").where("active","==",true),async uid=>{await store(uid,notice);});
+}
+export async function processMeetingChange(id:string,before:Record<string,unknown>|null,after:Record<string,unknown>){
+ if(!["scheduled","cancelled"].includes(String(after.status)))return;
+ if(before&&millis(before.updatedAt)===millis(after.updatedAt))return;
+ await meetingNotice(id,after,after.status==="cancelled"?"cancelled":"changed",Date.now());
+}
+export async function sendMeetingReminders(now=Date.now()){
+ const meetings=await db.collection("adminMeetings").where("startsAt",">=",Timestamp.fromMillis(now-10*60000)).where("startsAt","<=",Timestamp.fromMillis(now+30*60000)).get();
+ for(const meeting of meetings.docs){const data=meeting.data();if(data.status!=="scheduled")continue;
+  for(const stage of dueMeetingStages(millis(data.startsAt),millis(data.createdAt),now)){
+   const marker=db.doc(`meetingReminderState/${meeting.id}_${millis(data.updatedAt)}_${stage}`);if((await marker.get()).exists)continue;
+   await meetingNotice(meeting.id,data,stage,now);await marker.set({sentAt:FieldValue.serverTimestamp(),expiresAt:Timestamp.fromMillis(now+2*86400000)});
+  }
+ }
+}
 function source(data: Record<string, unknown> | undefined) {
   return data
     ? {
@@ -189,6 +212,11 @@ export const mobileSupportChanged = onDocumentWritten(
   },
 );
 async function currentEvent(event: NoticeEvent, uid: string) {
+  if(event.kind === "meeting"){
+    const [role,meeting]=await Promise.all([db.doc(`adminRoles/${uid}`).get(),db.doc(`adminMeetings/${event.itemId}`).get()]);
+    return role.data()?.active===true && meeting.exists && millis(meeting.data()?.updatedAt)===event.sourceVersion
+      && meeting.data()?.status===(event.meetingStage==="cancelled"?"cancelled":"scheduled");
+  }
   if (event.kind === "emergency") {
     const [admin, signal] = await Promise.all([db.doc(`adminRoles/${uid}`).get(), db.doc(`emergencyAdminSignals/${event.itemId}`).get()]);
     return admin.data()?.active === true && signal.data()?.incidentId === event.id.slice("emergency_".length)

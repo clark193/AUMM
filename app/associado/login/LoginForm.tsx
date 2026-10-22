@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from "firebase/auth";
+import { collection, doc, getDoc, getDocs, query, where, limit } from "firebase/firestore";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { LockKeyhole, LogIn, Mail, ShieldCheck, UserRound } from "lucide-react";
@@ -15,7 +15,7 @@ const ADMIN_LOGIN_EMAIL = "admin.final@aummteste.com.br";
 export function LoginForm({ mobile = false, beforeLogin }: { mobile?: boolean; beforeLogin?: () => Promise<void> } = {}) {
   const router = useRouter();
   const params = useSearchParams();
-  const admin = params.get("destino") === "admin";
+  const admin = false;
   const denied = params.get("erro") === "acesso";
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -40,24 +40,18 @@ export function LoginForm({ mobile = false, beforeLogin }: { mobile?: boolean; b
       const normalized = identifier.trim().toLowerCase();
       const email =
         admin && normalized === "admin" ? ADMIN_LOGIN_EMAIL : normalized;
+      await setPersistence(auth, browserLocalPersistence);
       const credential = await signInWithEmailAndPassword(
         auth,
         email,
         password,
       );
-      if (admin) {
-        const access = await getDoc(doc(db, "adminRoles", credential.user.uid));
-        if (!access.exists() || access.data().active !== true)
-          throw new Error("Este usuário não possui acesso administrativo.");
-      } else {
-        const member = await getDoc(doc(db, "associados", credential.user.uid));
-        if (!member.exists() || member.data().status !== "active") throw new Error("Seu cadastro ainda não está autorizado para acessar o portal.");
-        if (member.data().mustChangePassword === true) {
-          router.push("/associado/alterar-senha?primeiro=1");
-          return;
-        }
-      }
-      router.push(admin ? "/admin" : "/associado");
+      const [access, membership] = await Promise.all([getDoc(doc(db,"adminRoles",credential.user.uid)),getDocs(query(collection(db,"associados"),where("uid","==",credential.user.uid),limit(1)))]);
+      const member = membership.docs[0]?.data();
+      if (member?.mustChangePassword === true) { router.push("/associado/alterar-senha?primeiro=1"); return; }
+      if (access.data()?.active !== true && member?.status !== "active") throw new Error("Seu cadastro ainda não está autorizado. Consulte a associação.");
+      router.push("/associado");
+
     } catch (reason) {
       const text =
         reason instanceof Error &&
@@ -161,13 +155,6 @@ export function LoginForm({ mobile = false, beforeLogin }: { mobile?: boolean; b
           )}
           <div className="auth-links">
             <Link href="/">← Voltar {mobile ? "ao aplicativo" : "ao site"}</Link>
-            <Link
-              href={
-                admin ? "/associado/login" : "/associado/login?destino=admin"
-              }
-            >
-              {admin ? "Portal do associado" : "Acesso administrativo"}
-            </Link>
           </div>
         </div>
       </section>

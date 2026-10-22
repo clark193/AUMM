@@ -17,7 +17,7 @@ export async function changeMemberPassword(bearer: string, input: Record<string,
   const ref = db.doc(`associados/${id}`), member = (await ref.get()).data();
   const target = member?.uid;
   if (typeof target !== "string" || !target || target === identity.uid) throw new AdminPasswordError(400, "Este cadastro não possui um login de associado elegível.");
-  if ((await db.doc(`adminRoles/${target}`).get()).exists) throw new AdminPasswordError(403, "Contas administrativas não podem ser alteradas por este recurso.");
+  if ((await db.doc(`adminRoles/${target}`).get()).data()?.active === true) throw new AdminPasswordError(403, "Contas administrativas não podem ser alteradas por este recurso.");
   await auth.getUser(target);
   // Nenhum valor de senha é persistido, incluído no log ou devolvido ao cliente.
   const audit = db.collection("auditLogs").doc();

@@ -1,4 +1,6 @@
 "use client";
+import {useActiveAdmin} from "@/lib/useActiveAdmin";
+import {AdminCardContent} from "./AdminCardContent";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -18,7 +20,7 @@ type Member = {
 
 function formatted(value?: Timestamp) { return value?.toDate().toLocaleDateString("pt-BR") || "—"; }
 
-export function MemberCardContent({ embedded = false, siteUrl, onPhoto, onShare }: { embedded?: boolean; siteUrl?: string; onPhoto?: () => void; onShare?: (url: string) => Promise<void> }) {
+function MemberCredential({ embedded = false, siteUrl, onPhoto, onShare }: { embedded?: boolean; siteUrl?: string; onPhoto?: () => void; onShare?: (url: string) => Promise<void> }) {
   const [member, setMember] = useState<Member | null>(null);
   const [uid, setUid] = useState("");
   const [busy, setBusy] = useState(false);
@@ -70,3 +72,5 @@ export function MemberCardContent({ embedded = false, siteUrl, onPhoto, onShare 
     </div>}
   </div></main>;
 }
+
+export function MemberCardContent(props:{embedded?:boolean;siteUrl?:string;onPhoto?:()=>void;onShare?:(url:string)=>Promise<void>}){const {role,loading}=useActiveAdmin();if(loading)return <p role="status">Carregando credencial…</p>;return role?<AdminCardContent {...props}/>:<MemberCredential {...props}/>;}
