@@ -13,7 +13,7 @@
     "build:firebase": "next build",
     "preview:network": "node scripts/serve-local-site.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "npm run build && node --experimental-strip-types --test tests/assembly-rules.test.ts tests/membership.test.ts tests/rendered-html.test.mjs",
+    "test": "npm run build && node --experimental-strip-types --test tests/assembly-rules.test.ts tests/membership.test.ts tests/portal-navigation.test.ts tests/rendered-html.test.mjs",
     "test:rules": "npx firebase-tools emulators:exec --only firestore \"node --test --test-concurrency=1 tests/firestore-assemblies.rules.test.mjs tests/firestore-admin.rules.test.mjs\"",
     "seed:assembly:emulator": "node scripts/seed-assembly-emulator.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern out --ignore-pattern .next --ignore-pattern functions/lib --ignore-pattern functions/node_modules"

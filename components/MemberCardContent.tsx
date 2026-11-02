@@ -20,7 +20,7 @@ type Member = {
 
 function formatted(value?: Timestamp) { return value?.toDate().toLocaleDateString("pt-BR") || "—"; }
 
-function MemberCredential({ embedded = false, siteUrl, onPhoto, onShare }: { embedded?: boolean; siteUrl?: string; onPhoto?: () => void; onShare?: (url: string) => Promise<void> }) {
+export function MemberCredential({ embedded = false, siteUrl, onPhoto, onShare }: { embedded?: boolean; siteUrl?: string; onPhoto?: () => void; onShare?: (url: string) => Promise<void> }) {
   const [member, setMember] = useState<Member | null>(null);
   const [uid, setUid] = useState("");
   const [busy, setBusy] = useState(false);

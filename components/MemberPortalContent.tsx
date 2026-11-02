@@ -1,7 +1,4 @@
 "use client";
-import { useActiveAdmin } from "@/lib/useActiveAdmin";
-import { AdminShell } from "./AdminShell";
-import { AdminDashboardContent } from "./AdminDashboardContent";
 
 import Link from "next/link";
 import { onAuthStateChanged } from "firebase/auth";
@@ -139,4 +136,4 @@ function MemberOnlyPortalContent() {
   );
 }
 
-export function MemberPortalContent(){const {role,loading}=useActiveAdmin();if(loading)return <p role="status">Carregando sua conta…</p>;return role?<AdminShell title="Minha área administrativa"><AdminDashboardContent/></AdminShell>:<MemberOnlyPortalContent/>;}
+export function MemberPortalContent() { return <MemberOnlyPortalContent />; }

@@ -1,80 +1,21 @@
 "use client";
 import { EmbeddedAdminContext } from "./EmbeddedAdmin";
-import { Siren, Phone, Video } from "lucide-react";
 import { EmergencyAdmin } from "./EmergencyAdmin";
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
-import {
-  BarChart3,
-  BadgeCheck,
-  Bell,
-  BookOpenText,
-  CalendarDays,
-  FileText,
-  ClipboardCheck,
-  Handshake,
-  LayoutDashboard,
-  LockKeyhole,
-  MessageSquareText,
-  Newspaper,
-  LogOut,
-  ScrollText,
-  Settings,
-  CreditCard,
-  ShieldCheck,
-  Tags,
-  UsersRound,
-  Vote,
-  Menu,
-  X,
-  type LucideIcon,
-} from "lucide-react";
+import { BookOpenText, LogOut, LockKeyhole, Menu, X } from "lucide-react";
 import { AuthGate } from "./AuthGate";
 import { firebaseEnabled, getFirebaseServices } from "@/lib/firebase";
 import { withBasePath } from "@/lib/paths";
 import { NotificationBell } from "./NotificationBell";
+import { AdminNavLinks, MemberNavLinks } from "./PortalNavigationLinks";
+export { navGroups } from "@/lib/portalNavigation";
 
-type AdminLink = { href: string; label: string; icon: LucideIcon; levels: readonly number[] };
-export const navGroups: { label: string; links: AdminLink[] }[] = [
-  { label: "Visão geral", links: [
-    { href: "/admin", label: "Dashboard", icon: LayoutDashboard, levels: [1, 2, 3, 4, 5] },
-  ] },
-  { label: "Pessoas", links: [
-    { href: "/admin/recrutamento", label: "Cadastrar associado", icon: UsersRound, levels: [1, 2, 3, 5] },
-    { href: "/admin/associados", label: "Lista de associados", icon: UsersRound, levels: [1, 2, 3] },
-    { href: "/admin/filiacoes", label: "Filiações", icon: ClipboardCheck, levels: [1] },
-    { href: "/admin/cargos", label: "Cargos", icon: Tags, levels: [1, 2] },
-    { href: "/admin/diretoria", label: "Diretoria", icon: ShieldCheck, levels: [1, 2] },
-  ] },
-  { label: "Comunicação", links: [
-    { href: "/admin/noticias", label: "Notícias", icon: Newspaper, levels: [1, 2, 4] },
-    { href: "/admin/realizacoes", label: "O que já fizemos", icon: BadgeCheck, levels: [1, 2, 4] },
-    { href: "/admin/comunicados", label: "Comunicados", icon: Bell, levels: [1, 2, 4] },
-    { href: "/admin/eventos", label: "Eventos", icon: CalendarDays, levels: [1, 2, 4] },
-    { href: "/admin/beneficios", label: "Benefícios", icon: Handshake, levels: [1, 2, 4] },
-    { href: "/admin/patrocinadores", label: "Apoio, patrocínio e parceiros", icon: Handshake, levels: [1, 2, 4] },
-  ] },
-  { label: "Atendimento e gestão", links: [
-    { href: "/admin/emergencias", label: "Emergências", icon: Siren, levels: [1, 2, 3] },
-    { href: "/admin/reunioes", label: "Reuniões da diretoria", icon: Video, levels: [1, 2, 3, 4, 5] },
-    { href: "/admin/contatos-apoio", label: "Contatos de apoio", icon: Phone, levels: [1] },
-    { href: "/admin/solicitacoes", label: "Solicitações", icon: MessageSquareText, levels: [1, 2, 3] },
-    { href: "/admin/recuperacao-senha", label: "Recuperar senhas", icon: LockKeyhole, levels: [1, 3] },
-    { href: "/admin/assembleias", label: "Assembleias", icon: Vote, levels: [1] },
-    { href: "/admin/transparencia", label: "Transparência financeira", icon: BarChart3, levels: [1, 2] },
-    { href: "/admin/documentos", label: "Documentos", icon: FileText, levels: [1, 2, 3] },
-  ] },
-  { label: "Sistema", links: [
-    { href: "/admin/carteirinha", label: "Minha carteirinha", icon: CreditCard, levels: [1, 2, 3, 4, 5] },
-    { href: "/admin/logs", label: "Auditoria", icon: ScrollText, levels: [1] },
-    { href: "/admin/configuracoes", label: "Configurações", icon: Settings, levels: [1, 2, 3, 4, 5] },
-  ] },
-];
 
 type Props = {
   title: string;
@@ -90,7 +31,6 @@ export function AdminShell({
   requiredPermissions = [],
 }: Props) {
   const embedded = useContext(EmbeddedAdminContext);
-  const pathname = usePathname();
   const router = useRouter();
   const [level, setLevel] = useState<number | null>(firebaseEnabled ? null : 1);
   const [role, setRole] = useState("Administrador");
@@ -143,14 +83,8 @@ export function AdminShell({
             </Link>
             <button className="sidebar-close" aria-label="Fechar menu" onClick={() => setMenuOpen(false)}><X /></button>
             <nav className="side-nav" aria-label="Menu administrativo">
-              {navGroups.map((group) => {
-                const visible = group.links.filter(({ href, levels }) =>
-                  levels.includes(level)
-                    || (href === "/admin/assembleias" && ["canManageAssemblies","canPublishAssembly","canPresideAssembly","canModerateAssembly","canCertifyResults","canFinalizeMinutes"].some((permission) => permissions[permission] === true))
-                    || (href === "/admin/filiacoes" && permissions.canManageMembershipRequests === true));
-                if (!visible.length) return null;
-                return <section className="nav-group" key={group.label}><h2>{group.label}</h2>{visible.map(({ href, label, icon: Icon }) => <Link key={href} className={pathname === href ? "active" : ""} href={href} onClick={() => setMenuOpen(false)}><Icon /> <span>{label}</span></Link>)}</section>;
-              })}
+              <MemberNavLinks onNavigate={() => setMenuOpen(false)} />
+              <AdminNavLinks role={{ active: true, level, role, permissions }} onNavigate={() => setMenuOpen(false)} />
             </nav>
             <div className="sidebar-footer">
               <BookOpenText size={15} /> Acesso {role} · nível {level}
