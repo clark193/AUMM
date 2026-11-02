@@ -4,4 +4,4 @@ Disallow: /admin/
 Disallow: /associado/
 Disallow: /verificar/
 
-Sitemap: https://aumm-21dda.web.app/sitemap.xml
+Sitemap: https://aumm.com.br/sitemap.xml
