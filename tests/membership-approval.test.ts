@@ -16,5 +16,5 @@ test("legacy requests keep missing dates empty instead of inventing a birth date
   const profile = approvedMemberDetails({ fullName: "Pessoa antiga" });
   assert(!("birthDate" in profile));
   assert(!("createdAt" in profile));
-  assert(!Object.values(profile).includes(undefined));
+  assert(Object.values(profile).every(value => value !== undefined));
 });
