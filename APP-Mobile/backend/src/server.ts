@@ -104,7 +104,10 @@ const server = createServer(async (request, response) => {
     response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
     response.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   }
-  if (request.url === "/health" && request.method === "GET") { response.writeHead(ready ? 200 : 503); response.end(ready ? "ok" : "starting"); return; }
+  if (request.url === "/health" && request.method === "GET") {
+    response.setHeader("X-AUMM-Revision", process.env.RENDER_GIT_COMMIT || "local");
+    response.writeHead(ready ? 200 : 503); response.end(ready ? "ok" : "starting"); return;
+  }
   if (!["/wake", "/admin/member-password"].includes(request.url || "")) { response.writeHead(404); response.end(); return; }
   if (origin && !allowedOrigins.has(origin)) { response.writeHead(403); response.end(); return; }
   if (request.method === "OPTIONS") { response.writeHead(204); response.end(); return; }
