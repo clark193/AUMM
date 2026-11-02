@@ -1,0 +1,68 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+process.env.FIRESTORE_EMULATOR_HOST='127.0.0.1:8080';
+process.env.FIREBASE_AUTH_EMULATOR_HOST='127.0.0.1:9099';
+const require=createRequire(new URL('../backend/package.json',import.meta.url));
+const {initializeApp}=require('firebase-admin/app');
+const {getFirestore,Timestamp}=require('firebase-admin/firestore');
+const {getAuth}=require('firebase-admin/auth');
+initializeApp({projectId:'demo-aumm-profile'});
+const {updateMemberProfile,normalizeMemberProfile}=await import('../backend/lib/backend/src/memberProfile.js');
+const db=getFirestore(),auth=getAuth(),tag=Date.now();
+// Reset only this fixed local demo project so repeated runs remain independent.
+await fetch('http://127.0.0.1:8080/emulator/v1/projects/demo-aumm-profile/databases/(default)/documents',{method:'DELETE'});
+await fetch('http://127.0.0.1:9099/emulator/v1/projects/demo-aumm-profile/accounts',{method:'DELETE'});
+async function signup(name){
+ const response=await fetch('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo-key',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:`profile-${name}-${tag}@aumm.test`,password:'OriginalPassword123!',returnSecureToken:true})});assert.equal(response.status,200);return response.json();
+}
+const admin=await signup('admin'),staff=await signup('staff'),target=await signup('target'),other=await signup('other');
+for(const user of [admin,staff])await db.doc(`associados/${user.localId}`).set({uid:user.localId,status:'active'});
+await db.doc(`adminRoles/${admin.localId}`).set({active:true,level:1,fullName:'Admin fictício'});
+await db.doc(`adminRoles/${staff.localId}`).set({active:true,level:2});
+const createdAt=Timestamp.fromMillis(1000),before=Timestamp.fromMillis(2000);
+const original={uid:target.localId,fullName:'Nome anterior',email:target.email,cpf:'52998224725',phone:'(47) 99999-1111',whatsapp:'(47) 99999-1111',category:'Motoboy',status:'active',memberNumber:`PROFILE-${tag}`,createdAt,updatedAt:before};
+const ref=db.doc(`associados/${target.localId}`);await ref.set(original);
+await db.doc(`publicMembers/${original.memberNumber}`).set({uid:target.localId,fullName:original.fullName,role:'Comunicação',status:'active'});
+await db.doc(`adminRoles/${target.localId}`).set({active:true,level:4,role:'Comunicação',fullName:original.fullName,email:target.email});
+await db.doc(`adminCards/${target.localId}`).set({fullName:original.fullName,role:'Comunicação',status:'active'});
+const updates={fullName:'Nome atualizado',email:`profile-new-${tag}@aumm.test`,cpf:'111.444.777-35',whatsapp:'47988882222',birthDate:'31/01/1990',category:'Ciclista',city:'Blumenau',state:'sc',address:'Rua fictícia',rg:'123',issuingBody:'SSP',maritalStatus:'Solteiro',dependents:'0',bloodType:'O+',emergencyContact:'Contato fictício'};
+const input={memberId:target.localId,expectedVersion:2000,updates};
+await assert.rejects(updateMemberProfile('invalid',input),e=>e.status===401);
+await assert.rejects(updateMemberProfile(staff.idToken,input),e=>e.status===403);
+await assert.rejects(updateMemberProfile(admin.idToken,{...input,expectedVersion:99}),e=>e.status===409);
+for(const change of [{birthDate:'31/02/1990'},{birthDate:'01/01/2999'},{cpf:'11111111111'},{email:'errado'},{category:'Administrador'},{createdAt:'2000'},{level:'1'}])assert.throws(()=>normalizeMemberProfile({...updates,...change}),e=>e.status===400);
+const parts=admin.idToken.split('.');const tokenData=JSON.parse(Buffer.from(parts[1],'base64url'));tokenData.auth_time=Math.floor(Date.now()/1000)-600;parts[1]=Buffer.from(JSON.stringify(tokenData)).toString('base64url');
+await assert.rejects(updateMemberProfile(parts.join('.'),input),e=>e.status===401);
+assert.equal((await auth.getUser(target.localId)).email,target.email);
+await assert.rejects(updateMemberProfile(admin.idToken,{...input,updates:{...updates,email:other.email}}),e=>e.status===409);
+assert.equal((await ref.get()).data().email,target.email);
+await db.doc('associados/duplicate-test').set({cpf:'11144477735'});
+await assert.rejects(updateMemberProfile(admin.idToken,input),e=>e.status===409);
+await db.doc('associados/duplicate-test').delete();
+await db.doc(`adminProfileEditLocks/${target.localId}`).set({lockId:'other',expiresAt:Timestamp.fromMillis(Date.now()+60000)});
+await assert.rejects(updateMemberProfile(admin.idToken,input),e=>e.status===409);
+await db.doc(`adminProfileEditLocks/${target.localId}`).delete();
+// Force a concurrent profile change after the Auth update; the operation must restore the login.
+const realUpdateUser=auth.updateUser.bind(auth);let intercept=true;
+auth.updateUser=async(uid,data)=>{const result=await realUpdateUser(uid,data);if(intercept&&uid===target.localId){intercept=false;await ref.update({updatedAt:Timestamp.fromMillis(3000)});}return result;};
+await assert.rejects(updateMemberProfile(admin.idToken,input),e=>e.status===409);
+auth.updateUser=realUpdateUser;
+assert.equal((await auth.getUser(target.localId)).email,target.email);
+assert.equal((await ref.get()).data().fullName,original.fullName);
+assert.equal((await db.doc(`adminProfileEditLocks/${target.localId}`).get()).exists,false);
+const result=await updateMemberProfile(admin.idToken,{...input,expectedVersion:3000});assert.match(result.message,/Cadastro atualizado/);assert.equal(typeof result.updatedAtMillis,'number');
+const saved=(await ref.get()).data();
+assert.equal(saved.fullName,updates.fullName);assert.equal(saved.cpf,'11144477735');assert.equal(saved.whatsapp,'(47) 98888-2222');assert.equal(saved.phone,saved.whatsapp);assert.equal(saved.state,'SC');assert.equal(saved.birthDate.toDate().toISOString(),'1990-01-31T12:00:00.000Z');assert.equal(saved.createdAt.toMillis(),1000);assert.equal(saved.updatedAt.toMillis(),result.updatedAtMillis);
+assert.equal((await auth.getUser(target.localId)).email,updates.email);assert.equal((await auth.getUser(target.localId)).displayName,updates.fullName);
+assert.equal((await db.doc(`publicMembers/${original.memberNumber}`).get()).data().fullName,updates.fullName);
+assert.equal((await db.doc(`adminRoles/${target.localId}`).get()).data().level,4);assert.equal((await db.doc(`adminRoles/${target.localId}`).get()).data().fullName,updates.fullName);
+assert.equal((await db.doc(`adminCards/${target.localId}`).get()).data().fullName,updates.fullName);
+async function login(email){return fetch('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=demo-key',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:'OriginalPassword123!',returnSecureToken:true})});}
+assert.equal((await login(target.email)).status,400);assert.equal((await login(updates.email)).status,200);
+const pending=db.doc(`associados/pending-${tag}`);await pending.set({uid:null,status:'pending',fullName:'Pendente',email:'pending-old@aumm.test',createdAt});
+await updateMemberProfile(admin.idToken,{memberId:pending.id,expectedVersion:null,updates:{...updates,email:`pending-new-${tag}@aumm.test`,cpf:'39053344705',whatsapp:'47977773333'}});
+assert.equal((await pending.get()).data().uid,null);assert.equal((await pending.get()).data().createdAt.toMillis(),1000);
+const logs=await db.collection('auditLogs').where('resourceId','==',target.localId).get();assert.equal(logs.size,1);assert.equal(logs.docs[0].data().action,'MEMBER_PROFILE_UPDATED');assert(!JSON.stringify(logs.docs[0].data()).includes(updates.cpf));
+await db.doc(`adminRoles/${admin.localId}`).update({active:false});await assert.rejects(updateMemberProfile(admin.idToken,{...input,expectedVersion:result.updatedAtMillis}),e=>e.status===403);
+console.log('PASS: level-1 authorization, stale sessions, CPF/DOB validation, duplicate Auth/Firestore data, concurrency lock, Auth rollback, real login email change, credential names, preserved creation date, pending records and audit.');
+await db.terminate();

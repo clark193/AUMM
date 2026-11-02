@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import { getAuth } from "firebase-admin/auth";
+import { MemberProfileError, updateMemberProfile } from "./memberProfile.js";
 import { AdminPasswordError, changeMemberPassword } from "./adminPassword.js";
 import { getFirestore, Timestamp, type DocumentSnapshot } from "firebase-admin/firestore";
 import {
@@ -108,24 +109,25 @@ const server = createServer(async (request, response) => {
     response.setHeader("X-AUMM-Revision", process.env.RENDER_GIT_COMMIT || "local");
     response.writeHead(ready ? 200 : 503); response.end(ready ? "ok" : "starting"); return;
   }
-  if (!["/wake", "/admin/member-password"].includes(request.url || "")) { response.writeHead(404); response.end(); return; }
+  if (!["/wake", "/admin/member-password", "/admin/member-profile"].includes(request.url || "")) { response.writeHead(404); response.end(); return; }
   if (origin && !allowedOrigins.has(origin)) { response.writeHead(403); response.end(); return; }
   if (request.method === "OPTIONS") { response.writeHead(204); response.end(); return; }
   if (request.method !== "POST") { response.writeHead(405); response.end(); return; }
   const bearer = request.headers.authorization?.match(/^Bearer ([A-Za-z0-9._-]{100,8192})$/)?.[1];
   if (!bearer) { response.writeHead(401); response.end(); return; }
-  if (request.url === "/admin/member-password") {
+  if (request.url === "/admin/member-password" || request.url === "/admin/member-profile") {
+    const profile = request.url === "/admin/member-profile";
     try {
       let body = "";
-      for await (const chunk of request) { body += chunk.toString("utf8"); if (Buffer.byteLength(body) > 2048) throw new AdminPasswordError(413, "Requisição muito grande."); }
+      for await (const chunk of request) { body += chunk.toString("utf8"); if (Buffer.byteLength(body) > (profile ? 8192 : 2048)) throw new AdminPasswordError(413, "Requisição muito grande."); }
       let input;
       try { input = JSON.parse(body); } catch { throw new AdminPasswordError(400, "Requisição inválida."); }
       if (!input || typeof input !== "object" || Array.isArray(input)) throw new AdminPasswordError(400, "Requisição inválida.");
-      const result = await changeMemberPassword(bearer, input);
+      const result = profile ? await updateMemberProfile(bearer, input) : await changeMemberPassword(bearer, input);
       response.writeHead(200, { "Content-Type": "application/json" }); response.end(JSON.stringify(result));
     } catch (error) {
-      response.writeHead(error instanceof AdminPasswordError ? error.status : 500, { "Content-Type": "application/json" });
-      response.end(JSON.stringify({ message: error instanceof AdminPasswordError ? error.message : "Não foi possível processar a alteração de senha." }));
+      response.writeHead(error instanceof AdminPasswordError || error instanceof MemberProfileError ? error.status : 500, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ message: error instanceof AdminPasswordError || error instanceof MemberProfileError ? error.message : "Não foi possível processar a alteração." }));
     }
     return;
   }

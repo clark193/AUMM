@@ -1204,3 +1204,7 @@ td { padding:13px 10px; border-bottom:1px solid #eee; white-space:nowrap; }
 .meetings-hero{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;padding:24px;background:linear-gradient(130deg,#ae1626,#68132b);color:white;border-radius:22px;margin:16px 0}.meetings-hero p{color:#ffe2e7!important;font-size:13px}.meetings-hero h2{color:white!important}.meeting-reminders{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:12px;line-height:1.7;margin:14px 0}.meeting-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:14px}.meeting-card{display:grid;gap:12px;padding:20px;border:1px solid var(--line);border-radius:19px;background:var(--surface);margin-top:12px}.meeting-card h3{margin:0;font-size:20px}.meeting-card p{line-height:1.8;color:var(--muted)}.meeting-card small{color:var(--muted)}.meeting-date{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--red);line-height:1.5}
 
 @media(max-width:650px){.admin-meetings .form-grid{grid-template-columns:1fr}.meetings-hero{padding:20px}.member-role-assignment{padding:14px}}
+
+.member-profile-fields { min-width:0; padding:0; margin:16px 0 0; border:0; }
+.member-profile-editor details { margin:16px 0; }
+.member-profile-editor summary { margin-bottom:12px; cursor:pointer; font-weight:700; }
