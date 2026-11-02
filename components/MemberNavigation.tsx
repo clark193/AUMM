@@ -4,12 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
-import { BarChart3, CalendarDays, CreditCard, FileText, Gift, Home, LogOut, Menu, Settings, Vote, X } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { LogOut, Menu, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
 import { getFirebaseServices } from "@/lib/firebase";
 import { withBasePath } from "@/lib/paths";
 import { NotificationBell } from "./NotificationBell";
+import { useActiveAdmin } from "@/lib/useActiveAdmin";
+import { AdminNavLinks, MemberNavLinks } from "./PortalNavigationLinks";
 
 const MemberMenuContext = createContext<{
   open: boolean;
@@ -29,19 +31,8 @@ function useMemberMenu() {
   return menu;
 }
 
-const links = [
-  ["/associado", "Início", Home],
-  ["/associado/carteirinha", "Carteirinha", CreditCard],
-  ["/associado/assembleias", "Assembleias", Vote],
-  ["/associado/beneficios", "Benefícios", Gift],
-  ["/associado/eventos", "Eventos", CalendarDays],
-  ["/associado/documentos", "Documentos", FileText],
-  ["/associado/transparencia", "Transparência financeira", BarChart3],
-  ["/associado/configuracoes", "Configurações", Settings],
-] as const;
-
 export function MemberSidebar({ footer = "Conteúdo exclusivo para associados" }: { footer?: string }) {
-  const pathname = usePathname().replace(/\/+$/, "");
+  const { role } = useActiveAdmin();
   const { open, setOpen, menuId } = useMemberMenu();
   const sidebar = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -77,7 +68,10 @@ export function MemberSidebar({ footer = "Conteúdo exclusivo para associados" }
     <aside ref={sidebar} id={menuId} className={`sidebar member-sidebar${open ? " member-menu-open" : ""}`} aria-label="Navegação do associado">
     <Link className="sidebar-brand" href="/"><Image src={withBasePath("/logo.png")} width={51} height={51} alt="AUMM" /><span><strong>AUMM</strong><small>Portal do associado</small></span></Link>
     <button type="button" className="sidebar-close" aria-label="Fechar menu do associado" onClick={() => setOpen(false)}><X /></button>
-    <nav className="side-nav" aria-label="Menu do associado">{links.map(([href, label, Icon]) => <Link className={pathname === href ? "active" : ""} href={href} key={href} onClick={() => setOpen(false)}><Icon /> {label}</Link>)}</nav>
+    <nav className="side-nav" aria-label="Menu do associado e funções do cargo">
+      <MemberNavLinks onNavigate={() => setOpen(false)} />
+      <AdminNavLinks role={role} onNavigate={() => setOpen(false)} />
+    </nav>
     <button className="sidebar-logout" onClick={logout}><LogOut size={16} /> Sair</button>
     <div className="sidebar-footer">{footer}</div>
   </aside></>;

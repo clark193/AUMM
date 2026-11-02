@@ -1,6 +1,6 @@
 import { AuthGate } from "@/components/AuthGate";
-import { MemberCardContent } from "@/components/MemberCardContent";
+import { MemberCredential } from "@/components/MemberCardContent";
 
 export default function DigitalCard() {
-  return <AuthGate><MemberCardContent /></AuthGate>;
+  return <AuthGate><MemberCredential /></AuthGate>;
 }
