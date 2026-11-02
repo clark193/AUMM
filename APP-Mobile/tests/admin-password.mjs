@@ -16,7 +16,7 @@ await db.doc(`associados/${admin.localId}`).set({uid:admin.localId,status:"activ
 await db.doc(`adminRoles/${admin.localId}`).set({active:true,level:1,fullName:"Admin de teste"});
 await db.doc(`adminRoles/${staff.localId}`).set({active:true,level:2});
 await db.doc(`associados/${member.localId}`).set({uid:member.localId,status:"active",fullName:"Associado de teste"});
-const input={memberId:member.localId,password:"TemporaryPassword456!"};
+const input={memberId:member.localId,password:"12345678"};
 await assert.rejects(changeMemberPassword("invalid",input),e=>e.status===401);
 await assert.rejects(changeMemberPassword(staff.idToken,input),e=>e.status===403);
 await assert.rejects(changeMemberPassword(admin.idToken,{...input,password:"short"}),e=>e.status===400);

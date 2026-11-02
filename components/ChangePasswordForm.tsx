@@ -25,6 +25,7 @@ export function ChangePasswordForm() {
     try {
       if (newPassword.length < 8) throw new Error("A nova senha precisa ter pelo menos 8 caracteres.");
       if (newPassword !== confirmation) throw new Error("A confirmação da senha não confere.");
+      if (firstAccess && newPassword === currentPassword) throw new Error("Escolha uma senha diferente da senha inicial.");
       const { auth, db } = getFirebaseServices();
       const user = auth.currentUser;
       if (!user?.email) throw new Error("Sessão inválida. Entre novamente.");

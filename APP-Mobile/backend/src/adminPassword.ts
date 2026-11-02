@@ -14,7 +14,7 @@ export async function changeMemberPassword(bearer: string, input: Record<string,
   if (Date.now() / 1000 - identity.auth_time > 300) throw new AdminPasswordError(401, "Confirme novamente sua senha de administrador.");
   const id = input.memberId, password = input.password;
   if (typeof id !== "string" || !/^[A-Za-z0-9_-]{1,160}$/.test(id)) throw new AdminPasswordError(400, "Cadastro inválido.");
-  if (typeof password !== "string" || password.length < 12 || password.length > 128 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) throw new AdminPasswordError(400, "Use 12 a 128 caracteres, com maiúscula, minúscula e número.");
+  if (typeof password !== "string" || password.length < 8 || password.length > 128) throw new AdminPasswordError(400, "Use de 8 a 128 caracteres.");
   const ref = db.doc(`associados/${id}`), member = (await ref.get()).data();
   const target = member?.uid;
   if (typeof target !== "string" || !target || target === identity.uid) throw new AdminPasswordError(400, "Este cadastro não possui um login de associado elegível.");
@@ -27,6 +27,7 @@ export async function changeMemberPassword(bearer: string, input: Record<string,
     description: "Administrador iniciou alteração de senha de associado.", timestamp: FieldValue.serverTimestamp() });
   let changed = false;
   try {
+    await ref.update({ mustChangePassword: true, updatedAt: FieldValue.serverTimestamp() });
     await auth.updateUser(target, { password }); changed = true;
     await auth.revokeRefreshTokens(target);
     const batch = db.batch();

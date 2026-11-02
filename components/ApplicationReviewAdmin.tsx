@@ -9,7 +9,7 @@ import { BadgeCheck, CheckCircle2, Copy, Eye, EyeOff, FileCheck2, Search, Shield
 import { useEffect, useMemo, useState } from "react";
 import { firebaseConfig, firebaseEnabled, getFirebaseServices } from "@/lib/firebase";
 import { type MembershipCategory, type MembershipStatus } from "@/lib/application";
-import { maskCpf } from "@/lib/membershipValidation";
+import { maskCpf, onlyDigits, validCpf } from "@/lib/membershipValidation";
 import { withBasePath } from "@/lib/paths";
 
 type MembershipRow = {
@@ -28,7 +28,6 @@ function formatDate(value?: Timestamp, onlyDate = false) { return value?.toDate(
 function searchable(value: string) { return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
 function fullCpf(value?: string) { return value ? maskCpf(value) : "—"; }
 function partialCpf(value?: string) { const digits = value?.replace(/\D/g, "") || ""; return digits.length === 11 ? `***.***.***-${digits.slice(-2)}` : "—"; }
-function temporaryPassword() { const bytes = crypto.getRandomValues(new Uint8Array(9)); return `Aumm!${Array.from(bytes, (byte) => (byte % 36).toString(36)).join("")}7`; }
 function friendlyError(error: unknown) {
   if (error instanceof FirebaseError) {
     if (error.code === "auth/email-already-in-use") return "Este e-mail já possui acesso. Pesquise a pessoa na lista de associados antes de aprovar.";
@@ -116,13 +115,14 @@ export function ApplicationReviewAdmin() {
       const email = item.email.trim().toLowerCase();
       const duplicates = await getDocs(query(collection(db, "associados"), where("email", "==", email), limit(1)));
       if (!duplicates.empty) throw new Error("Este e-mail já pertence a um associado. Pesquise o cadastro existente.");
-      const password = temporaryPassword();
+      const password = onlyDigits(item.cpf || "");
+      if (!validCpf(password)) throw new Error("Informe um CPF válido antes de liberar o primeiro acesso.");
       secondaryApp = initializeApp(firebaseConfig, `membership-approval-${crypto.randomUUID()}`);
       secondaryAuth = initializeAuth(secondaryApp, { persistence: inMemoryPersistence });
       createdUser = (await createUserWithEmailAndPassword(secondaryAuth, email, password)).user;
       const memberNumber = await uniqueMemberNumber(); const verificationToken = crypto.randomUUID().replaceAll("-", "");
       const batch = writeBatch(db);
-      batch.set(doc(db, "associados", createdUser.uid), { uid: createdUser.uid, membershipRequestId: item.id, memberNumber, fullName: item.fullName?.trim() || "Associado", email, phone: item.whatsapp || "", category: item.category, role: "Associado", status: "active", authorized: true, eligibleToVote: true, source: "membership_request", approvedBy: actor.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+      batch.set(doc(db, "associados", createdUser.uid), { uid: createdUser.uid, membershipRequestId: item.id, memberNumber, fullName: item.fullName?.trim() || "Associado", cpf: password, mustChangePassword: true, email, phone: item.whatsapp || "", category: item.category, role: "Associado", status: "active", authorized: true, eligibleToVote: true, source: "membership_request", approvedBy: actor.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
       batch.set(doc(db, "publicMembers", memberNumber), { uid: createdUser.uid, memberNumber, fullName: item.fullName?.trim() || "Associado", role: "Associado", status: "active", verificationToken, updatedAt: serverTimestamp() });
       batch.update(doc(db, "membershipRequests", item.id), { status: "approved", memberUid: createdUser.uid, memberNumber, decisionAt: serverTimestamp(), decisionDate: Timestamp.fromDate(new Date(`${decisionDate}T12:00:00-03:00`)), decisionBy: actor.uid, decisionNotes: decisionNotes.trim(), meetingReference: meetingReference.trim(), minutesReference: minutesReference.trim() });
       batch.update(doc(db, "membershipRequestOwners", item.ownerUid), { status: "approved", memberNumber, updatedAt: serverTimestamp() });
