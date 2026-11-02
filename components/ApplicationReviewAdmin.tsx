@@ -1,4 +1,5 @@
 "use client";
+import { approvedMemberDetails } from "@/lib/membershipApproval";
 import {useContext} from "react";
 import {NativeActionsContext} from "./EmbeddedAdmin";
 
@@ -122,7 +123,7 @@ export function ApplicationReviewAdmin() {
       createdUser = (await createUserWithEmailAndPassword(secondaryAuth, email, password)).user;
       const memberNumber = await uniqueMemberNumber(); const verificationToken = crypto.randomUUID().replaceAll("-", "");
       const batch = writeBatch(db);
-      batch.set(doc(db, "associados", createdUser.uid), { uid: createdUser.uid, membershipRequestId: item.id, memberNumber, fullName: item.fullName?.trim() || "Associado", cpf: password, mustChangePassword: true, email, phone: item.whatsapp || "", category: item.category, role: "Associado", status: "active", authorized: true, eligibleToVote: true, source: "membership_request", approvedBy: actor.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+      batch.set(doc(db, "associados", createdUser.uid), { uid: createdUser.uid, membershipRequestId: item.id, memberNumber, ...approvedMemberDetails(item), cpf: password, mustChangePassword: true, email, role: "Associado", status: "active", authorized: true, eligibleToVote: true, source: "membership_request", approvedBy: actor.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
       batch.set(doc(db, "publicMembers", memberNumber), { uid: createdUser.uid, memberNumber, fullName: item.fullName?.trim() || "Associado", role: "Associado", status: "active", verificationToken, updatedAt: serverTimestamp() });
       batch.update(doc(db, "membershipRequests", item.id), { status: "approved", memberUid: createdUser.uid, memberNumber, decisionAt: serverTimestamp(), decisionDate: Timestamp.fromDate(new Date(`${decisionDate}T12:00:00-03:00`)), decisionBy: actor.uid, decisionNotes: decisionNotes.trim(), meetingReference: meetingReference.trim(), minutesReference: minutesReference.trim() });
       batch.update(doc(db, "membershipRequestOwners", item.ownerUid), { status: "approved", memberNumber, updatedAt: serverTimestamp() });
