@@ -171,6 +171,7 @@ export function NewsAdmin() {
           <div>
             <h3><Newspaper size={18} /> {editingId ? "Editar notícia" : "Nova notícia"}</h3>
             <p>Publique a notícia e escolha se ela deve rodar no topo da página inicial.</p>
+            <p>Depois de criar, editar ou excluir uma notícia, solicite a atualização do site para publicar o link próprio e a prévia com título e imagem no WhatsApp.</p>
           </div>
           {editingId && <button type="button" className="button button-ghost-dark button-sm" onClick={reset}><X size={15} /> Cancelar</button>}
         </div>

@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, CalendarDays, Newspaper } from "lucide-react";
+import { ArrowLeft, CalendarDays, Newspaper, Share2 } from "lucide-react";
 import { doc, onSnapshot, Timestamp } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { firebaseEnabled, getFirebaseServices } from "@/lib/firebase";
+import { newsPath, shareNews } from "@/lib/newsSharing";
 
 type Publication = {
   title?: string;
@@ -15,12 +16,30 @@ type Publication = {
   imageUrl?: string;
   status?: string;
   publishedAt?: Timestamp;
+  publishedAtISO?: string;
 };
 
-export function NewsPublication() {
+export function LegacyNewsPublication() {
   const id = useSearchParams().get("id") || "";
-  const [publication, setPublication] = useState<Publication | null>(null);
-  const [loaded, setLoaded] = useState(!firebaseEnabled || !id);
+  return <NewsPublication publicationId={id} />;
+}
+
+export function NewsPublication({ publicationId, initialPublication }: { publicationId?: string; initialPublication?: Publication } = {}) {
+  const id = publicationId || "";
+  const [publication, setPublication] = useState<Publication | null>(initialPublication || null);
+  const [loaded, setLoaded] = useState(Boolean(initialPublication) || !firebaseEnabled || !id);
+  const [shareMessage, setShareMessage] = useState("");
+
+  async function share() {
+    const base = (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, "");
+    const url = `${base}${newsPath(id)}`;
+    try {
+      const result = await shareNews(publication?.title || "Notícia AUMM", url, navigator);
+      setShareMessage(result === "copied" ? "Link da notícia copiado. Cole no WhatsApp ou onde preferir." : "");
+    } catch {
+      setShareMessage("Não foi possível compartilhar neste navegador. Copie este link: " + url);
+    }
+  }
 
   useEffect(() => {
     if (!firebaseEnabled || !id) {
@@ -43,9 +62,11 @@ export function NewsPublication() {
     {safeImage && <div className="news-publication-image" style={{ backgroundImage: `url("${safeImage.replace(/["\\]/g, "")}")` }} />}
     <div className="news-publication-header">
       <span>{publication.category || "Notícia"}</span>
-      <small><CalendarDays size={14} /> {publication.publishedAt?.toDate?.().toLocaleDateString("pt-BR", { dateStyle: "long" }) || "AUMM"}</small>
+      <small><CalendarDays size={14} /> {(publication.publishedAt?.toDate?.() || (publication.publishedAtISO ? new Date(publication.publishedAtISO) : undefined))?.toLocaleDateString("pt-BR", { dateStyle: "long" }) || "AUMM"}</small>
       <h1>{publication.title}</h1>
       {publication.summary && <p>{publication.summary}</p>}
+      <button type="button" className="button button-sm" onClick={share}><Share2 size={16} /> Compartilhar notícia</button>
+      {shareMessage && <p role="status">{shareMessage}</p>}
     </div>
     <div className="news-publication-content">
       {paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
