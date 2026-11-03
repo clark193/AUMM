@@ -104,3 +104,7 @@ O painel administra Estatuto, atas, editais, convocações, normas e prestação
 ## Filiações e Estatuto em HTML
 
 Consulte `docs/FILIACOES.md` para o fluxo público, proteção contra duplicidade, análise administrativa, conferência documental externa e versionamento do Estatuto.
+
+## Atendimento WhatsApp oficial
+
+Implementação preparada, com envio desabilitado. Consulte [operação e limites](docs/WHATSAPP-OPERACAO.md) antes de configurar a conta Meta ou implantar.

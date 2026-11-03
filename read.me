@@ -1,0 +1,18 @@
+# Contexto operacional AUMM
+
+Leia AGENTS.md quando disponível, README.md e docs/WHATSAPP-OPERACAO.md. Preserve alterações existentes e não repita migrações de contas/senhas. As seções históricas do read.me local foram preservadas na cópia D:; este arquivo ainda não existia na main remota consultada.
+
+## 14. Bot WhatsApp oficial — 03/11/2026 (pendente de ativação)
+
+- Implementação: APP-Mobile/backend/src/whatsapp.ts; integração na entrada server.ts; configuração de referência .env.whatsapp.example; operação em docs/WHATSAPP-OPERACAO.md.
+- Exclusivamente Cloud API Meta, menu programado em português, sem API de IA, templates, campanhas ou envio em massa. Nenhum cadastro/senha foi migrado ou alterado.
+- WA_ENABLED e WA_SEND_ENABLED desligados por padrão; sem orçamento privado por número/mês não envia. Não habilitar cobrança nem presumir gratuidade por estar dentro de 24 horas.
+- FAQ oficial Meta consultada em 03/11/2026 informa franquia de 1.000 mensagens de serviço por número/mês desde 01/10/2026. Página comercial diverge; tabela/conta exigem confirmação autenticada antes de envio. Limite local não comprova saldo real na Meta.
+- Render gratuito tem repouso em 15 minutos, início em cerca de um minuto, 750 horas compartilhadas/mês, limites de tráfego/build e risco de suspensão/cobrança se houver pagamento cadastrado. Não promete atendimento contínuo.
+- Streamcord foi excluído pelo responsável: não pertence à associação. Serviço AUMM ainda precisa de acesso na conta Render correta.
+- Número pretendido já está no aplicativo Business. Registro preservado; coexistência e formato E.164 completo ainda não confirmados. Não excluir conta nem registrar o número diretamente sem essa confirmação.
+- Firebase confirmado ativo e sem cobrança; regras publicadas iguais às locais; cinco notícias publicadas. Benefícios permanecem restritos; bot não lê esses documentos privados.
+- Build TypeScript e sete testes com HTTP/banco/transporte simulados aprovados, sem envio real. Não há validação por emulador Firestore nem conversa real nesta etapa.
+- Não implantado: URL pretendida https://aumm-notificacoes.onrender.com/webhooks/whatsapp. /health atual respondeu 200 com revisão f3d7a0d30de14ba6b246c24f331c7643302a067d, que não inclui este bot.
+- Pendências: login Meta/conta AUMM, coexistência ou número de teste, acesso Render correto, conferência de custos/franquia, configuração de segredos, implantação, webhook HTTPS e conversa real autorizada. Só então registrar como concluído.
+- Fontes anteriores preservadas em work/before-whatsapp-20261103/. Alterações locais de outras tarefas não foram incluídas nesta entrega.

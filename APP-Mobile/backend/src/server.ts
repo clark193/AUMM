@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { whatsapp } from "./whatsapp.js";
 import { getAuth } from "firebase-admin/auth";
 import { MemberProfileError, updateMemberProfile } from "./memberProfile.js";
 import { AdminPasswordError, changeMemberPassword } from "./adminPassword.js";
@@ -11,6 +12,10 @@ import {
 
 if (process.env.AUMM_EXTERNAL_PUSH !== "true") throw new Error("Defina AUMM_EXTERNAL_PUSH=true para executar o servidor externo.");
 const db = getFirestore();
+const wa = whatsapp(db);
+const waRetry = setInterval(() => void wa.drain(), 15000);
+const waCleanup = setInterval(() => void wa.cleanup().catch(() => console.error("WhatsApp: limpeza pendente.")), 3600000);
+void wa.cleanup().catch(() => console.error("WhatsApp: limpeza pendente."));
 const sources = ["news", "communications", "supportRequests", "emergencyAdminSignals", "adminMeetings"] as const;
 type SourceName = typeof sources[number];
 const pending = new Map<string, DocumentSnapshot>();
@@ -98,6 +103,7 @@ const wakeLimits = new Map<string, number>();
 const server = createServer(async (request, response) => {
   response.setHeader("Cache-Control", "no-store");
   response.setHeader("X-Content-Type-Options", "nosniff");
+  if (request.url?.split("?")[0] === "/webhooks/whatsapp") { await wa.handle(request, response); return; }
   const origin = String(request.headers.origin || "");
   if (allowedOrigins.has(origin)) {
     response.setHeader("Access-Control-Allow-Origin", origin);
@@ -144,7 +150,7 @@ const server = createServer(async (request, response) => {
 server.headersTimeout = 10000; server.requestTimeout = 15000;
 server.listen(Number(process.env.PORT || 8788), "0.0.0.0", () => { ready = true; console.log("Servidor externo de notificações iniciado."); });
 function close() {
-  stopping = true; ready = false; clearInterval(retry); clearInterval(expiry); stops.forEach(stop => stop());
+  stopping = true; ready = false; clearInterval(retry); clearInterval(expiry); clearInterval(waRetry); clearInterval(waCleanup); stops.forEach(stop => stop());
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 10000).unref();
 }
