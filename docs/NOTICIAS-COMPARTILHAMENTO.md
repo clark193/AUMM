@@ -2,6 +2,8 @@
 
 As notícias publicadas usam `/noticias/ID/`, com título, resumo, imagem, canonical, Open Graph e Twitter Card gravados no HTML exportado. O botão Compartilhar notícia usa este endereço, inclusive quando o visitante abriu o endereço legado `/noticias/publicacao/?id=ID`.
 
+O comando build:pages prepara uma cópia JPEG leve do banner em public/news-previews/, com 1200 × 630 pixels e sem cortar a imagem original. Os metadados usam essa cópia no domínio AUMM, com tipo e dimensões explícitos. Os arquivos gerados devem ser publicados junto com o HTML, mas não versionados na main. A versão da imagem é incluída no link do botão para ajudar a renovar prévias em cache. Mensagens já enviadas no WhatsApp podem conservar a imagem antiga.
+
 O GitHub Pages serve arquivos estáticos. Criar, editar, despublicar ou excluir uma notícia no Firebase exige gerar e publicar uma nova exportação para atualizar suas páginas e metadados. Até essa publicação, a página estática pode conservar o conteúdo exportado anterior; a consulta no navegador continua respeitando o status atual no Firebase. Não publique informações privadas em notícias.
 
 Execute `npm run build:pages`, com `NEXT_PUBLIC_FIREBASE_PROJECT_ID` e as demais variáveis públicas configuradas. Esse comando fixa o domínio público em https://aumm.com.br, mesmo que arquivos de ambiente antigos apontem para o Firebase Hosting. A exportação consulta exclusivamente notícias com status published pela API pública do Firestore, sem credenciais administrativas. Uma falha nessa consulta interrompe a compilação. Publique o conteúdo completo de out/ na gh-pages, preservando CNAME e .nojekyll, e confira o HTML no domínio.

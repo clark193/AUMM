@@ -1,5 +1,15 @@
 import { cache } from "react";
 import { request } from "node:https";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+export function getNewsPreview(id: string, source: string) {
+  if (!source) return undefined;
+  const manifest = JSON.parse(readFileSync(join(process.cwd(), "public/news-previews/manifest.json"), "utf8")) as Record<string, { path: string; source: string; version: string; width: number; height: number; type: string }>;
+  const preview = manifest[id];
+  if (!preview || preview.source !== source) throw new Error(`Gere as imagens atualizadas com npm run build:pages (${id}).`);
+  return preview;
+}
 
 export type PublicNews = { id: string; title: string; summary: string; content: string; category: string; imageUrl: string; publishedAtISO: string; status: "published" };
 type Document = { name: string; fields?: Record<string, { stringValue?: string; timestampValue?: string }> };

@@ -51,3 +51,4 @@ next-env.d.ts
 /.deploy-gh-pages/
 /outputs/
 /work/
+/public/news-previews/

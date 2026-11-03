@@ -24,7 +24,7 @@ export function LegacyNewsPublication() {
   return <NewsPublication publicationId={id} />;
 }
 
-export function NewsPublication({ publicationId, initialPublication }: { publicationId?: string; initialPublication?: Publication } = {}) {
+export function NewsPublication({ publicationId, initialPublication, previewVersion }: { publicationId?: string; initialPublication?: Publication; previewVersion?: string } = {}) {
   const id = publicationId || "";
   const [publication, setPublication] = useState<Publication | null>(initialPublication || null);
   const [loaded, setLoaded] = useState(Boolean(initialPublication) || !firebaseEnabled || !id);
@@ -32,7 +32,7 @@ export function NewsPublication({ publicationId, initialPublication }: { publica
 
   async function share() {
     const base = (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, "");
-    const url = `${base}${newsPath(id)}`;
+    const url = `${base}${newsPath(id)}?imagem=${encodeURIComponent(previewVersion || "2")}`;
     try {
       const result = await shareNews(publication?.title || "Notícia AUMM", url, navigator);
       setShareMessage(result === "copied" ? "Link da notícia copiado. Cole no WhatsApp ou onde preferir." : "");
