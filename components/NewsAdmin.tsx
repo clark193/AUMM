@@ -6,7 +6,6 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDoc,
   onSnapshot,
   serverTimestamp,
   setDoc,
@@ -60,6 +59,7 @@ export function NewsAdmin() {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [level, setLevel] = useState(5);
+  const [permissions,setPermissions]=useState<Record<string,boolean>>({});
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -67,10 +67,11 @@ export function NewsAdmin() {
     if (!firebaseEnabled) return;
     const { auth, db } = getFirebaseServices();
     let stopNews: (() => void) | undefined;
+    let stopRole: (() => void) | undefined;
     const stopAuth = onAuthStateChanged(auth, async (user) => {
       if (!user) return;
-      const role = await getDoc(doc(db, "adminRoles", user.uid));
-      setLevel(Number(role.data()?.level || 5));
+      stopRole?.();
+      stopRole = onSnapshot(doc(db,"adminRoles",user.uid),role=>{setLevel(Number(role.data()?.level ?? 0));setPermissions(role.data()?.permissions||{});});
       stopNews?.();
       stopNews = onSnapshot(
         collection(db, "news"),
@@ -81,7 +82,7 @@ export function NewsAdmin() {
         () => setMessage({ type: "error", text: "Não foi possível carregar as notícias." }),
       );
     });
-    return () => { stopAuth(); stopNews?.(); };
+    return () => { stopAuth(); stopNews?.(); stopRole?.(); };
   }, []);
 
   const update = <K extends keyof typeof emptyForm>(field: K, value: (typeof emptyForm)[K]) => {
@@ -110,6 +111,7 @@ export function NewsAdmin() {
 
   async function save(event: FormEvent) {
     event.preventDefault();
+    if(level===0 && permissions[editingId?"news.edit":"news.create"]!==true)return;
     setMessage(null);
     if (!firebaseEnabled) return setMessage({ type: "error", text: "Configure o Firebase para salvar." });
     if (form.title.trim().length < 5) return setMessage({ type: "error", text: "Informe um título com pelo menos 5 caracteres." });
@@ -164,7 +166,7 @@ export function NewsAdmin() {
 
   return (
     <div className="news-admin-layout">
-      <section className="panel news-editor">
+      {(level!==0 || permissions[editingId?"news.edit":"news.create"]===true) && <section className="panel news-editor">
         <div className="panel-head">
           <div>
             <h3><Newspaper size={18} /> {editingId ? "Editar notícia" : "Nova notícia"}</h3>
@@ -178,7 +180,7 @@ export function NewsAdmin() {
             <label className="field"><span>Categoria *</span><input value={form.category} onChange={(event) => update("category", event.target.value)} maxLength={60} required /></label>
             <label className="field"><span>Status</span><select value={form.status} onChange={(event) => update("status", event.target.value as "draft" | "published")}><option value="draft">Rascunho</option><option value="published">Publicada</option></select></label>
             <label className="field full"><span>Resumo *</span><textarea value={form.summary} onChange={(event) => update("summary", event.target.value)} maxLength={420} required placeholder="Texto que aparecerá no destaque e na lista de notícias." /></label>
-            <label className="field full"><span>Texto completo da publicação *</span><textarea className="news-content-input" value={form.content} onChange={(event) => update("content", event.target.value)} minLength={40} maxLength={12000} required placeholder="Escreva aqui a notícia completa. Os parágrafos serão preservados na página da publicação." /><small>Este conteúdo será aberto quando o visitante clicar em “Ver publicação”.</small></label>
+            <label className="field full"><span>Texto completo da publicação *</span><textarea className="news-content-input" value={form.content} onChange={(event) => update("content", event.target.value)} minLength={40} required placeholder="Escreva aqui a notícia completa. Os parágrafos serão preservados na página da publicação." /><small>Este conteúdo será aberto quando o visitante clicar em “Ver publicação”.</small></label>
             <label className="field full"><span><ImageIcon size={14} /> URL pública da imagem de fundo</span><input type="url" value={form.imageUrl} onChange={(event) => update("imageUrl", event.target.value)} placeholder="https://..." /><small>Use uma imagem horizontal. Sem imagem, será usado o fundo institucional.</small></label>
           </div>
           <label className={`home-feature-switch ${form.showOnHome ? "active" : ""}`}>
@@ -190,7 +192,7 @@ export function NewsAdmin() {
           {message && <div className={`form-message ${message.type}`}><CheckCircle2 size={16} /> {message.text}</div>}
           <button className="button" type="submit" disabled={busy}><Save size={16} /> {busy ? "Salvando..." : editingId ? "Salvar alterações" : "Salvar notícia"}</button>
         </form>
-      </section>
+      </section>}
 
       <section className="panel news-manager">
         <div className="panel-head"><div><h3>Notícias cadastradas</h3><p>{items.length} registro(s) no painel.</p></div><button className="button button-sm" type="button" onClick={reset}><Plus size={15} /> Nova</button></div>
@@ -202,7 +204,7 @@ export function NewsAdmin() {
               <h4>{item.title || "Sem título"}</h4>
               <p>{item.summary || "Sem resumo"}</p>
             </div>
-            <div className="news-admin-actions"><button type="button" onClick={() => edit(item)}><Edit3 /> Editar</button>{level <= 2 && <button type="button" className="danger" disabled={busy} onClick={() => remove(item)}><Trash2 /> Excluir</button>}</div>
+            <div className="news-admin-actions">{(level!==0 || permissions["news.edit"]===true) && <button type="button" onClick={() => edit(item)}><Edit3 /> Editar</button>}{(level===0?permissions["news.delete"]===true:level <= 2) && <button type="button" className="danger" disabled={busy} onClick={() => remove(item)}><Trash2 /> Excluir</button>}</div>
           </article>
         ))}</div>}
       </section>

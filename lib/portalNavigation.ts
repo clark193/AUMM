@@ -1,3 +1,4 @@
+import {manualModuleAllowed} from "./manualPermissions.ts";
 import { Siren, Phone, Video, Gift, Home } from "lucide-react";
 import {
   BarChart3,
@@ -53,6 +54,7 @@ export const navGroups: { label: string; links: AdminLink[] }[] = [
     { href: "/admin/documentos", label: "Documentos", icon: FileText, levels: [1, 2, 3] },
   ] },
   { label: "Sistema", links: [
+    { href: "/admin/label-admin", label: "Label admin", icon: Settings, levels: [1] },
     { href: "/admin/carteirinha", label: "Credencial do cargo", icon: CreditCard, levels: [1, 2, 3, 4, 5] },
     { href: "/admin/logs", label: "Auditoria", icon: ScrollText, levels: [1] },
     { href: "/admin/configuracoes", label: "Configurações administrativas", icon: Settings, levels: [1, 2, 3, 4, 5] },
@@ -81,7 +83,7 @@ export function getAdminNavGroups(role: ActiveAdmin | null) {
   if (!role?.active) return [];
   return navGroups.map(group => ({
     ...group,
-    links: group.links.filter(link => link.levels.includes(Number(role.level))
+    links: group.links.filter(link => Number(role.level)===0 ? manualModuleAllowed(link.href,role.permissions||{}) : link.levels.includes(Number(role.level))
       || additionalPermissions[link.href]?.some(permission => role.permissions?.[permission] === true)),
   })).filter(group => group.links.length > 0);
 }
