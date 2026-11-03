@@ -10,6 +10,7 @@ test('manual grants allow long news, revocation blocks writes and non-level-one 
  await assertSucceeds(setDoc(doc(db,'news','long'),{title:'Texto extenso',status:'draft',content:'a'.repeat(20000)}));
  await assertSucceeds(getDoc(doc(db,'news','long')));
  await assertFails(updateDoc(doc(db,'adminRoles','manual'),{level:1,superAdmin:true}));
+ await assertFails(setDoc(doc(db,'adminRoles','role-policy-example'),{active:false,permissionPolicy:true,permissions:{'news.create':true}}));
  await env.withSecurityRulesDisabled(c=>updateDoc(doc(c.firestore(),'adminRoles','manual'),{permissions:{'news.read':true,'news.create':false,'news.edit':false}}));
  await assertFails(updateDoc(doc(db,'news','long'),{content:'bloqueado'}));
  await assertFails(setDoc(doc(db,'news','new'),{status:'draft'}));
