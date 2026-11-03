@@ -1,5 +1,9 @@
 {
-  "sourceCommit": "3c58a47eb45db85942839f011d7c51c976961024",
-  "description": "Correções de senha administrativa e primeiro acesso por CPF",
-  "builtAt": "2026-11-02T16:16:44.6311997Z"
+  "features": [
+    "noticias-com-previa-individual",
+    "compartilhar-noticia",
+    "dominio-aumm-correto"
+  ],
+  "sourceCommit": "be495ff159bde390e836342610d2eb9b29787d8f",
+  "publishedAt": "2026-11-03T23:18:30.5416311Z"
 }
