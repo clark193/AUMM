@@ -1,4 +1,5 @@
 "use client";
+import {LabelAdmin} from "./LabelAdmin";
 import { AdminMeetings } from "./AdminMeetings";
 import { SupportContacts } from "./SupportContacts";
 import { EmergencyAdmin } from "./EmergencyAdmin";
@@ -55,6 +56,7 @@ const moduleAccess: Record<string, readonly number[]> = {
 
 
 export function AdminModuleContent({ module }: { module: string }) {
+  if(module==="label-admin")return <AdminShell title="Label admin" allowedLevels={[1]}><LabelAdmin/></AdminShell>;
   const item = modules[module];
   if (!item) notFound();
   const allowedLevels = moduleAccess[module] || [1];

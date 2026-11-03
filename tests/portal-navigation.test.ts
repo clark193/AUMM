@@ -10,7 +10,7 @@ function adminPaths(role: ActiveAdmin | null) {
 
 test("all five roles keep every member option and add only their permitted tools", () => {
   const expected: Record<number, string[]> = {
-    1: ["/admin", "/admin/recrutamento", "/admin/associados", "/admin/filiacoes", "/admin/cargos", "/admin/diretoria", "/admin/noticias", "/admin/realizacoes", "/admin/comunicados", "/admin/eventos", "/admin/beneficios", "/admin/patrocinadores", "/admin/emergencias", "/admin/reunioes", "/admin/contatos-apoio", "/admin/solicitacoes", "/admin/recuperacao-senha", "/admin/assembleias", "/admin/transparencia", "/admin/documentos", "/admin/carteirinha", "/admin/logs", "/admin/configuracoes"],
+    1: ["/admin", "/admin/recrutamento", "/admin/associados", "/admin/filiacoes", "/admin/cargos", "/admin/diretoria", "/admin/noticias", "/admin/realizacoes", "/admin/comunicados", "/admin/eventos", "/admin/beneficios", "/admin/patrocinadores", "/admin/emergencias", "/admin/reunioes", "/admin/contatos-apoio", "/admin/solicitacoes", "/admin/recuperacao-senha", "/admin/assembleias", "/admin/transparencia", "/admin/documentos", "/admin/label-admin", "/admin/carteirinha", "/admin/logs", "/admin/configuracoes"],
     2: ["/admin", "/admin/recrutamento", "/admin/associados", "/admin/cargos", "/admin/diretoria", "/admin/noticias", "/admin/realizacoes", "/admin/comunicados", "/admin/eventos", "/admin/beneficios", "/admin/patrocinadores", "/admin/emergencias", "/admin/reunioes", "/admin/solicitacoes", "/admin/transparencia", "/admin/documentos", "/admin/carteirinha", "/admin/configuracoes"],
     3: ["/admin", "/admin/recrutamento", "/admin/associados", "/admin/emergencias", "/admin/reunioes", "/admin/solicitacoes", "/admin/recuperacao-senha", "/admin/documentos", "/admin/carteirinha", "/admin/configuracoes"],
     4: ["/admin", "/admin/noticias", "/admin/realizacoes", "/admin/comunicados", "/admin/eventos", "/admin/beneficios", "/admin/patrocinadores", "/admin/reunioes", "/admin/carteirinha", "/admin/configuracoes"],
@@ -41,3 +41,10 @@ test("specific grants add their own module without exposing unrelated tools", ()
   assert(!adminPaths({ active: true, level: 5, permissions: { canPublishAssembly: false } }).includes("/admin/assembleias"));
   assert(!adminPaths({ active: true, level: 5 }).includes("/admin/assembleias"));
 });
+
+ test("manual roles override predefined access and never grant Label admin",()=>{
+ const manual={active:true,level:0,permissions:{"news.read":true,"news.create":true}};
+ assert.deepEqual(adminPaths(manual),["/admin/noticias"]);
+ assert.deepEqual(adminPaths({...manual,permissions:{}}),[]);
+ assert(!adminPaths(manual).includes("/admin/label-admin"));
+ });

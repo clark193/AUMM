@@ -4,7 +4,8 @@ import { EmergencyAdmin } from "./EmergencyAdmin";
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import {manualModuleAllowed} from "@/lib/manualPermissions";
+import { usePathname, useRouter } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
@@ -32,6 +33,7 @@ export function AdminShell({
 }: Props) {
   const embedded = useContext(EmbeddedAdminContext);
   const router = useRouter();
+  const pathname=usePathname();
   const [level, setLevel] = useState<number | null>(firebaseEnabled ? null : 1);
   const [role, setRole] = useState("Administrador");
   const [permissions, setPermissions] = useState<Record<string, boolean>>({});
@@ -43,7 +45,7 @@ export function AdminShell({
     if (!firebaseEnabled) return;
     const {auth,db}=getFirebaseServices();let stopRole=()=>{},stopPhoto=()=>{};
     const stop=onAuthStateChanged(auth,user=>{stopRole();stopPhoto();setLevel(null);setPermissions({});setPhotoURL("");if(!user)return;
-      stopRole=onSnapshot(doc(db,"adminRoles",user.uid),snap=>{const data=snap.data();setLevel(data?.active===true?Number(data.level||5):0);setRole(String(data?.role||"Administrador"));setPermissions(data?.permissions||{});},()=>setLevel(0));
+      stopRole=onSnapshot(doc(db,"adminRoles",user.uid),snap=>{const data=snap.data();setLevel(data?.active===true?Number(data.level??5):0);setRole(String(data?.role||"Administrador"));setPermissions(data?.permissions||{});},()=>setLevel(0));
       stopPhoto=onSnapshot(doc(db,"memberPhotos",user.uid),snap=>{if(snap.exists())setPhotoURL(String(snap.data().dataUrl||""));else void getDoc(doc(db,"adminPhotos",user.uid)).then(p=>setPhotoURL(String(p.data()?.dataUrl||""))).catch(()=>{});},()=>{});
     });return()=>{stop();stopRole();stopPhoto();};
   }, []);
@@ -58,7 +60,7 @@ export function AdminShell({
     }
   }
 
-  if (embedded) return <AuthGate admin>{level === null ? <p role="status">Carregando permissões…</p> : allowedLevels.includes(level) || requiredPermissions.some(p => permissions[p] === true) ? <section className="embedded-admin-module"><h2>{title}</h2>{children}</section> : <p role="alert">Seu nível não permite abrir este módulo.</p>}</AuthGate>;
+  if (embedded) return <AuthGate admin>{level === null ? <p role="status">Carregando permissões…</p> : (level===0?manualModuleAllowed(pathname,permissions):allowedLevels.includes(level)) || requiredPermissions.some(p => permissions[p] === true) ? <section className="embedded-admin-module"><h2>{title}</h2>{children}</section> : <p role="alert">Seu nível não permite abrir este módulo.</p>}</AuthGate>;
   return (
     <AuthGate admin>
       {level === null ? (
@@ -78,7 +80,7 @@ export function AdminShell({
               />
               <span>
                 <strong>AUMM</strong>
-                <small>Administração · Nível {level}</small>
+                <small>Administração · {level===0?"Personalizado":`Nível ${level}`}</small>
               </span>
             </Link>
             <button className="sidebar-close" aria-label="Fechar menu" onClick={() => setMenuOpen(false)}><X /></button>
@@ -109,7 +111,7 @@ export function AdminShell({
             </header>
             <div className="dash-content">
               {[1, 2, 3].includes(level) && <EmergencyAdmin compact />}
-              {allowedLevels.includes(level) || requiredPermissions.some((permission) => permissions[permission] === true) ? (
+              {(level===0?manualModuleAllowed(pathname,permissions):allowedLevels.includes(level)) || requiredPermissions.some((permission) => permissions[permission] === true) ? (
                 children
               ) : (
                 <section className="panel access-denied">
