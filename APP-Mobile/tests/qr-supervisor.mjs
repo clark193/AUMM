@@ -21,3 +21,13 @@ test('falha ao abrir processo vira estado de erro e não propaga exceção', () 
   const supervisor = startQrSupervisor({ WA_QR_ENABLED: 'true' }, () => { throw Error('unavailable'); });
   assert.equal(supervisor.status().state, 'error');
 });
+test('recupera disputa temporária de sessão durante troca de versão', async () => {
+  const children = [];
+  const supervisor = startQrSupervisor({ WA_QR_ENABLED: 'true' }, () => {
+    const child = new EventEmitter(); child.kill = () => { queueMicrotask(() => child.emit('exit', 0)); return true; }; children.push(child); return child;
+  });
+  children[0].emit('exit', 1); assert.equal(supervisor.status().state, 'offline');
+  await new Promise(resolve => setTimeout(resolve, 2200));
+  assert.equal(children.length, 2); children[1].emit('message', { type: 'qr-state', state: 'connected' });
+  assert.equal(supervisor.status().state, 'connected'); await supervisor.stop();
+});

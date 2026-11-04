@@ -6,29 +6,42 @@ import { fileURLToPath } from "node:url";
 export function startQrSupervisor(env: NodeJS.ProcessEnv = process.env, launch: typeof spawn = spawn) {
   let child: ChildProcess | undefined;
   let state = "disabled";
+  let stopping = false, backoff = 2000;
+  let restart: NodeJS.Timeout | undefined;
   const states = new Set(["starting", "pairing", "connected", "reconnecting", "needs_pairing", "error", "stopped"]);
+  function retry() {
+    if (stopping || restart) return;
+    restart = setTimeout(() => { restart = undefined; run(); }, backoff);
+    restart.unref(); backoff = Math.min(backoff * 2, 30000);
+  }
+  function run() {
+    if (stopping) return;
+    state = "starting";
+    try {
+      const entry = fileURLToPath(new URL("../../../../whatsapp-qr/src/server.mjs", import.meta.url));
+      child = launch(process.execPath, [entry], {
+        env: { ...env, WA_QR_HEADLESS: "true" },
+        stdio: ["ignore", "ignore", "ignore", "ipc"], windowsHide: true,
+      });
+      child.on("message", message => {
+        const update = message as { type?: string; state?: string } | null;
+        if (update?.type === "qr-state" && typeof update.state === "string" && states.has(update.state)) {
+          state = update.state;
+          if (state === "connected") backoff = 2000;
+        }
+      });
+      child.on("error", () => { state = "error"; retry(); });
+      child.on("exit", () => { state = "offline"; child = undefined; retry(); });
+    } catch { state = "error"; retry(); }
+  }
   if (env.WA_QR_ENABLED === "true") {
     if (env.WA_ENABLED === "true") state = "configuration_error";
-    else {
-      state = "starting";
-      try {
-        const entry = fileURLToPath(new URL("../../../../whatsapp-qr/src/server.mjs", import.meta.url));
-        child = launch(process.execPath, [entry], {
-          env: { ...env, WA_QR_HEADLESS: "true" },
-          stdio: ["ignore", "ignore", "ignore", "ipc"], windowsHide: true,
-        });
-        child.on("message", message => {
-          const update = message as { type?: string; state?: string } | null;
-          if (update?.type === "qr-state" && typeof update.state === "string" && states.has(update.state)) state = update.state;
-        });
-        child.on("error", () => { state = "error"; });
-        child.on("exit", () => { state = "offline"; child = undefined; });
-      } catch { state = "error"; }
-    }
+    else run();
   }
   return {
     status: () => ({ state }),
     async stop() {
+      stopping = true; clearTimeout(restart);
       const current = child;
       if (!current) return;
       await new Promise<void>(resolve => {
