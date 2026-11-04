@@ -8,7 +8,7 @@ O responsável mudou expressamente o projeto para uma integração não oficial 
 - Sessão criptografada restaurada depois de uma parada/reinício, sem novo QR.
 - Uma mensagem MENU de outro celular gerou resposta com seis opções; o responsável confirmou recebimento e o painel registrou uma resposta aceita e zero pendências.
 - Sete testes do modo QR e os sete testes anteriores passaram. Testes do banco usam simulação, não emulador Firestore. O teste real acima usou WhatsApp e Firestore de produção, sem alterar usuários ou senhas.
-- **Funciona neste computador enquanto o processo estiver ativo. Não foi implantado na nuvem.** Não existe inicialização automática no Windows configurada por esta tarefa.
+- **Agora implantado no Render Free**, revisão f553b41f7fba60751525c3b89cd35fb908a76b7d, deploy dep-dbl7v45bedkc7389u010. /health respondeu 200 e X-AUMM-WhatsApp-State=connected em 03/11/2026. Execução local parada. Recebimento de nova conversa na nuvem ainda aguardando confirmação do responsável.
 
 ## Arquitetura
 
@@ -61,7 +61,7 @@ node --test APP-Mobile/whatsapp-qr/tests/qr.test.mjs
 node APP-Mobile/tests/whatsapp.mjs
 ```
 
-## Nuvem: ainda pendente
+## Nuvem: implantação e disponibilidade limitada
 
 O código pode ser incorporado ao **mesmo serviço `aumm-notificacoes`**, sem contratar outro serviço. `render.yaml` acrescenta a instalação das dependências QR, mantendo `plan: free` e start atual. O backend carrega o transporte somente com `WA_QR_ENABLED=true`. O supervisor `APP-Mobile/backend/src/qrSupervisor.ts` inicia o filho sem bloquear o HTTP; `WA_QR_HEADLESS=true` é definido internamente para não abrir outra porta. Nenhum segredo está no Blueprint.
 
@@ -73,7 +73,7 @@ Plano Hobby: 5 GB de saída e 500 minutos de build/mês, conforme documentação
 
 Firestore Spark continua sem cobrança e com cotas compartilhadas com site/aplicativo. A renovação de controle custa cerca de 1.440 gravações e leituras/dia quando continuamente ativo, além das chaves do protocolo, consultas e atendimento. Tráfego alto no número também pode consumir cotas de criptografia mesmo quando o bot não responde. Sem TTL pago. O projeto não mede nem garante saldo de cota disponível.
 
-Para nuvem contínua é preciso um servidor já disponível que mantenha o processo Node ativo ou uma hospedagem adequada, possivelmente paga. Não foi encontrada/provisionada nesta tarefa uma opção sem custo que cumpra continuidade garantida. Até resolver a hospedagem, o bot continua local e para se este computador/processo parar.
+Para nuvem contínua é preciso um servidor já disponível que mantenha o processo Node ativo ou uma hospedagem adequada, possivelmente paga. Não foi encontrada/provisionada nesta tarefa uma opção sem custo que cumpra continuidade garantida. A sessão já foi transferida para o Render; este computador pode ser desligado sem encerrar o processo remoto. O serviço pode repousar/suspender pelas regras Free, e não será acordado por uma mensagem de WhatsApp quando estiver dormindo.
 
 Passos de transferência, depois do acesso e da verificação de custos:
 
@@ -101,4 +101,8 @@ O bot é complementar. Filiação, login, recuperação de acesso, edição de c
 
 O menu e as respostas incluem links diretos ao site. Se a consulta de notícias falhar, a opção 3 ainda aponta /noticias/. A página de contato existente apresenta e-mail e telefone quando publicados; nenhum contato novo foi inventado. Não foram alteradas regras de acesso ou fluxos de senha para depender do bot.
 
-Testes adicionais: oito testes QR, três de supervisão do processo e sete do modo oficial preservado (18 no total), mais compilação TypeScript. Comando adicional: node APP-Mobile/tests/qr-supervisor.mjs. A revisão de isolamento/escopo ainda precisa de validação na hospedagem antes de ser declarada implantada.
+Testes adicionais: nove testes QR, quatro de supervisão do processo e sete do modo oficial preservado (20 no total), mais compilação TypeScript. Comando adicional: node APP-Mobile/tests/qr-supervisor.mjs. A revisão de isolamento/escopo foi implantada e conectada na hospedagem. Durante a transição, o backend HTTP respondeu 200 mesmo com o filho do bot offline; as cinco rotas principais do site responderam 200. O recebimento de uma nova conversa na nuvem ainda está sendo confirmado.
+
+O supervisor tenta novamente após saída inesperada do filho, com espera progressiva de 2 a 30 segundos. Isso recupera a disputa temporária de sessão entre instâncias antiga/nova durante deploy; não é tráfego para manter o Render acordado. O backend HTTP continua independente desse ciclo.
+
+A validação de sessão vinculada usa identidade e conta do aparelho (me/account). O indicador registered de registro móvel não é exigido para QR, pois permanece false em vínculos válidos desta biblioteca. O teste de regressão cobre essa condição.

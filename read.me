@@ -38,3 +38,16 @@ O responsável optou expressamente por seguir fora da API oficial, aceitando os 
 - Acesso real confirmado: o espaço Streamcord TAMBÉM contém aumm-notificacoes, serviço srv-dbcdf759fdbs73cls7tg, ligado ao repositório correto. A orientação anterior de excluir esse espaço da investigação estava baseada na informação inicial e foi corrigida por evidência do painel. Não apagar o espaço.
 - Render Free/Hobby sem cartão, consumo observado de 2,27/750 horas, 0/500 minutos e 0/5 GB; total atual/projetado US$ 0,00. Não habilitar cartão/plano pago. Repouso continua permitido e não se promete disponibilidade contínua.
 - Compilação e 18 testes relacionados aprovados; não houve alteração de usuários, senhas ou regras Firebase. Implantação desta revisão ainda em preparação; só registrar conclusão depois da verificação real.
+
+
+## 17. Implantação complementar no Render — 03/11/2026
+
+- PR #8 integrado. Revisão de código em produção: f553b41f7fba60751525c3b89cd35fb908a76b7d. Deploy dep-dbl7v45bedkc7389u010 terminou live no Render.
+- Conferido no HTTPS: /health 200, X-AUMM-Revision igual à revisão acima, X-AUMM-WhatsApp-State=connected. Sessão criptografada transferida diretamente ao armazenamento protegido do serviço, sem expor a chave no chat, repositório ou frontend.
+- Execução local parada antes da transferência. Nenhuma necessidade de registrar/remover o número no aplicativo. O computador pode ser desligado sem encerrar o processo remoto; o Render Free ainda pode dormir e não acorda por mensagem recebida pelo protocolo QR.
+- Variáveis do modo oficial desativadas. QR habilitado para comandos diretos e limite de 50 respostas/dia UTC. As demais variáveis/credenciais do servidor foram preservadas (atualização por mesclagem).
+- Comando de build instalado também APP-Mobile/whatsapp-qr. Filtros originais preservados e acrescentado APP-Mobile/whatsapp-qr/**. Mudanças via GitHub não iniciaram automaticamente as duas últimas revisões nesta sessão; foi necessário Deploy latest commit no painel, uma vez por revisão. Verificar sempre a revisão efetivamente publicada.
+- Processo filho tem reinício progressivo após falhas/disputa de sessão em deploy, sem bloquear HTTP. O backend respondeu 200 enquanto o filho estava offline. Site /, /associe-se/, /associado/login/, /noticias/ e /contato/ responderam 200 durante a transferência.
+- Correção validada: QR vinculado usa identidade/conta me/account, não exige registered=true (indicador de registro móvel). Vinte testes relacionados e TypeScript aprovados.
+- Recebimento real da nova versão NA NUVEM ainda aguarda confirmação do responsável. O teste real anterior foi local. Não confundir conexão ou deploy live com confirmação de conversa ponta a ponta na hospedagem.
+- Nenhum cartão/plano pago/cobrança habilitado. Plano Free/Hobby preservado. Cadastros, senhas, migrações e regras Firebase não foram alterados.
