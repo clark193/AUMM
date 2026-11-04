@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { whatsapp } from "./whatsapp.js";
 import { startQrSupervisor } from "./qrSupervisor.js";
+import { startNewsPublisher } from "./newsPublisher.js";
 import { getAuth } from "firebase-admin/auth";
 import { MemberProfileError, updateMemberProfile } from "./memberProfile.js";
 import { AdminPasswordError, changeMemberPassword } from "./adminPassword.js";
@@ -13,6 +14,7 @@ import {
 
 if (process.env.AUMM_EXTERNAL_PUSH !== "true") throw new Error("Defina AUMM_EXTERNAL_PUSH=true para executar o servidor externo.");
 const db = getFirestore();
+const newsPublisher = startNewsPublisher(db);
 const qrControl = startQrSupervisor();
 const wa = whatsapp(db);
 const waRetry = setInterval(() => void wa.drain(), 15000);
@@ -105,6 +107,7 @@ const wakeLimits = new Map<string, number>();
 const server = createServer(async (request, response) => {
   response.setHeader("Cache-Control", "no-store");
   response.setHeader("X-Content-Type-Options", "nosniff");
+  response.setHeader("X-AUMM-News-Publisher", newsPublisher.status());
   if (request.url?.split("?")[0] === "/webhooks/whatsapp") { await wa.handle(request, response); return; }
   const origin = String(request.headers.origin || "");
   if (allowedOrigins.has(origin)) {
@@ -112,6 +115,7 @@ const server = createServer(async (request, response) => {
     response.setHeader("Vary", "Origin");
     response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
     response.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    response.setHeader("Access-Control-Expose-Headers", "X-AUMM-News-Publisher");
   }
   if (request.url === "/health" && request.method === "GET") {
     response.setHeader("X-AUMM-WhatsApp-State", qrControl.status().state);
@@ -147,12 +151,14 @@ const server = createServer(async (request, response) => {
     for (const [uid, at] of wakeLimits) if (at < Date.now() - 60000) wakeLimits.delete(uid);
     wakeLimits.set(identity.uid, Date.now());
     void drain(since);
+    newsPublisher.wake();
     response.writeHead(202); response.end();
   } catch { response.writeHead(401); response.end(); }
 });
 server.headersTimeout = 10000; server.requestTimeout = 15000;
 server.listen(Number(process.env.PORT || 8788), "0.0.0.0", () => { ready = true; console.log("Servidor externo de notificações iniciado."); });
 function close() {
+  newsPublisher.stop();
   stopping = true; ready = false; clearInterval(retry); clearInterval(expiry); clearInterval(waRetry); clearInterval(waCleanup); stops.forEach(stop => stop());
   server.close(() => { void Promise.resolve(qrControl?.stop()).finally(() => process.exit(0)); });
   setTimeout(() => process.exit(0), 10000).unref();

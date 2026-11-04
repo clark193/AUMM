@@ -1,6 +1,6 @@
 "use client";
 
-import { wakeExternalNotifications } from "../lib/externalNotifications";
+import { requestNewsPublication } from "../lib/requestNewsPublication";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   collection,
@@ -138,9 +138,11 @@ export function NewsAdmin() {
         ...(!editingId ? { createdAt: serverTimestamp(), createdBy: auth.currentUser?.uid || "" } : {}),
       }, { merge: true });
       const action = form.status === "published" && previous?.status !== "published" ? "NEWS_PUBLISHED" : editingId ? "NEWS_UPDATED" : "NEWS_CREATED";
-      wakeExternalNotifications({ auth, db });
+      void requestNewsPublication({ auth, db }).then(ready => {
+        if (!ready) setMessage({ type: "success", text: "Notícia salva no Firebase. A publicação automática está pendente: verifique a configuração e a conexão do servidor." });
+      });
       await writeAdminAudit({ action, resource: "news", resourceId: reference.id, description: `${action === "NEWS_PUBLISHED" ? "Publicou" : editingId ? "Editou" : "Criou"} a notícia “${form.title.trim()}”.` }).catch(() => undefined);
-      setMessage({ type: "success", text: form.status === "published" ? "Notícia publicada com sucesso." : "Rascunho salvo com sucesso." });
+      setMessage({ type: "success", text: form.status === "published" ? "Notícia salva. A página e a prévia serão atualizadas automaticamente em alguns minutos." : "Rascunho salvo. Se havia página pública, sua remoção será sincronizada." });
       reset();
     } catch (error) {
       setMessage({ type: "error", text: firebaseErrorMessage(error, "Não foi possível salvar a notícia.") });
@@ -154,6 +156,7 @@ export function NewsAdmin() {
     setBusy(true);
     try {
       await deleteDoc(doc(getFirebaseServices().db, "news", item.id));
+      void requestNewsPublication(getFirebaseServices());
       await writeAdminAudit({ action: "NEWS_DELETED", resource: "news", resourceId: item.id, description: `Excluiu a notícia “${item.title || "Sem título"}”.` }).catch(() => undefined);
       if (editingId === item.id) reset();
       setMessage({ type: "success", text: "Notícia excluída." });
@@ -171,7 +174,7 @@ export function NewsAdmin() {
           <div>
             <h3><Newspaper size={18} /> {editingId ? "Editar notícia" : "Nova notícia"}</h3>
             <p>Publique a notícia e escolha se ela deve rodar no topo da página inicial.</p>
-            <p>Depois de criar, editar ou excluir uma notícia, solicite a atualização do site para publicar o link próprio e a prévia com título e imagem no WhatsApp.</p>
+            <p>As páginas e prévias de compartilhamento são sincronizadas automaticamente pelo servidor após salvar, editar ou excluir. Durante a publicação, os visitantes continuam lendo pelo Firebase.</p>
           </div>
           {editingId && <button type="button" className="button button-ghost-dark button-sm" onClick={reset}><X size={15} /> Cancelar</button>}
         </div>

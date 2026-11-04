@@ -34,6 +34,8 @@ export function NewsPublication({ publicationId, initialPublication, previewVers
     const base = (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, "");
     const url = `${base}${newsPath(id)}?imagem=${encodeURIComponent(previewVersion || "2")}`;
     try {
+      const response = await fetch(newsPath(id), { method: "HEAD", cache: "no-store", signal: AbortSignal.timeout(10000) });
+      if (!response.ok) { setShareMessage("A notícia já pode ser lida. O link com prévia está sendo preparado; tente compartilhar novamente em alguns minutos."); return; }
       const result = await shareNews(publication?.title || "Notícia AUMM", url, navigator);
       setShareMessage(result === "copied" ? "Link da notícia copiado. Cole no WhatsApp ou onde preferir." : "");
     } catch {

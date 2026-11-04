@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { ArrowRight, CalendarDays, Newspaper } from "lucide-react";
 import { usePublishedNews } from "./HomeNewsHero";
-import { newsPath } from "@/lib/newsSharing";
+import { PublishedNewsLink } from "./PublishedNewsLink";
 
 type Props = { compact?: boolean };
 
@@ -28,9 +27,9 @@ export function PublicNewsFeed({ compact = false }: Props) {
             <small>{item.publishedAt?.toDate?.().toLocaleDateString("pt-BR") || "AUMM"}</small>
             <h3>{item.title}</h3>
             <p>{item.summary}</p>
-            <Link className="read-more" href={newsPath(item.id)}>
+            <PublishedNewsLink id={item.id}>
               Ver publicação <ArrowRight size={16} />
-            </Link>
+            </PublishedNewsLink>
           </div>
         </article>
       ))}
