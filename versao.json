@@ -1,8 +1,8 @@
 {
+  "publishedAt": "2026-11-04T17:32:34.7265105Z",
   "features": [
-    "noticias-atualizadas",
-    "pagina-sociedade-da-exaustao"
+    "publicacao-automatica-preparada",
+    "leitura-sem-404-durante-publicacao"
   ],
-  "sourceCommit": "903c01590a9947df2084b2f393312107de8cc68b",
-  "publishedAt": "2026-11-04T17:01:32.5070592Z"
+  "sourceCommit": "68f4f25fad1e0a4e3e7de56377bc5bc3f1b0abb9"
 }
