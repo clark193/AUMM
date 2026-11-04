@@ -111,4 +111,4 @@ Implementação preparada, com envio desabilitado. Consulte [operação e limite
 
 ## Atendimento por QR code (modo atual, não oficial)
 
-O responsável autorizou a mudança para integração por QR. Consulte [operação do modo QR](APP-Mobile/whatsapp-qr/README.md). Conexão e conversa MENU verificadas localmente; implantação na nuvem pendente. O código oficial anterior foi preservado e fica desligado.
+O responsável autorizou a mudança para integração por QR. Consulte [operação do modo QR](APP-Mobile/whatsapp-qr/README.md). Implantado no Render Free com MENU e link de filiação recebidos em conversa real na nuvem. O bot aceita somente comandos definidos; site/portal mantêm os fluxos principais. O serviço pode repousar por inatividade. O código oficial anterior foi preservado e fica desligado.

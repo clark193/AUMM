@@ -8,7 +8,7 @@ O responsável mudou expressamente o projeto para uma integração não oficial 
 - Sessão criptografada restaurada depois de uma parada/reinício, sem novo QR.
 - Uma mensagem MENU de outro celular gerou resposta com seis opções; o responsável confirmou recebimento e o painel registrou uma resposta aceita e zero pendências.
 - Sete testes do modo QR e os sete testes anteriores passaram. Testes do banco usam simulação, não emulador Firestore. O teste real acima usou WhatsApp e Firestore de produção, sem alterar usuários ou senhas.
-- **Agora implantado no Render Free**, revisão f553b41f7fba60751525c3b89cd35fb908a76b7d, deploy dep-dbl7v45bedkc7389u010. /health respondeu 200 e X-AUMM-WhatsApp-State=connected em 03/11/2026. Execução local parada. Recebimento de nova conversa na nuvem ainda aguardando confirmação do responsável.
+- **Agora implantado no Render Free**, revisão f553b41f7fba60751525c3b89cd35fb908a76b7d, deploy dep-dbl7v45bedkc7389u010. /health respondeu 200 e X-AUMM-WhatsApp-State=connected em 03/11/2026. Execução local parada. O responsável confirmou recebimento de MENU e do link de filiação após a transferência para a nuvem.
 
 ## Arquitetura
 
@@ -101,8 +101,10 @@ O bot é complementar. Filiação, login, recuperação de acesso, edição de c
 
 O menu e as respostas incluem links diretos ao site. Se a consulta de notícias falhar, a opção 3 ainda aponta /noticias/. A página de contato existente apresenta e-mail e telefone quando publicados; nenhum contato novo foi inventado. Não foram alteradas regras de acesso ou fluxos de senha para depender do bot.
 
-Testes adicionais: nove testes QR, quatro de supervisão do processo e sete do modo oficial preservado (20 no total), mais compilação TypeScript. Comando adicional: node APP-Mobile/tests/qr-supervisor.mjs. A revisão de isolamento/escopo foi implantada e conectada na hospedagem. Durante a transição, o backend HTTP respondeu 200 mesmo com o filho do bot offline; as cinco rotas principais do site responderam 200. O recebimento de uma nova conversa na nuvem ainda está sendo confirmado.
+Testes adicionais: nove testes QR, quatro de supervisão do processo e sete do modo oficial preservado (20 no total), mais compilação TypeScript. Comando adicional: node APP-Mobile/tests/qr-supervisor.mjs. A revisão de isolamento/escopo foi implantada e conectada na hospedagem. Durante a transição, o backend HTTP respondeu 200 mesmo com o filho do bot offline; as cinco rotas principais do site responderam 200. O responsável confirmou recebimento real de MENU e opção 2 na nuvem.
 
 O supervisor tenta novamente após saída inesperada do filho, com espera progressiva de 2 a 30 segundos. Isso recupera a disputa temporária de sessão entre instâncias antiga/nova durante deploy; não é tráfego para manter o Render acordado. O backend HTTP continua independente desse ciclo.
 
 A validação de sessão vinculada usa identidade e conta do aparelho (me/account). O indicador registered de registro móvel não é exigido para QR, pois permanece false em vínculos válidos desta biblioteca. O teste de regressão cobre essa condição.
+
+Confirmação final em 03/11/2026: MENU e opção 2 recebidos no outro celular, conforme confirmação expressa do responsável. Consulta sanitizada dos jobs após o deploy encontrou quatro respostas aceitas (comandos menu, 2 e 5) e zero em revisão. A aceitação dos demais comandos não substitui confirmação individual de recebimento. O computador local permanece fora da execução do bot.
