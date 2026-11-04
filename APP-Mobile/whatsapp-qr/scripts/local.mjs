@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import { readFile } from 'node:fs/promises';
 import { start } from '../src/server.mjs';
+import { reply } from '../src/replies.mjs';
 
 // Somente neste computador: reutiliza o login Firebase CLI já autorizado.
 // Não envia, grava ou exibe refresh tokens. Não publicar credenciais CLI na hospedagem.
@@ -14,7 +15,6 @@ async function main() {
   const { Firestore } = require('@google-cloud/firestore');
   const db = new Firestore({ projectId: 'aumm-21dda', credentials, preferRest: true });
   const key = Buffer.from((await readFile(process.env.WA_QR_KEY_FILE, 'utf8')).trim(), 'base64');
-  const { reply } = await import('../../backend/lib/backend/src/whatsapp.js');
   await start({ db, key, renderReply: reply, local: true });
   process.stdout.write('Painel local pronto: http://127.0.0.1:8799\n');
 }

@@ -8,7 +8,8 @@ export function incoming(message, type, now = Date.now()) {
   const at = Number(message.messageTimestamp) * 1000;
   if (typeof body !== 'string' || !Number.isFinite(at) || at > now + 60000 || now - at > 5 * 60000) return null;
   const value = body.trim().toLocaleLowerCase('pt-BR');
-  const choice = /^[1-6]$/.test(value) || ['menu', 'sair', 'parar'].includes(value) ? value : 'menu';
+  if (!/^[1-6]$/.test(value) && !['menu', 'sair', 'parar'].includes(value)) return null;
+  const choice = value;
   return { id: digest(`${jid}:${message.key.id}`), jid, choice, at };
 }
 

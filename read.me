@@ -29,3 +29,12 @@ O responsável optou expressamente por seguir fora da API oficial, aceitando os 
 - NUVEM NÃO CONCLUÍDA: o único espaço acessível pelo conector é Streamcord, excluído pelo responsável. O bot atual depende deste computador/processo ligado.
 - Render Free repousa; mensagem recebida no WhatsApp por este transporte não acorda o serviço por webhook. Não oferece atendimento contínuo no modo QR. Não foi contratado plano, habilitada cobrança ou criado tráfego artificial para manter o serviço ativo.
 - Fontes anteriores desta etapa preservadas em work/before-whatsapp-qr-20261103/. O modo oficial continua disponível em seu PR anterior como alternativa histórica.
+
+## 16. Bot complementar e acesso Render corrigido — 03/11/2026
+
+- O responsável pediu atendimento restrito e independência dos canais. O QR agora aceita somente MENU, 1–6 e SAIR/PARAR; ignora texto livre, sem ações de cadastro, senha, aprovação ou protocolo.
+- Respostas próprias em APP-Mobile/whatsapp-qr/src/replies.mjs, com caminhos diretos ao site e portal. Notícias indisponíveis retornam o link do site. Atendimento humano pausa e aponta /contato/, sem prometer protocolo ou prazo.
+- APP-Mobile/backend/src/qrSupervisor.ts inicia o bot em processo filho, sem bloquear o HTTP; falha do bot não encerra backend/notificações. A mesma instância Render ainda compartilha memória e cotas: isolamento de processo não é isolamento da hospedagem.
+- Acesso real confirmado: o espaço Streamcord TAMBÉM contém aumm-notificacoes, serviço srv-dbcdf759fdbs73cls7tg, ligado ao repositório correto. A orientação anterior de excluir esse espaço da investigação estava baseada na informação inicial e foi corrigida por evidência do painel. Não apagar o espaço.
+- Render Free/Hobby sem cartão, consumo observado de 2,27/750 horas, 0/500 minutos e 0/5 GB; total atual/projetado US$ 0,00. Não habilitar cartão/plano pago. Repouso continua permitido e não se promete disponibilidade contínua.
+- Compilação e 18 testes relacionados aprovados; não houve alteração de usuários, senhas ou regras Firebase. Implantação desta revisão ainda em preparação; só registrar conclusão depois da verificação real.

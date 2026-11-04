@@ -8,6 +8,7 @@ import { sessionStore, authState } from './store.mjs';
 import { engine } from './engine.mjs';
 import { transport } from './transport.mjs';
 import { panel } from './panel.mjs';
+import { reply } from './replies.mjs';
 
 export async function start({ db, key, renderReply, env = process.env, local = false, listen = true, manageSignals = true }) {
   if (env.WA_QR_ENABLED !== 'true') throw Error('Modo QR desativado.');
@@ -33,6 +34,7 @@ export async function start({ db, key, renderReply, env = process.env, local = f
     server?.close();
   }
   control = transport({ baileys, logger: pino({ level: 'silent' }), store, engine: handler,
+    onState: state => { if (process.connected) process.send?.({ type: 'qr-state', state: state.state }); },
     async authFactory() {
       auth = await authState(store, baileys);
       if (!local && !auth.state.creds.registered) throw Error('Vincule o aparelho pelo painel local antes de executar na nuvem.');
@@ -68,8 +70,7 @@ async function main() {
   if (process.env.WA_QR_ENABLED !== 'true') throw Error('Defina WA_QR_ENABLED=true para iniciar.');
   initializeApp({ credential: process.env.FIREBASE_SERVICE_ACCOUNT ? cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)) : applicationDefault(), projectId: process.env.GOOGLE_CLOUD_PROJECT || 'aumm-21dda' });
   const key = process.env.WA_QR_SESSION_KEY ? Buffer.from(process.env.WA_QR_SESSION_KEY, 'base64') : Buffer.from((await readFile(process.env.WA_QR_KEY_FILE, 'utf8')).trim(), 'base64');
-  const { reply } = await import('../../backend/lib/backend/src/whatsapp.js');
-  await start({ db: getFirestore(), key, renderReply: reply });
+  await start({ db: getFirestore(), key, renderReply: reply, listen: process.env.WA_QR_HEADLESS !== 'true' });
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch(() => { process.stderr.write('AUMM QR: não foi possível iniciar. Confira configuração, sessão e acesso ao Firebase.\n'); process.exitCode = 1; });

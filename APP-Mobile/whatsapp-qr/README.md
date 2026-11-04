@@ -14,11 +14,11 @@ O responsável mudou expressamente o projeto para uma integração não oficial 
 
 Baileys `7.0.0-rc14`, versão fixada e lockfile. A [documentação do projeto](https://github.com/WhiskeySockets/Baileys) informa que a biblioteca usa o protocolo do WhatsApp Web/aparelhos conectados e não é afiliada à Meta. É uma versão de pré-lançamento, que exige acompanhamento de mudanças. Não há garantia contra bloqueios ou desconexões.
 
-Reutiliza o menu programado de `APP-Mobile/backend/src/whatsapp.ts`: institucional, associação, notícias publicadas, benefícios/informações públicas, portal e atendimento humano. Sem IA, templates ou campanhas. Não usa Graph API ou franquia de mensagens Meta. Continuam existindo limites/custos possíveis da hospedagem e Firestore; nenhuma cobrança foi habilitada.
+Usa respostas públicas próprias em `src/replies.mjs`, sem depender da compilação do backend para o modo local/standalone: institucional, associação, notícias publicadas, benefícios/informações públicas, portal e atendimento humano. Sem IA, templates ou campanhas. Não usa Graph API ou franquia de mensagens Meta. Continuam existindo limites/custos possíveis da hospedagem e Firestore; nenhuma cobrança foi habilitada.
 
-Grupos, status, canais, mensagens próprias, histórico, mídia e conteúdo encapsulado são ignorados. Responde somente a mensagens de texto novas, posteriores ao início do processo e com até cinco minutos. Texto livre é reduzido a MENU ou comando 1–6/SAIR/PARAR, sem persistir CPF, senha ou conteúdo livre. Não usa telefone como autenticação. Notícias são limitadas a publicadas; benefícios privados não são lidos. Pedidos humanos pausam respostas até MENU e ficam na coleção privada `whatsappQrJobs`; o operador atende pelo aplicativo Business, sem promessa de horário.
+Grupos, status, canais, mensagens próprias, histórico, mídia e conteúdo encapsulado são ignorados. Responde somente a mensagens de texto novas, posteriores ao início do processo e com até cinco minutos. Somente MENU, 1–6 e SAIR/PARAR são aceitos. Conversas livres são ignoradas, sem persistir CPF, senha ou conteúdo livre. Não usa telefone como autenticação. Notícias são limitadas a publicadas; benefícios privados não são lidos. A opção humana pausa respostas até MENU e aponta os canais reais da página de contato. A marcação privada é somente preferência de pausa, sem confirmar protocolo ou atendimento já solicitado à equipe.
 
-O módulo é separado do backend administrativo. Quando habilitado no servidor existente, preserva seus endpoints e notificações. O processo QR standalone serve apenas `/health` na nuvem; o QR não tem endpoint público.
+O módulo roda em processo filho isolado, iniciado sem aguardar conexão pelo backend administrativo. Não importa o protocolo no processo HTTP principal. Se o bot falhar, os endpoints e notificações continuam ativos. Ambos ainda compartilham memória, cotas e disponibilidade da mesma instância Render Free; uma falha da hospedagem inteira pode atingir os dois. O processo QR standalone serve apenas `/health` na nuvem; o QR não tem endpoint público.
 
 ## Sessão e segurança
 
@@ -30,7 +30,7 @@ Coleções privadas pelas regras atuais: `whatsappQrAuth`, `whatsappQrControl`, 
 
 O painel de pareamento é exclusivo de `127.0.0.1`, com Host fixo, cookie HttpOnly/SameSite, proteção de origem, bloqueio de iframe e sem cache. Não encaminhar a porta por túnel ou proxy público. O QR funciona como credencial: não enviar screenshot/código no chat nem publicar em repositórios.
 
-Logs de protocolo/console são silenciados enquanto o módulo está ativo para evitar vazamento de chaves; o backend expõe apenas o estado sanitizado no cabeçalho `X-AUMM-WhatsApp-State` de `/health`. Essa opção também silencia logs genéricos via console do processo compartilhado. O estado do processo não prova entrega das mensagens; `accepted` significa aceitação pelo transporte. Nesta tarefa o recebimento real foi confirmado pelo responsável.
+Logs de protocolo/console são silenciados enquanto o módulo está ativo para evitar vazamento de chaves; o backend expõe apenas o estado sanitizado no cabeçalho `X-AUMM-WhatsApp-State` de `/health`. O silenciamento fica restrito ao processo do bot, preservando os logs do servidor administrativo. O estado do processo não prova entrega das mensagens; `accepted` significa aceitação pelo transporte. Nesta tarefa o recebimento real foi confirmado pelo responsável.
 
 ## Limites e falhas
 
@@ -63,9 +63,9 @@ node APP-Mobile/tests/whatsapp.mjs
 
 ## Nuvem: ainda pendente
 
-O código pode ser incorporado ao **mesmo serviço `aumm-notificacoes`**, sem contratar outro serviço. `render.yaml` acrescenta a instalação das dependências QR, mantendo `plan: free` e start atual. O backend carrega o transporte somente com `WA_QR_ENABLED=true`. Nenhum segredo está no Blueprint.
+O código pode ser incorporado ao **mesmo serviço `aumm-notificacoes`**, sem contratar outro serviço. `render.yaml` acrescenta a instalação das dependências QR, mantendo `plan: free` e start atual. O backend carrega o transporte somente com `WA_QR_ENABLED=true`. O supervisor `APP-Mobile/backend/src/qrSupervisor.ts` inicia o filho sem bloquear o HTTP; `WA_QR_HEADLESS=true` é definido internamente para não abrir outra porta. Nenhum segredo está no Blueprint.
 
-O conector Render continua mostrando somente Streamcord, espaço que o responsável excluiu por não ser da AUMM. Não foi modificado. É necessário entrar em [Render Dashboard](https://dashboard.render.com/) com a conta que contém o serviço da associação, antes de implantar.
+Acesso confirmado: o espaço Streamcord também contém o serviço AUMM `srv-dbcdf759fdbs73cls7tg`, em https://aumm-notificacoes.onrender.com, ligado a clark193/AUMM. A identificação anterior do espaço foi corrigida após conferência do painel. Plano Free/Hobby, sem cartão; custo atual e projetado US$ 0,00 na consulta de 03/11/2026. Não excluir esse espaço.
 
 **O Render Free não atende funcionamento contínuo deste bot.** Ele [repousa após 15 minutos sem requisições HTTP recebidas](https://render.com/docs/free), leva cerca de um minuto para iniciar, tem 750 horas compartilhadas/mês e disco temporário. A conexão QR é um WebSocket iniciado pelo bot para WhatsApp; quando o Render dorme, ela cai. Uma mensagem no WhatsApp não é um webhook HTTP para o Render e não acorda o serviço por si só. Preservar sessão não significa preservar disponibilidade. Não foi implementado tráfego artificial para mantê-lo acordado.
 
@@ -94,3 +94,11 @@ Passos de transferência, depois do acesso e da verificação de custos:
 - `qr.env.example`: configuração sem valores reais.
 
 O `read.me` registra a mudança de direção. O modo oficial e sua documentação foram preservados para eventual retorno.
+
+## Limites funcionais definidos em 03/11/2026
+
+O bot é complementar. Filiação, login, recuperação de acesso, edição de cadastro, aprovações, documentos, benefícios privados e solicitações continuam no site/portal e em seus fluxos administrativos, sem chamar o transporte WhatsApp. O bot apenas informa e encaminha. O atendimento humano aponta /contato/; não é o único canal nem cria protocolo formal.
+
+O menu e as respostas incluem links diretos ao site. Se a consulta de notícias falhar, a opção 3 ainda aponta /noticias/. A página de contato existente apresenta e-mail e telefone quando publicados; nenhum contato novo foi inventado. Não foram alteradas regras de acesso ou fluxos de senha para depender do bot.
+
+Testes adicionais: oito testes QR, três de supervisão do processo e sete do modo oficial preservado (18 no total), mais compilação TypeScript. Comando adicional: node APP-Mobile/tests/qr-supervisor.mjs. A revisão de isolamento/escopo ainda precisa de validação na hospedagem antes de ser declarada implantada.

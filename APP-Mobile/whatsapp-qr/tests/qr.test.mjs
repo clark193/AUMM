@@ -6,6 +6,7 @@ import * as baileys from '@whiskeysockets/baileys';
 import { vault, sessionStore, authState } from '../src/store.mjs';
 import { incoming, engine } from '../src/engine.mjs';
 import { panel } from '../src/panel.mjs';
+import { reply } from '../src/replies.mjs';
 import { database } from './helpers.mjs';
 
 const message = (id = 'id', text = 'menu', at = Date.now()) => ({ key: { remoteJid: '5547999999999@s.whatsapp.net', id }, messageTimestamp: Math.floor(at / 1000), message: { conversation: text } });
@@ -41,7 +42,20 @@ test('entrada: ignora grupos, status, mídia, histórico, ecos e mensagens antig
   for (const jid of ['123@g.us', 'status@broadcast', '123@newsletter']) { const m = message(); m.key.remoteJid = jid; assert.equal(incoming(m, 'notify'), null); }
   assert.equal(incoming(message('old', 'menu', Date.now() - 360000), 'notify'), null);
   const media = message(); media.message = { imageMessage: {} }; assert.equal(incoming(media, 'notify'), null);
-  const privateText = incoming(message('pii', 'senha CPF 123'), 'notify'); assert.equal(privateText.choice, 'menu'); assert(!JSON.stringify(privateText).includes('senha'));
+  assert.equal(incoming(message('pii', 'senha CPF 123'), 'notify'), null);
+  assert.equal(incoming(message('human', 'obrigado, vou falar com a equipe'), 'notify'), null);
+});
+test('respostas restritas encaminham ao site; falha em notícias não centraliza o acesso', async () => {
+  const noPrivate = { collection(name) { assert.equal(name, 'news'); return { where(field, op, value) { assert.equal(field, 'status'); assert.equal(value, 'published'); throw Error('unavailable'); } }; } };
+  for (const choice of ['menu', '1', '2', '3', '4', '5', '6', 'sair']) {
+    const text = await reply(choice, noPrivate);
+    assert(text.includes('https://aumm.com.br'));
+    assert(!text.includes('Seu pedido de atendimento humano foi registrado'));
+  }
+  assert((await reply('3', noPrivate)).includes('/noticias/'));
+  assert((await reply('2', noPrivate)).includes('/associe-se/'));
+  assert((await reply('5', noPrivate)).includes('não faz login'));
+  assert((await reply('6', noPrivate)).includes('não confirma prazo nem abertura de protocolo'));
 });
 test('engine: orçamento, deduplicação, consentimento, pedido humano e falha ambígua', async () => {
   let now = Date.now(); const db = database(), store = sessionStore(db, randomBytes(32), 'engine', () => now); await store.acquire();
