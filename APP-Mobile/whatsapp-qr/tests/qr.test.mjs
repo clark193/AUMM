@@ -3,13 +3,18 @@ import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
 import * as baileys from '@whiskeysockets/baileys';
-import { vault, sessionStore, authState } from '../src/store.mjs';
+import { vault, sessionStore, authState, isPaired } from '../src/store.mjs';
 import { incoming, engine } from '../src/engine.mjs';
 import { panel } from '../src/panel.mjs';
 import { reply } from '../src/replies.mjs';
 import { database } from './helpers.mjs';
 
 const message = (id = 'id', text = 'menu', at = Date.now()) => ({ key: { remoteJid: '5547999999999@s.whatsapp.net', id }, messageTimestamp: Math.floor(at / 1000), message: { conversation: text } });
+test('vinculação QR válida não depende do indicador de registro móvel', () => {
+  assert(!isPaired(baileys.initAuthCreds()));
+  assert(isPaired({ registered: false, me: { id: '5547999999999@s.whatsapp.net' }, account: { details: Buffer.from('fixture') } }));
+  assert(!isPaired({ registered: true }));
+});
 
 test('AES-GCM: IV aleatório, autenticação do conteúdo/chave/contexto', () => {
   const key = randomBytes(32), box = vault(key); const blob = box.seal('session secret', 'context');

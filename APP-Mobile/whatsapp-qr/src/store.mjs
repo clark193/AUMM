@@ -18,6 +18,8 @@ export function vault(key) {
   };
 }
 export const digest = value => createHash('sha256').update(value).digest('hex');
+// QR vinculado preenche me/account. `registered` pode continuar false (não é login móvel).
+export const isPaired = creds => typeof creds?.me?.id === 'string' && creds.me.id.length > 0 && !!creds.account;
 
 export function sessionStore(db, key, session = 'aumm', clock = Date.now) {
   if (!/^[a-z0-9_-]{1,40}$/.test(session)) throw Error('Identificação de sessão inválida.');

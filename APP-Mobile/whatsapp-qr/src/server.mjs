@@ -4,7 +4,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { sessionStore, authState } from './store.mjs';
+import { sessionStore, authState, isPaired } from './store.mjs';
 import { engine } from './engine.mjs';
 import { transport } from './transport.mjs';
 import { panel } from './panel.mjs';
@@ -37,7 +37,7 @@ export async function start({ db, key, renderReply, env = process.env, local = f
     onState: state => { if (process.connected) process.send?.({ type: 'qr-state', state: state.state }); },
     async authFactory() {
       auth = await authState(store, baileys);
-      if (!local && !auth.state.creds.registered) throw Error('Vincule o aparelho pelo painel local antes de executar na nuvem.');
+      if (!local && !isPaired(auth.state.creds)) throw Error('Vincule o aparelho pelo painel local antes de executar na nuvem.');
       return auth;
     }, onFailure: () => { void shutdown().catch(() => {}); },
   });
