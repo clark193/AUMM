@@ -108,3 +108,7 @@ Consulte `docs/FILIACOES.md` para o fluxo público, proteção contra duplicidad
 ## Atendimento WhatsApp oficial
 
 Implementação preparada, com envio desabilitado. Consulte [operação e limites](docs/WHATSAPP-OPERACAO.md) antes de configurar a conta Meta ou implantar.
+
+## Atendimento por QR code (modo atual, não oficial)
+
+O responsável autorizou a mudança para integração por QR. Consulte [operação do modo QR](APP-Mobile/whatsapp-qr/README.md). Conexão e conversa MENU verificadas localmente; implantação na nuvem pendente. O código oficial anterior foi preservado e fica desligado.

@@ -1,3 +1,5 @@
+> Histórico: o responsável mudou para o modo QR não oficial. Esta implementação oficial foi preservada e está desligada. Consulte APP-Mobile/whatsapp-qr/README.md para o estado atual.
+
 # Atendimento AUMM pela WhatsApp Cloud API
 
 Verificação: 03/11/2026. Estado: implementação local testada; envio desabilitado; sem implantação ou conversa real verificada. Não tratar este documento como confirmação de produção.

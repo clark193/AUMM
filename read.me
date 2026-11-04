@@ -16,3 +16,16 @@ Leia AGENTS.md quando disponível, README.md e docs/WHATSAPP-OPERACAO.md. Preser
 - Não implantado: URL pretendida https://aumm-notificacoes.onrender.com/webhooks/whatsapp. /health atual respondeu 200 com revisão f3d7a0d30de14ba6b246c24f331c7643302a067d, que não inclui este bot.
 - Pendências: login Meta/conta AUMM, coexistência ou número de teste, acesso Render correto, conferência de custos/franquia, configuração de segredos, implantação, webhook HTTPS e conversa real autorizada. Só então registrar como concluído.
 - Fontes anteriores preservadas em work/before-whatsapp-20261103/. Alterações locais de outras tarefas não foram incluídas nesta entrega.
+## 15. Mudança autorizada para QR code não oficial — 03/11/2026
+
+O responsável optou expressamente por seguir fora da API oficial, aceitando os riscos. Essa decisão substitui a restrição de usar somente Cloud API para esta etapa; código e documentação do modo oficial foram preservados e o modo permanece desligado.
+
+- Novo módulo: APP-Mobile/whatsapp-qr. Leia seu README.md e qr.env.example para operação, segurança e limitações.
+- QR local escaneado pelo responsável; conta final 4104 conectada, sessão criptografada persistida no Firestore e restaurada após reinício sem novo QR.
+- Respostas locais habilitadas a novas mensagens diretas, teto 50/dia UTC. Uma conversa real MENU foi confirmada pelo responsável (recebeu seis opções); painel mostrou uma resposta aceita e zero pendências.
+- Sete testes QR e sete anteriores passaram. Compilação TypeScript do backend aprovada. Não houve alteração de cadastros, migração de contas ou senhas.
+- Sessão usa chave mestre em armazenamento local protegido fora do repositório; não está em GitHub, pacote, frontend, logs ou chat. Não divulgar QR nem chaves. Coleções whatsappQr* permanecem privadas pelas regras atuais.
+- Backend preparado para carregar QR opcionalmente; render.yaml mantém free e instala as dependências adicionais. Não implantar antes de conferir custos e conta correta.
+- NUVEM NÃO CONCLUÍDA: o único espaço acessível pelo conector é Streamcord, excluído pelo responsável. O bot atual depende deste computador/processo ligado.
+- Render Free repousa; mensagem recebida no WhatsApp por este transporte não acorda o serviço por webhook. Não oferece atendimento contínuo no modo QR. Não foi contratado plano, habilitada cobrança ou criado tráfego artificial para manter o serviço ativo.
+- Fontes anteriores desta etapa preservadas em work/before-whatsapp-qr-20261103/. O modo oficial continua disponível em seu PR anterior como alternativa histórica.
