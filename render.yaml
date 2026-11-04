@@ -3,7 +3,7 @@ services:
     name: aumm-notificacoes
     runtime: node
     plan: free
-    buildCommand: npm --prefix APP-Mobile/backend ci && npm --prefix APP-Mobile/backend run build
+    buildCommand: npm --prefix APP-Mobile/backend ci && npm --prefix APP-Mobile/backend run build && npm --prefix APP-Mobile/whatsapp-qr ci
     startCommand: node APP-Mobile/backend/lib/backend/src/server.js
     healthCheckPath: /health
     autoDeployTrigger: commit

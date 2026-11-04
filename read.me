@@ -1,0 +1,40 @@
+# Contexto operacional AUMM
+
+Leia AGENTS.md quando disponível, README.md e docs/WHATSAPP-OPERACAO.md. Preserve alterações existentes e não repita migrações de contas/senhas. As seções históricas do read.me local foram preservadas na cópia D:; este arquivo ainda não existia na main remota consultada.
+
+## 14. Bot WhatsApp oficial — 03/11/2026 (pendente de ativação)
+
+- Implementação: APP-Mobile/backend/src/whatsapp.ts; integração na entrada server.ts; configuração de referência .env.whatsapp.example; operação em docs/WHATSAPP-OPERACAO.md.
+- Exclusivamente Cloud API Meta, menu programado em português, sem API de IA, templates, campanhas ou envio em massa. Nenhum cadastro/senha foi migrado ou alterado.
+- WA_ENABLED e WA_SEND_ENABLED desligados por padrão; sem orçamento privado por número/mês não envia. Não habilitar cobrança nem presumir gratuidade por estar dentro de 24 horas.
+- FAQ oficial Meta consultada em 03/11/2026 informa franquia de 1.000 mensagens de serviço por número/mês desde 01/10/2026. Página comercial diverge; tabela/conta exigem confirmação autenticada antes de envio. Limite local não comprova saldo real na Meta.
+- Render gratuito tem repouso em 15 minutos, início em cerca de um minuto, 750 horas compartilhadas/mês, limites de tráfego/build e risco de suspensão/cobrança se houver pagamento cadastrado. Não promete atendimento contínuo.
+- Streamcord foi excluído pelo responsável: não pertence à associação. Serviço AUMM ainda precisa de acesso na conta Render correta.
+- Número pretendido já está no aplicativo Business. Registro preservado; coexistência e formato E.164 completo ainda não confirmados. Não excluir conta nem registrar o número diretamente sem essa confirmação.
+- Firebase confirmado ativo e sem cobrança; regras publicadas iguais às locais; cinco notícias publicadas. Benefícios permanecem restritos; bot não lê esses documentos privados.
+- Build TypeScript e sete testes com HTTP/banco/transporte simulados aprovados, sem envio real. Não há validação por emulador Firestore nem conversa real nesta etapa.
+- Não implantado: URL pretendida https://aumm-notificacoes.onrender.com/webhooks/whatsapp. /health atual respondeu 200 com revisão f3d7a0d30de14ba6b246c24f331c7643302a067d, que não inclui este bot.
+- Pendências: login Meta/conta AUMM, coexistência ou número de teste, acesso Render correto, conferência de custos/franquia, configuração de segredos, implantação, webhook HTTPS e conversa real autorizada. Só então registrar como concluído.
+- Fontes anteriores preservadas em work/before-whatsapp-20261103/. Alterações locais de outras tarefas não foram incluídas nesta entrega.
+## 15. Mudança autorizada para QR code não oficial — 03/11/2026
+
+O responsável optou expressamente por seguir fora da API oficial, aceitando os riscos. Essa decisão substitui a restrição de usar somente Cloud API para esta etapa; código e documentação do modo oficial foram preservados e o modo permanece desligado.
+
+- Novo módulo: APP-Mobile/whatsapp-qr. Leia seu README.md e qr.env.example para operação, segurança e limitações.
+- QR local escaneado pelo responsável; conta final 4104 conectada, sessão criptografada persistida no Firestore e restaurada após reinício sem novo QR.
+- Respostas locais habilitadas a novas mensagens diretas, teto 50/dia UTC. Uma conversa real MENU foi confirmada pelo responsável (recebeu seis opções); painel mostrou uma resposta aceita e zero pendências.
+- Sete testes QR e sete anteriores passaram. Compilação TypeScript do backend aprovada. Não houve alteração de cadastros, migração de contas ou senhas.
+- Sessão usa chave mestre em armazenamento local protegido fora do repositório; não está em GitHub, pacote, frontend, logs ou chat. Não divulgar QR nem chaves. Coleções whatsappQr* permanecem privadas pelas regras atuais.
+- Backend preparado para carregar QR opcionalmente; render.yaml mantém free e instala as dependências adicionais. Não implantar antes de conferir custos e conta correta.
+- NUVEM NÃO CONCLUÍDA: o único espaço acessível pelo conector é Streamcord, excluído pelo responsável. O bot atual depende deste computador/processo ligado.
+- Render Free repousa; mensagem recebida no WhatsApp por este transporte não acorda o serviço por webhook. Não oferece atendimento contínuo no modo QR. Não foi contratado plano, habilitada cobrança ou criado tráfego artificial para manter o serviço ativo.
+- Fontes anteriores desta etapa preservadas em work/before-whatsapp-qr-20261103/. O modo oficial continua disponível em seu PR anterior como alternativa histórica.
+
+## 16. Bot complementar e acesso Render corrigido — 03/11/2026
+
+- O responsável pediu atendimento restrito e independência dos canais. O QR agora aceita somente MENU, 1–6 e SAIR/PARAR; ignora texto livre, sem ações de cadastro, senha, aprovação ou protocolo.
+- Respostas próprias em APP-Mobile/whatsapp-qr/src/replies.mjs, com caminhos diretos ao site e portal. Notícias indisponíveis retornam o link do site. Atendimento humano pausa e aponta /contato/, sem prometer protocolo ou prazo.
+- APP-Mobile/backend/src/qrSupervisor.ts inicia o bot em processo filho, sem bloquear o HTTP; falha do bot não encerra backend/notificações. A mesma instância Render ainda compartilha memória e cotas: isolamento de processo não é isolamento da hospedagem.
+- Acesso real confirmado: o espaço Streamcord TAMBÉM contém aumm-notificacoes, serviço srv-dbcdf759fdbs73cls7tg, ligado ao repositório correto. A orientação anterior de excluir esse espaço da investigação estava baseada na informação inicial e foi corrigida por evidência do painel. Não apagar o espaço.
+- Render Free/Hobby sem cartão, consumo observado de 2,27/750 horas, 0/500 minutos e 0/5 GB; total atual/projetado US$ 0,00. Não habilitar cartão/plano pago. Repouso continua permitido e não se promete disponibilidade contínua.
+- Compilação e 18 testes relacionados aprovados; não houve alteração de usuários, senhas ou regras Firebase. Implantação desta revisão ainda em preparação; só registrar conclusão depois da verificação real.

@@ -35,3 +35,7 @@ node APP-Mobile/tests/external-server.mjs
 ```
 
 Os testes usam destinatários fictícios e simulação do transporte FCM, sem enviar mensagens reais. Verifique também em aparelho físico a permissão, o registro do token, o recebimento com a tela bloqueada e a abertura pelo aviso.
+
+## WhatsApp oficial (ainda desativado)
+
+Consulte docs/WHATSAPP-OPERACAO.md na raiz. Webhook /webhooks/whatsapp; configuração de referência .env.whatsapp.example. Sem configuração explícita e orçamento privado, nenhum envio é feito. Testes: node APP-Mobile/tests/whatsapp.mjs após compilar. Ativação depende de conta Meta, verificação de franquia/coexistência e acesso Render da AUMM; não usar Streamcord.
