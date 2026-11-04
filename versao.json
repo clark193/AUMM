@@ -1,9 +1,8 @@
 {
-  "sourceCommit": "98cd1fe7eb58e89bd74e60117ed84d55deb80342",
-  "publishedAt": "2026-11-03T23:26:24.2182387Z",
   "features": [
-    "banners-locais-otimizados",
-    "previas-jpeg",
-    "compartilhar-com-versao-da-imagem"
-  ]
+    "noticias-atualizadas",
+    "pagina-sociedade-da-exaustao"
+  ],
+  "sourceCommit": "903c01590a9947df2084b2f393312107de8cc68b",
+  "publishedAt": "2026-11-04T17:01:32.5070592Z"
 }
