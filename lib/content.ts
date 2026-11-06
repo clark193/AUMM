@@ -110,6 +110,8 @@ export const publicPages: Record<string, { eyebrow: string; title: string; intro
       { title: "Segurança", text: "Usamos controles de acesso, registros de auditoria e armazenamento protegido para reduzir riscos de acesso indevido." },
     ],
   },
+  exclusao: { eyebrow: "Conta e dados", title: "Excluir conta e dados — AUMM", intro: "Solicite a exclusão da conta do aplicativo AUMM e dos dados associados.", sections: [] },
+  "exclusão": { eyebrow: "Conta e dados", title: "Excluir conta e dados — AUMM", intro: "Solicite a exclusão da conta do aplicativo AUMM e dos dados associados.", sections: [] },
   termos: {
     eyebrow: "Uso responsável",
     title: "Termos de Uso",

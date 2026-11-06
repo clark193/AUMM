@@ -15,6 +15,6 @@ export function SiteFooter() {
       <div><h3>Serviços</h3><Link href="/associe-se">Associe-se</Link><Link href="/verificar">Verificar carteirinha</Link><Link href="/associado/login">Portal do associado</Link><Link href="/admin">Administração</Link></div>
       <div><h3>Contato</h3>{settings.email && <p><Mail size={16}/> {settings.email}</p>}{settings.instagram && <p><AtSign size={16}/> <a href="https://www.instagram.com/aumm.oficial/" target="_blank" rel="noreferrer">@aumm.oficial</a></p>}{settings.cnpj && <p><Building2 size={16}/> CNPJ: {settings.cnpj}</p>}</div>
     </div>
-    <div className="container footer-bottom"><span>© 2026 AUMM. Todos os direitos reservados.</span><span><Link href="/privacidade">Privacidade</Link> · <Link href="/termos">Termos de uso</Link></span></div>
+    <div className="container footer-bottom"><span>© 2026 AUMM. Todos os direitos reservados.</span><span><Link href="/privacidade">Privacidade</Link> · <Link href="/termos">Termos de uso</Link> · <Link href="/exclusao/">Excluir conta e dados</Link></span></div>
   </footer>;
 }

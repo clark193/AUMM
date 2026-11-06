@@ -10,6 +10,8 @@ import { ManagedPublicFeed } from "@/components/ManagedPublicFeed";
 import { PublicContactDetails } from "@/components/PublicContactDetails";
 import { SponsorShowcase } from "@/components/SponsorShowcase";
 import { AccomplishmentsFeed } from "@/components/AccomplishmentsFeed";
+import { LegalPage } from "@/components/LegalPage";
+import { legalKind, legalDocuments } from "@/lib/legalContent";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -20,6 +22,11 @@ export const dynamicParams = false;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
+  const kind = legalKind(slug);
+  if (kind) {
+    const document = legalDocuments[kind], url = `https://aumm.com.br/${kind}/`;
+    return { title: { absolute: document.title }, description: document.intro, alternates: { canonical: url }, openGraph: { title: document.title, description: document.intro, url, type: "website", images: ["https://aumm.com.br/logo.png"] }, twitter: { card: "summary", title: document.title, description: document.intro } };
+  }
   if (slug === "noticias") return { title: "Notícias" };
   if (slug === "documentos") return { title: "Documentos Públicos" };
   return publicPages[slug] ? { title: publicPages[slug].title, description: publicPages[slug].intro } : {};
@@ -27,6 +34,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PublicPage({ params }: Props) {
   const { slug } = await params;
+  const kind = legalKind(slug);
+  if (kind) return <LegalPage kind={kind} />;
   if (slug === "noticias") return <NewsList />;
   if (slug === "documentos") return <Documents />;
   const page = publicPages[slug];

@@ -36,6 +36,9 @@ const menuGroups = [
       { label: "Documentos", href: "/documentos" },
       { label: "Verificar carteirinha", href: "/verificar" },
       { label: "Contato", href: "/contato" },
+      { label: "Política de privacidade", href: "/privacidade/" },
+      { label: "Termos de uso", href: "/termos/" },
+      { label: "Excluir conta e dados", href: "/exclusao/" },
     ],
   },
 ] as const;

@@ -1364,14 +1364,17 @@ function App() {
               <p>
                 A localização é obtida somente ao solicitar apoio ou tocar em
                 compartilhar. Quem ajuda também pode ativar o compartilhamento
-                do trajeto durante o atendimento. O aplicativo não rastreia sua
-                posição em segundo plano.
+                do trajeto durante o atendimento. Quando você inicia o
+                compartilhamento ao vivo, o serviço pode continuar com a tela
+                apagada ou o app minimizado, com indicação do Android. Encerre
+                o compartilhamento no aplicativo quando quiser parar.
               </p>
               <p>
-                No pedido de apoio, somente você e o associado que aceitar
-                ajudar podem consultar as coordenadas. Elas são apagadas ao
-                concluir ou cancelar o pedido e deixam de ser acessíveis após 24
-                horas.
+                Nos pedidos de apoio, os dados são disponibilizados aos
+                participantes autorizados e à equipe responsável conforme o
+                recurso utilizado. Links de acompanhamento permitem que seus
+                destinatários vejam a localização enquanto estiverem válidos.
+                Confira as condições de uso e conservação na política completa.
               </p>
               <p>
                 Checklist, manutenção e notícias salvas ficam neste aparelho. A
@@ -1391,7 +1394,10 @@ function App() {
               >
                 Política de privacidade <ExternalLink size={16} />
               </Button>
-              <Button secondary onClick={() => setModal("contact")}>
+              <Button secondary onClick={() => void perform(() => site("/termos/"))}>
+                Termos de uso <ExternalLink size={16} />
+              </Button>
+              <Button secondary onClick={() => void perform(() => site("/exclusao/"))}>
                 Solicitar exclusão de conta e dados
               </Button>
             </div>
