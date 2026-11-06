@@ -1,8 +1,9 @@
 {
-  "publishedAt": "2026-11-04T17:32:34.7265105Z",
+  "sourceCommit": "ffdf907a1eb4cf0e86893948e453ba8bfe108448",
   "features": [
-    "publicacao-automatica-preparada",
-    "leitura-sem-404-durante-publicacao"
+    "privacidade-site-e-app",
+    "termos-de-uso",
+    "solicitacao-exclusao-conta-dados"
   ],
-  "sourceCommit": "68f4f25fad1e0a4e3e7de56377bc5bc3f1b0abb9"
+  "publishedAt": "2026-11-06T15:16:44.5827399Z"
 }
